@@ -11,6 +11,7 @@ import {
 import type { GlucoseUnit, EstimateGMIOptions, ConversionResult } from './types'
 import { isEstimateGMIOptions } from './guards'
 import { parseGlucoseString } from './glucose'
+import { DomainError } from './errors'
 
 /**
  * Converts clinical average glucose (mg/dL) to estimated A1C (percentage).
@@ -43,7 +44,8 @@ export function estimateAvgGlucoseFromA1C(a1c: number): number {
  * @see https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html
  */
 export function estimateEAG(a1c: number): number {
-  if (a1c < 0) throw new Error('A1C must be positive')
+  if (a1c < 0)
+    throw new DomainError('A1C must be positive', 'INVALID_A1C_VALUE')
   const eAG = Number(
     (a1c * A1C_TO_EAG_MULTIPLIER - A1C_TO_EAG_CONSTANT).toFixed(10)
   )
@@ -104,17 +106,27 @@ export function estimateGMI(
     value = parsed.value
     resolvedUnit = parsed.unit
   } else {
-    if (!unit) throw new Error('Unit is required when input is a number.')
+    if (!unit)
+      throw new DomainError(
+        'Unit is required when input is a number.',
+        'INVALID_UNIT'
+      )
     value = valueOrOptions
     resolvedUnit = unit
   }
 
   if (![MG_DL, MMOL_L].includes(resolvedUnit)) {
-    throw new Error(`Unsupported glucose unit: ${resolvedUnit}`)
+    throw new DomainError(
+      `Unsupported glucose unit: ${resolvedUnit}`,
+      'INVALID_UNIT'
+    )
   }
 
   if (value <= 0 || !Number.isFinite(value)) {
-    throw new Error('Glucose value must be a positive number.')
+    throw new DomainError(
+      'Glucose value must be a positive number.',
+      'INVALID_GLUCOSE_VALUE'
+    )
   }
 
   const gmi =
@@ -141,7 +153,7 @@ export function estimateGMI(
  */
 export function mgDlToMmolL(val: number): number {
   if (!Number.isFinite(val) || val <= 0)
-    throw new Error('Invalid glucose value')
+    throw new DomainError('Invalid glucose value', 'INVALID_GLUCOSE_VALUE')
   return +(val / MGDL_MMOLL_CONVERSION).toFixed(1)
 }
 
@@ -161,7 +173,7 @@ export function mgDlToMmolL(val: number): number {
  */
 export function mmolLToMgDl(val: number): number {
   if (!Number.isFinite(val) || val <= 0)
-    throw new Error('Invalid glucose value')
+    throw new DomainError('Invalid glucose value', 'INVALID_GLUCOSE_VALUE')
   return Math.round(val * MGDL_MMOLL_CONVERSION)
 }
 
@@ -183,8 +195,9 @@ export function convertGlucoseUnit({
   unit: GlucoseUnit
 }): ConversionResult {
   if (!Number.isFinite(value) || value <= 0)
-    throw new Error('Invalid glucose value')
-  if (![MG_DL, MMOL_L].includes(unit)) throw new Error('Invalid unit')
+    throw new DomainError('Invalid glucose value', 'INVALID_GLUCOSE_VALUE')
+  if (![MG_DL, MMOL_L].includes(unit))
+    throw new DomainError('Invalid unit', 'INVALID_UNIT')
   if (unit === MG_DL)
     return {
       value: Math.round((value / MGDL_MMOLL_CONVERSION) * 10) / 10,

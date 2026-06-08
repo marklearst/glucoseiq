@@ -10,6 +10,7 @@
  */
 
 import { MG_DL } from '../constants'
+import { TimestampError } from '../errors'
 import type {
   NightscoutEntry,
   NightscoutDirection,
@@ -53,7 +54,10 @@ export function normalizeNightscoutEntry(
     if (entry.dateString) {
       const parsed = Date.parse(entry.dateString)
       if (!Number.isNaN(parsed)) {
-        return new Date(parsed).toISOString()
+        const parsedDate = new Date(parsed)
+        if (!Number.isNaN(parsedDate.getTime())) {
+          return parsedDate.toISOString()
+        }
       }
 
       // Fall back to `entry.date` if available and valid
@@ -64,14 +68,14 @@ export function normalizeNightscoutEntry(
         }
       }
 
-      throw new Error(
+      throw new TimestampError(
         `Unable to parse Nightscout timestamp from 'dateString': ${entry.dateString}`
       )
     }
 
     const date = new Date(entry.date)
     if (Number.isNaN(date.getTime())) {
-      throw new Error(
+      throw new TimestampError(
         `Unable to parse Nightscout timestamp from 'date' field: ${String(
           entry.date
         )}`

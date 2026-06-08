@@ -8,6 +8,7 @@
 import { isValidA1C } from './a1c'
 import { isValidGlucoseValue } from './glucose'
 import { isValidInsulin } from './validators'
+import { DomainError } from './errors'
 import {
   HOMA_IR_DENOMINATOR,
   HOMA_IR_CUTOFFS,
@@ -32,13 +33,15 @@ import {
  */
 export function calculateHOMAIR(glucose: number, insulin: number) {
   if (!isValidGlucoseValue(glucose, MG_DL)) {
-    throw new Error(
-      'Invalid fasting glucose value (must be a positive number in mg/dL)'
+    throw new DomainError(
+      'Invalid fasting glucose value (must be a positive number in mg/dL)',
+      'INVALID_GLUCOSE_VALUE'
     )
   }
   if (!isValidInsulin(insulin)) {
-    throw new Error(
-      'Invalid fasting insulin value (must be a positive number in µIU/mL)'
+    throw new DomainError(
+      'Invalid fasting insulin value (must be a positive number in µIU/mL)',
+      'INVALID_INSULIN_VALUE'
     )
   }
   const score = (glucose * insulin) / HOMA_IR_DENOMINATOR
@@ -98,16 +101,21 @@ export function checkGlycemicAlignment(
   insulin: number
 ) {
   if (!isValidA1C(a1c)) {
-    throw new Error('Invalid A1C value (must be a positive number < 20%)')
+    throw new DomainError(
+      'Invalid A1C value (must be a positive number < 20%)',
+      'INVALID_A1C_VALUE'
+    )
   }
   if (!isValidGlucoseValue(glucose, MG_DL)) {
-    throw new Error(
-      'Invalid fasting glucose value (must be a positive number in mg/dL)'
+    throw new DomainError(
+      'Invalid fasting glucose value (must be a positive number in mg/dL)',
+      'INVALID_GLUCOSE_VALUE'
     )
   }
   if (!isValidInsulin(insulin)) {
-    throw new Error(
-      'Invalid fasting insulin value (must be a positive number in µIU/mL)'
+    throw new DomainError(
+      'Invalid fasting insulin value (must be a positive number in µIU/mL)',
+      'INVALID_INSULIN_VALUE'
     )
   }
 

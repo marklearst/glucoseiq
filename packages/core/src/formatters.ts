@@ -1,6 +1,7 @@
 // @file src/formatters.ts
 
-import { GlucoseUnit } from './types'
+import { DomainError, TimestampError } from './errors'
+import type { GlucoseUnit } from './types'
 
 /**
  * Formats a clinical glucose value with unit and optional rounding.
@@ -39,18 +40,29 @@ export function formatPercentage(val: number, digits = 1): string {
  * @param iso - ISO 8601 timestamp string (e.g., '2024-03-20T10:00:00Z')
  * @param timeZone - Optional IANA time zone (e.g., 'America/New_York')
  * @returns Localized date/time string (e.g., 'Mar 20, 2024, 06:00 AM')
- * @throws {RangeError} If the ISO string is invalid or cannot be parsed
+ * @throws {TimestampError} If the ISO string is invalid or cannot be parsed
+ * @throws {DomainError} If the time zone is invalid
  */
 export function formatDate(iso: string, timeZone?: string): string {
   if (isNaN(Date.parse(iso))) {
-    throw new RangeError('Invalid ISO timestamp')
+    throw new TimestampError('Invalid ISO timestamp')
   }
-  return new Date(iso).toLocaleString('en-US', {
+
+  const options: Intl.DateTimeFormatOptions = {
     timeZone,
     year: 'numeric',
     month: 'short',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-  })
+  }
+
+  try {
+    return new Date(iso).toLocaleString('en-US', options)
+  } catch (error) {
+    if (error instanceof RangeError) {
+      throw new DomainError(error.message, 'INVALID_TIMEZONE')
+    }
+    throw error
+  }
 }
