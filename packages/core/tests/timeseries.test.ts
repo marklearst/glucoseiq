@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { detectGaps, splitDayNight } from '../src/timeseries'
 import { createGlucoseReadings } from './test-helpers'
+import { DomainError } from '../src/errors'
 import type { GlucoseReading } from '../src/types'
 
 const at = (isoMin: number, value = 100): GlucoseReading => ({
@@ -68,7 +69,16 @@ describe('splitDayNight', () => {
     expect(res.night).toHaveLength(0)
   })
 
-  it('throws on an invalid time zone', () => {
-    expect(() => splitDayNight([at(0)], { timeZone: 'Mars/Phobos' })).toThrow()
+  it('throws a coded error on an invalid time zone', () => {
+    try {
+      splitDayNight([at(0)], { timeZone: 'Mars/Phobos' })
+      throw new Error('Expected call to throw')
+    } catch (error) {
+      expect(error).toBeInstanceOf(DomainError)
+      expect(error).toMatchObject({
+        code: 'INVALID_TIMEZONE',
+        message: 'Invalid time zone specified: Mars/Phobos',
+      })
+    }
   })
 })

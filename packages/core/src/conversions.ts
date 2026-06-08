@@ -40,7 +40,7 @@ export function estimateAvgGlucoseFromA1C(a1c: number): number {
  * Throws if input is negative. Used for clinical and research reporting.
  * @param a1c - A1C value (percentage)
  * @returns Estimated average glucose (mg/dL)
- * @throws {Error} If a1c is negative
+ * @throws {DomainError} If a1c is negative
  * @see https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html
  */
 export function estimateEAG(a1c: number): number {
@@ -86,9 +86,10 @@ export function a1cToGMI(a1c: number): number {
  * @param valueOrOptions - Glucose value, string, or options object
  * @param unit - Glucose unit (if value is a number)
  * @returns GMI value
- * @throws {Error} If unit is required but not provided when input is a number.
- * @throws {Error} If the glucose unit is unsupported.
- * @throws {Error} If the glucose value is not a positive number.
+ * @throws {DomainError} If unit is required but not provided when input is a number.
+ * @throws {DomainError} If the glucose unit is unsupported.
+ * @throws {DomainError} If the glucose value is not a positive number.
+ * @throws {ParseError} If a string input cannot be parsed.
  * @see https://diatribe.org/glucose-management-indicator-gmi
  */
 export function estimateGMI(
@@ -142,7 +143,7 @@ export function estimateGMI(
  * Used for international interoperability and reporting.
  * @param val - Glucose value in mg/dL
  * @returns Value in mmol/L
- * @throws {Error} If val is not a finite number or is negative/zero
+ * @throws {DomainError} If val is not a finite number or is negative/zero
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  *
  * @example
@@ -162,7 +163,7 @@ export function mgDlToMmolL(val: number): number {
  * Used for international interoperability and reporting.
  * @param val - Glucose value in mmol/L
  * @returns Value in mg/dL
- * @throws {Error} If val is not a finite number or is negative/zero
+ * @throws {DomainError} If val is not a finite number or is negative/zero
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  *
  * @example
@@ -183,8 +184,8 @@ export function mmolLToMgDl(val: number): number {
  * @param value - Glucose value (number)
  * @param unit - Current glucose unit ('mg/dL' or 'mmol/L')
  * @returns Object with converted value and new unit
- * @throws {Error} If value is not a finite number or is negative/zero
- * @throws {Error} If unit is not a supported glucose unit
+ * @throws {DomainError} If value is not a finite number or is negative/zero
+ * @throws {DomainError} If unit is not a supported glucose unit
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  */
 export function convertGlucoseUnit({

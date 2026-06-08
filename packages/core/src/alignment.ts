@@ -27,7 +27,7 @@ import {
  * @param glucose - Fasting glucose value in mg/dL. Must be a positive finite number.
  * @param insulin - Fasting insulin value in µIU/mL. Must be a positive finite number.
  * @returns Object with numeric HOMA-IR value and interpretation label.
- * @throws {Error} If glucose or insulin are invalid (non-finite, zero, or negative).
+ * @throws {DomainError} If glucose or insulin are invalid (non-finite, zero, or negative).
  * @see https://pubmed.ncbi.nlm.nih.gov/3899825/ (Original HOMA-IR publication)
  * @see https://diabetesjournals.org/care/article/26/1/118/22567/Prevalence-and-Concomitants-of-Glucose-Intolerance (ADA: Glucose Intolerance and HOMA-IR context)
  */
@@ -92,7 +92,7 @@ function interpretHOMAIR(score: number): string {
  * @param glucose - Fasting glucose value in mg/dL. Must be a positive finite number.
  * @param insulin - Fasting insulin value in µIU/mL. Must be a positive finite number.
  * @returns Object with estimated average glucose (mg/dL), HOMA-IR result object, flags array, recommendation string, and disclaimer.
- * @throws {Error} If any input value is invalid (non-finite, zero, or negative).
+ * @throws {DomainError} If any input value is invalid (non-finite, zero, or negative).
  * @see https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html (CDC: eAG formula)
  */
 export function checkGlycemicAlignment(
