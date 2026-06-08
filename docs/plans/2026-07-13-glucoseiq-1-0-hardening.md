@@ -1,0 +1,1230 @@
+# GlucoseIQ 1.0 Hardening Implementation Plan
+
+**Goal:** Correct the known runtime, package, documentation, CI, and release-safety defects before the six-package 1.0 launch.
+
+**Architecture:** Stabilize public contracts before documentation and automation. Each behavior change begins with a focused failing test, receives a minimal implementation, and passes a task-level review before the next task starts. The final release workflow enforces the same package and documentation contracts verified locally.
+
+**Tech stack:** TypeScript, Node 24, pnpm 11.12.0, Turborepo, Vitest, tsup, TypeDoc, Next.js 16, Fumadocs, Changesets, GitHub Actions, and npm provenance.
+
+## Global constraints
+
+- Work on `fix/glucoseiq-1-0-hardening` from `b69ea3bb11a6490bd736f7666a047e8d64d96820`.
+- Do not merge, publish, deploy, configure DNS, change repository settings, or create credentials.
+- Keep the public package set at five `@glucoseiq/*` packages plus the `diabetic-utils` compatibility bridge.
+- Preserve all 107 `diabetic-utils@1.5.0` runtime exports.
+- Preserve the core root and `/metrics`, `/connectors`, `/interop`, and `/render` entrypoints.
+- Require Node `>=24` in every published package and React `>=18` in the React peer range.
+- Route ESM declarations to `.d.mts` and CommonJS declarations to `.d.ts`.
+- Keep `@glucoseiq/core` free of runtime dependencies.
+- Freeze the visual layer. Content, metadata, semantics, and documentation behavior remain in scope.
+- Do not inspect, delete, regenerate, stage, or commit `packages/core/docs-md/`.
+- Keep branch names, commits, pull requests, source, packages, releases, and public documentation free of assistant attribution, generated-by trailers, task links, and tool-focused naming.
+- Use project-focused commit subjects and no commit trailers.
+
+## Baseline evidence
+
+The isolated worktree started clean. These commands passed before implementation:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm build
+pnpm test:coverage
+pnpm test:packages
+pnpm test:launch
+```
+
+The baseline contains 546 passing tests with 100 percent coverage, six packed tarballs, ten public entrypoints, React 18 and React 19 consumers, and 107 compatibility exports.
+
+---
+
+### Task 1: Complete the coded core error contract
+
+**Files:**
+
+- Modify: `packages/core/src/errors.ts`
+- Modify: `packages/core/src/a1c.ts`
+- Modify: `packages/core/src/alignment.ts`
+- Modify: `packages/core/src/conversions.ts`
+- Modify: `packages/core/src/formatters.ts`
+- Modify: `packages/core/src/connectors/nightscout.ts`
+- Modify: `packages/core/tests/errors.test.ts`
+- Create: `scripts/check-core-error-contract.mjs`
+- Modify: `package.json`
+
+**Interfaces:**
+
+- Preserve `GlucoseIQError`, `DomainError`, `ParseError`, `EmptyDatasetError`, and `TimestampError`.
+- Preserve every existing error message.
+- Map A1C, glucose, insulin, unit, timezone, option, parse, and timestamp failures to the existing `GlucoseIQErrorCode` union.
+
+- [ ] **Step 1: Add failing table-driven error tests**
+
+Expand `packages/core/tests/errors.test.ts` so each case asserts the subclass, code, and exact message. The table must cover these mappings:
+
+| Public call | Subclass | Code | Exact message |
+| --- | --- | --- | --- |
+| `a1cDelta(-1, 6)` | `DomainError` | `INVALID_A1C_VALUE` | `Invalid A1C value` |
+| `estimateEAG(-1)` | `DomainError` | `INVALID_A1C_VALUE` | `A1C must be positive` |
+| `calculateHOMAIR(-1, 5)` | `DomainError` | `INVALID_GLUCOSE_VALUE` | `Invalid fasting glucose value (must be a positive number in mg/dL)` |
+| `calculateHOMAIR(100, -1)` | `DomainError` | `INVALID_INSULIN_VALUE` | `Invalid fasting insulin value (must be a positive number in µIU/mL)` |
+| `checkGlycemicAlignment(-1, 100, 5)` | `DomainError` | `INVALID_A1C_VALUE` | `Invalid A1C value (must be a positive number < 20%)` |
+| `estimateGMI(100)` | `DomainError` | `INVALID_UNIT` | `Unit is required when input is a number.` |
+| `estimateGMI(100, 'other' as never)` | `DomainError` | `INVALID_UNIT` | `Unsupported glucose unit: other` |
+| `estimateGMI(0, 'mg/dL')` | `DomainError` | `INVALID_GLUCOSE_VALUE` | `Glucose value must be a positive number.` |
+| `mgDlToMmolL(0)` | `DomainError` | `INVALID_GLUCOSE_VALUE` | `Invalid glucose value` |
+| `mmolLToMgDl(0)` | `DomainError` | `INVALID_GLUCOSE_VALUE` | `Invalid glucose value` |
+| `convertGlucoseUnit({ value: 0, unit: 'mg/dL' })` | `DomainError` | `INVALID_GLUCOSE_VALUE` | `Invalid glucose value` |
+| `convertGlucoseUnit({ value: 100, unit: 'other' as never })` | `DomainError` | `INVALID_UNIT` | `Invalid unit` |
+| `formatDate('bad')` | `TimestampError` | `TIMESTAMP_UNPARSEABLE` | `Invalid ISO timestamp` |
+| `normalizeNightscoutEntry()` with invalid date fields | `TimestampError` | `TIMESTAMP_UNPARSEABLE` | preserve the existing field-specific message |
+
+Use a helper with this shape:
+
+```ts
+function expectCodedError(
+  call: () => unknown,
+  expected: {
+    type: new (...args: never[]) => GlucoseIQError
+    code: GlucoseIQErrorCode
+    message: string
+  },
+): void {
+  try {
+    call()
+    throw new Error('Expected call to throw')
+  } catch (error) {
+    expect(error).toBeInstanceOf(expected.type)
+    expect(error).toMatchObject({ code: expected.code, message: expected.message })
+  }
+}
+```
+
+- [ ] **Step 2: Run the focused test and confirm the expected red state**
+
+Run:
+
+```sh
+pnpm --filter @glucoseiq/core exec vitest run tests/errors.test.ts
+```
+
+Expected: the new cases fail because the functions still throw built-in `Error` or `RangeError` objects without codes.
+
+- [ ] **Step 3: Replace each intentional built-in throw**
+
+Import `DomainError` or `TimestampError` at each call site and use these exact constructions:
+
+```ts
+throw new DomainError(message, 'INVALID_A1C_VALUE')
+throw new DomainError(message, 'INVALID_GLUCOSE_VALUE')
+throw new DomainError(message, 'INVALID_INSULIN_VALUE')
+throw new DomainError(message, 'INVALID_UNIT')
+throw new DomainError(message, 'INVALID_TIMEZONE')
+throw new TimestampError(message)
+```
+
+Wrap the `Intl` timezone failure in `formatDate` while retaining its platform message:
+
+```ts
+try {
+  return new Date(iso).toLocaleString('en-US', options)
+} catch (error) {
+  if (error instanceof RangeError) {
+    throw new DomainError(error.message, 'INVALID_TIMEZONE')
+  }
+  throw error
+}
+```
+
+Check `Date#getTime()` before every `toISOString()` call so an out-of-range vendor epoch becomes `TimestampError` instead of a built-in `RangeError`.
+
+- [ ] **Step 4: Add the static source contract**
+
+Create `scripts/check-core-error-contract.mjs` to recursively scan `packages/core/src/**/*.ts` and fail when this expression matches executable source:
+
+```js
+/throw\s+new\s+(?:Error|RangeError|TypeError)\s*\(/
+```
+
+Add `test:errors` to the root scripts:
+
+```json
+"test:errors": "node scripts/check-core-error-contract.mjs"
+```
+
+- [ ] **Step 5: Verify the green state**
+
+Run:
+
+```sh
+pnpm --filter @glucoseiq/core exec vitest run tests/errors.test.ts
+pnpm test:errors
+```
+
+Expected: all focused tests pass and the static scan reports zero built-in intentional throws.
+
+- [ ] **Step 6: Commit the task**
+
+```sh
+git add package.json scripts/check-core-error-contract.mjs packages/core/src packages/core/tests/errors.test.ts
+git commit -m "fix: standardize core error contracts"
+```
+
+---
+
+### Task 2: Bound grid alignment and generated test data
+
+**Files:**
+
+- Modify: `packages/core/src/align.ts`
+- Modify: `packages/core/tests/align.test.ts`
+- Modify: `packages/testing/src/index.ts`
+- Modify: `packages/testing/tests/testing.test.ts`
+
+**Interfaces:**
+
+- `alignToGrid` throws `DomainError` with `INVALID_OPTION` for invalid options.
+- `generateCGMSeries` throws `RangeError` with a stable option-specific message.
+- Both APIs cap generated output at 100,000 points.
+
+- [ ] **Step 1: Add safe failing alignment tests**
+
+Add tests for `intervalMin` values `0`, `NaN`, and `Infinity`, plus `maxInterpolateGapMin` values `-1`, `NaN`, and `Infinity`. Assert `DomainError` and `INVALID_OPTION`. Do not execute `intervalMin: -5` until validation exists because the baseline loop does not terminate.
+
+- [ ] **Step 2: Run the alignment red test**
+
+```sh
+pnpm --filter @glucoseiq/core exec vitest run tests/align.test.ts
+```
+
+Expected: the option assertions fail without hanging.
+
+- [ ] **Step 3: Validate before grid arithmetic**
+
+Add:
+
+```ts
+const MAX_GRID_POINTS = 100_000
+
+function assertFiniteOption(name: string, value: number, allowZero = false): void {
+  const valid = Number.isFinite(value) && (allowZero ? value >= 0 : value > 0)
+  if (!valid) {
+    throw new DomainError(`${name} must be ${allowZero ? 'non-negative' : 'positive'} and finite`, 'INVALID_OPTION')
+  }
+}
+```
+
+Calculate `slotCount` once, reject counts above `MAX_GRID_POINTS`, and iterate by integer index:
+
+```ts
+const slotCount = Math.floor((endSlot - startSlot) / intervalMs) + 1
+if (!Number.isSafeInteger(slotCount) || slotCount > MAX_GRID_POINTS) {
+  throw new DomainError(`alignToGrid would create more than ${MAX_GRID_POINTS} grid points`, 'INVALID_OPTION')
+}
+for (let index = 0; index < slotCount; index++) {
+  const slotMs = startSlot + index * intervalMs
+  // existing slot logic
+}
+```
+
+Add the `-5` regression after the guard exists and confirm it throws.
+
+- [ ] **Step 4: Add safe failing generator tests**
+
+Before adding validation, use inputs that return or throw promptly: `days: 0`, `days: 1.5`, `intervalMin: NaN`, invalid `start`, invalid unit, non-finite seed, non-positive basal, negative noise, negative meal amplitude, invalid meal time, and negative nocturnal-hypo day. Assert stable messages naming each option.
+
+- [ ] **Step 5: Run the generator red test**
+
+```sh
+pnpm --filter @glucoseiq/testing exec vitest run tests/testing.test.ts
+```
+
+Expected: the new option contract fails under the permissive baseline implementation.
+
+- [ ] **Step 6: Validate the complete generator input**
+
+Add `MAX_GENERATED_READINGS = 100_000`, validate before creating the PRNG, and compute:
+
+```ts
+const perDay = Math.floor(1440 / intervalMin)
+const totalReadings = days * perDay
+if (!Number.isSafeInteger(totalReadings) || totalReadings > MAX_GENERATED_READINGS) {
+  throw new RangeError(`generateCGMSeries cannot create more than ${MAX_GENERATED_READINGS} readings`)
+}
+```
+
+Require positive integer `days`, `intervalMin` between 0 and 1440, a safe-integer `seed`, positive finite `basal`, non-negative finite noise and meal amplitude, finite meal times between 0 and 1439, non-negative integer hypo-day indices, a supported unit, and a parseable start timestamp. Reject a zero-reading result before entering the loops.
+
+After validation exists, add direct regressions for `days: Infinity` and `intervalMin: 0` and verify they throw without entering a loop.
+
+- [ ] **Step 7: Verify and commit**
+
+```sh
+pnpm --filter @glucoseiq/core exec vitest run tests/align.test.ts
+pnpm --filter @glucoseiq/testing exec vitest run tests/testing.test.ts
+git add packages/core/src/align.ts packages/core/tests/align.test.ts packages/testing/src/index.ts packages/testing/tests/testing.test.ts
+git commit -m "fix: bound generated glucose series"
+```
+
+---
+
+### Task 3: Remove time-in-range gaps and invalid SVG geometry
+
+**Files:**
+
+- Modify: `packages/core/src/tir-enhanced.ts`
+- Modify: `packages/core/src/types.ts`
+- Modify: `packages/core/src/render/tir-bar.ts`
+- Modify: `packages/core/tests/tir-enhanced.test.ts`
+- Modify: `packages/core/tests/tir-bar.test.ts`
+
+**Interfaces:**
+
+- Each accepted reading belongs to one and only one zone.
+- Default thresholds use each reading's native unit.
+- Custom enhanced thresholds remain mg/dL values.
+- Pregnancy TIR keeps its explicit unit option.
+
+- [ ] **Step 1: Add boundary and invariant regressions**
+
+Add exact tests for:
+
+```ts
+expect(zoneFor(180.005, 'mg/dL')).toBe('high')
+expect(zoneFor(250.005, 'mg/dL')).toBe('veryHigh')
+expect(zoneFor(3.0, 'mmol/L')).toBe('low')
+expect(zoneFor(3.9, 'mmol/L')).toBe('inRange')
+expect(zoneFor(10.0, 'mmol/L')).toBe('inRange')
+expect(zoneFor(13.9, 'mmol/L')).toBe('high')
+expect(zoneFor(13.91, 'mmol/L')).toBe('veryHigh')
+```
+
+For mixed-unit and boundary datasets, assert:
+
+```ts
+const count = result.veryLow.readingCount + result.low.readingCount +
+  result.inRange.readingCount + result.high.readingCount + result.veryHigh.readingCount
+expect(count).toBe(readings.length)
+```
+
+Add invalid-threshold cases for `NaN`, infinity, equality, and descending values. Add pregnancy readings immediately above 140 mg/dL and 7.8 mmol/L. Add an SVG assertion that valid input never contains `NaN` or `Infinity`.
+
+- [ ] **Step 2: Run the red tests**
+
+```sh
+pnpm --filter @glucoseiq/core exec vitest run tests/tir-enhanced.test.ts tests/tir-bar.test.ts
+```
+
+Expected: boundary, count-invariant, threshold-validation, and SVG geometry assertions fail.
+
+- [ ] **Step 3: Replace filter-based classification with one pass**
+
+Remove `BOUNDARY_EPSILON`. Add one internal zone classifier that returns `'veryLow' | 'low' | 'inRange' | 'high' | 'veryHigh'` through ordered comparisons. Use native mmol/L constants for default thresholds and normalize to mg/dL only for averages and custom-threshold comparisons.
+
+Validate custom thresholds before mapping readings:
+
+```ts
+const values = [veryLowThreshold, lowThreshold, highThreshold, veryHighThreshold]
+if (!values.every(Number.isFinite) || !(values[0] < values[1] && values[1] < values[2] && values[2] < values[3])) {
+  throw new DomainError('Enhanced TIR thresholds must be finite and strictly increasing', 'INVALID_OPTION')
+}
+```
+
+Build zone arrays during one traversal, then calculate `RangeMetrics` from those arrays. Preserve the current rounded percentages, duration model, and mg/dL average output.
+
+- [ ] **Step 4: Remove pregnancy epsilon logic**
+
+Classify pregnancy values with `value < low`, `value <= high`, and `value > high`. Retain the current unit-selection strategy and output shape.
+
+- [ ] **Step 5: Guard renderer totals**
+
+Before dividing by the zone total, return the existing `No data` frame when the total is not finite or is less than or equal to zero. Add an accessible summary to the SVG label without changing its dimensions or colors.
+
+- [ ] **Step 6: Verify and commit**
+
+```sh
+pnpm --filter @glucoseiq/core exec vitest run tests/tir-enhanced.test.ts tests/tir-bar.test.ts
+git add packages/core/src/tir-enhanced.ts packages/core/src/types.ts packages/core/src/render/tir-bar.ts packages/core/tests/tir-enhanced.test.ts packages/core/tests/tir-bar.test.ts
+git commit -m "fix: classify glucose ranges without gaps"
+```
+
+---
+
+### Task 4: Finalize pre-1.0 statistics and option contracts
+
+**Files:**
+
+- Modify: `packages/tokens/src/index.ts`
+- Modify: `packages/tokens/tests/tokens.test.ts`
+- Modify: `packages/core/src/cohort.ts`
+- Modify: `packages/core/tests/cohort.test.ts`
+- Modify: `packages/core/src/types.ts`
+- Modify: `packages/core/src/metrics/episodes.ts`
+- Modify: `packages/core/src/metrics/gvi-pgs.ts`
+- Modify: `packages/core/src/score.ts`
+- Modify: `packages/core/src/analyze.ts`
+- Modify: `packages/react/src/hooks.ts`
+- Modify: affected core and React tests
+- Modify: `scripts/test-package-contracts.mjs`
+
+**Interfaces:**
+
+- `classifyGlucoseZone` remains mg/dL-only and throws `RangeError` for invalid input.
+- Even cohort medians average the middle pair; quartiles retain nearest-rank behavior.
+- Remove unit options that cannot override the unit carried by each `GlucoseReading`.
+
+- [ ] **Step 1: Add failing token and median tests**
+
+```ts
+for (const value of [NaN, Infinity, -Infinity, 0, -1]) {
+  expect(() => classifyGlucoseZone(value)).toThrow(RangeError)
+}
+
+const result = aggregateCohort([constantPatient(100), constantPatient(200)])
+expect(result.meanGlucose.median).toBe(150)
+expect(result.tir.median).toBe(50)
+```
+
+- [ ] **Step 2: Run the focused red tests**
+
+```sh
+pnpm --filter @glucoseiq/tokens exec vitest run tests/tokens.test.ts
+pnpm --filter @glucoseiq/core exec vitest run tests/cohort.test.ts
+```
+
+Expected: tokens classify invalid numbers and the cohort returns the lower middle value.
+
+- [ ] **Step 3: Implement the contracts**
+
+Add the token guard before threshold comparisons. Compute the cohort median separately from `p25` and `p75`:
+
+```ts
+const middle = Math.floor(v.length / 2)
+const median = v.length % 2 === 0 ? (v[middle - 1] + v[middle]) / 2 : v[middle]
+```
+
+- [ ] **Step 4: Remove inert pre-1.0 unit options**
+
+Remove these properties and their unused reads:
+
+- `EnhancedTIROptions.unit`
+- `EpisodeOptions.unit`
+- `GVIPGSOptions.unit`
+- `CohortOptions.unit` and the empty `aggregateCohort` options parameter
+- `GlucoseIQOptions.unit` and the empty `glucoseIQScore` options parameter
+- `AnalyzeGlucoseOptions.unit`
+
+Retain `PregnancyTIROptions.unit`. Update React hook types and call sites so TypeScript exposes the actual behavior. Do not remove runtime exports.
+
+Add a packed-package invariant that renders all five TIR zones through core and compares the emitted dark colors with `@glucoseiq/tokens`. This guards the deliberate zero-dependency duplication without adding a core runtime dependency or changing the palette.
+
+- [ ] **Step 5: Verify and commit**
+
+```sh
+pnpm --filter @glucoseiq/core exec vitest run tests/cohort.test.ts tests/episodes.test.ts tests/gvi-pgs.test.ts tests/score.test.ts tests/analyze.test.ts
+pnpm --filter @glucoseiq/tokens exec vitest run tests/tokens.test.ts
+pnpm --filter @glucoseiq/react exec vitest run tests/react.test.tsx
+pnpm test:packages
+git add packages/core packages/react/src/hooks.ts packages/react/tests packages/tokens scripts/test-package-contracts.mjs
+git commit -m "fix: finalize glucose metric contracts"
+```
+
+---
+
+### Task 5: Enforce one reading-validity policy across connectors and live surfaces
+
+**Files:**
+
+- Create: `packages/core/src/reading-policy.ts`
+- Modify: `packages/core/src/connectors/dexcom.ts`
+- Modify: `packages/core/src/connectors/libre.ts`
+- Modify: `packages/core/src/connectors/nightscout.ts`
+- Modify: `packages/core/src/connectors/safe.ts`
+- Modify: `packages/core/src/connectors/types.ts`
+- Modify: `packages/core/src/live.ts`
+- Modify: `packages/core/src/render/trend-tile.ts`
+- Modify: `packages/core/tests/connectors.test.ts`
+- Modify: `packages/core/tests/connectors-v2.test.ts`
+- Modify: `packages/core/tests/live.test.ts`
+- Modify: `packages/core/tests/trend-tile.test.ts`
+
+**Interfaces:**
+
+- Strict normalizers throw coded errors for malformed readings.
+- Safe normalizers retain valid siblings and report each rejected input by original index.
+- `NormalizeError` gains optional `code?: GlucoseIQErrorCode` while retaining `index` and `message`.
+- `latestReading` returns the newest fully usable reading or `null`.
+
+- [ ] **Step 1: Add connector regressions**
+
+For Dexcom, Libre, and Nightscout, add cases for `NaN`, both infinities, zero, negatives, normalized values over 600 mg/dL, invalid runtime units, and out-of-range timestamps. Assert `DomainError` with `INVALID_GLUCOSE_VALUE` or `INVALID_UNIT`, or `TimestampError` for timestamp failures.
+
+Add safe-normalizer input with valid entries on both sides of each malformed entry. Assert preserved order after chronological sorting, original failure index, message, and error code.
+
+- [ ] **Step 2: Add live and renderer regressions**
+
+Add tests proving:
+
+```ts
+expect(latestReading([validOlder, invalidNewer])).toBe(validOlder)
+expect(latestReading([invalidOnly])).toBeNull()
+expect(classifyGlucoseTrend(NaN)).toBe('unknown')
+expect(() => computeGlucoseTrend(readings, { windowMin: 0 })).toMatchCodedError('INVALID_OPTION')
+expect(() => minutesSinceLastReading(readings, 'bad')).toThrow(TimestampError)
+expect(trendTileToSVG([invalidOnly])).toContain('No data')
+expect(trendTileToSVG([invalidOnly])).not.toMatch(/NaN|Infinity/)
+```
+
+- [ ] **Step 3: Run the focused red suite**
+
+```sh
+pnpm --filter @glucoseiq/core exec vitest run tests/connectors.test.ts tests/connectors-v2.test.ts tests/live.test.ts tests/trend-tile.test.ts
+```
+
+Expected: malformed values escape strict normalizers, safe variants miss them, and live helpers select invalid readings.
+
+- [ ] **Step 4: Add the internal validity helper**
+
+Create `reading-policy.ts` with no public export from package entrypoints:
+
+```ts
+export const MAX_GLUCOSE_MGDL = 600
+
+export function toUsableMgDl(value: number, unit: unknown, label: string): number {
+  if (unit !== MG_DL && unit !== MMOL_L) {
+    throw new DomainError(`${label} has unsupported glucose unit: ${String(unit)}`, 'INVALID_UNIT')
+  }
+  const mgdl = unit === MG_DL ? value : value * MGDL_MMOLL_CONVERSION
+  if (!Number.isFinite(mgdl) || mgdl <= 0 || mgdl > MAX_GLUCOSE_MGDL) {
+    throw new DomainError(`${label} has invalid glucose value: ${String(value)}`, 'INVALID_GLUCOSE_VALUE')
+  }
+  return mgdl
+}
+
+export function parseUsableTimestamp(timestamp: string, label: string): number {
+  const value = Date.parse(timestamp)
+  if (!Number.isFinite(value)) throw new TimestampError(`${label} has invalid timestamp: ${timestamp}`)
+  return value
+}
+
+export function isUsableReading(reading: GlucoseReading): boolean {
+  try {
+    toUsableMgDl(reading.value, reading.unit, 'Reading')
+    parseUsableTimestamp(reading.timestamp, 'Reading')
+    return true
+  } catch {
+    return false
+  }
+}
+```
+
+Keep vendor-specific timestamp messages by validating inside each adapter before calling the shared value helper.
+
+- [ ] **Step 5: Apply the policy through the data path**
+
+Validate values in every strict normalizer after resolving the vendor unit. In `safeMap`, add `code` only when the caught value is a `GlucoseIQError`. Filter live trend input and latest-reading candidates with `isUsableReading`. Validate `windowMin` before filtering. Return `unknown` for non-finite rate input. Validate explicit `now` with `TimestampError`.
+
+- [ ] **Step 6: Verify and commit**
+
+```sh
+pnpm --filter @glucoseiq/core exec vitest run tests/connectors.test.ts tests/connectors-v2.test.ts tests/live.test.ts tests/trend-tile.test.ts
+git add packages/core/src/reading-policy.ts packages/core/src/connectors packages/core/src/live.ts packages/core/src/render/trend-tile.ts packages/core/tests
+git commit -m "fix: reject malformed glucose readings"
+```
+
+---
+
+### Task 6: Make CLI parsing and failure output deterministic
+
+**Files:**
+
+- Modify: `packages/cli/src/index.ts`
+- Modify: `packages/cli/tests/cli.test.ts`
+- Modify: `scripts/test-package-contracts.mjs`
+
+**Interfaces:**
+
+- Preserve `run(argv, io): number` and `CliIO`.
+- Accept only the documented command and flags.
+- Return `0` for success and `1` for input or operational failure.
+- Keep JSON stdout parseable when `--agp-svg` is also present.
+
+- [ ] **Step 1: Add failing CLI cases**
+
+Add table-driven tests for an unknown flag, every value-taking flag without a value, invalid unit, empty delimiter, multi-character delimiter, extra positional argument, invalid IANA timezone, and an unwritable SVG path. Assert no exception escapes `run`, exit code `1`, and one concise error line.
+
+Add a success case for `--json --agp-svg`:
+
+```ts
+const code = run(['report', csvPath, '--json', '--agp-svg', svgPath], io)
+expect(code).toBe(0)
+expect(() => JSON.parse(io.outLines.join('\n'))).not.toThrow()
+expect(existsSync(svgPath)).toBe(true)
+```
+
+- [ ] **Step 2: Run the CLI red test**
+
+```sh
+pnpm --filter @glucoseiq/cli exec vitest run tests/cli.test.ts
+```
+
+Expected: permissive parsing accepts invalid syntax and later operations can throw outside the current catch.
+
+- [ ] **Step 3: Replace the parser with `node:util`**
+
+Use `parseArgs` from `node:util` with `strict: true`, `allowPositionals: true`, and this closed option map:
+
+```ts
+const options = {
+  'timestamp-col': { type: 'string' },
+  'value-col': { type: 'string' },
+  unit: { type: 'string' },
+  delimiter: { type: 'string' },
+  timezone: { type: 'string' },
+  json: { type: 'boolean' },
+  'agp-svg': { type: 'string' },
+  help: { type: 'boolean' },
+} as const
+```
+
+Require exactly `report` and one file positional. Validate `unit` against `mg/dL` and `mmol/L`. Require one-character delimiter. Keep the default columns, delimiter, unit, and UTC behavior.
+
+- [ ] **Step 4: Enclose the operational path in one error boundary**
+
+Keep the existing friendly read-file message. Catch parsing, analysis, timezone, rendering, and write failures. Send errors to `io.err` and return `1`. Suppress the SVG success line when JSON output is active so stdout remains one JSON document.
+
+- [ ] **Step 5: Exercise packed CLI failures**
+
+In `scripts/test-package-contracts.mjs`, run the packed executable once with `--unit other` and once with `--unknown`. Assert nonzero status, concise stderr, and no stack trace.
+
+- [ ] **Step 6: Verify and commit**
+
+```sh
+pnpm --filter @glucoseiq/cli exec vitest run tests/cli.test.ts
+pnpm test:packages
+git add packages/cli/src/index.ts packages/cli/tests/cli.test.ts scripts/test-package-contracts.mjs
+git commit -m "fix: validate cli input and failures"
+```
+
+---
+
+### Task 7: Preserve the React client boundary in packed artifacts
+
+**Files:**
+
+- Modify: `packages/react/src/index.ts`
+- Modify: `packages/react/src/hooks.ts`
+- Modify: `packages/react/src/components.tsx`
+- Modify: `packages/react/tsup.config.ts`
+- Modify: `packages/react/tests/react.test.tsx`
+- Modify: `scripts/test-package-contracts.mjs`
+
+**Interfaces:**
+
+- The existing React root remains the only entrypoint and remains client-only.
+- Preserve every current React runtime and type export.
+- Keep React as peer dependency `>=18` and core as a runtime dependency.
+- Do not add a server subpath or package.
+
+- [ ] **Step 1: Add packed-output contract assertions**
+
+After packing `@glucoseiq/react`, read `dist/index.mjs` and `dist/index.js` and assert each begins with either `'use client'` or `"use client"`. Keep the existing ESM/CommonJS export parity and React 18/19 checks.
+
+- [ ] **Step 2: Run the red package contract**
+
+```sh
+pnpm --filter @glucoseiq/react build
+pnpm test:packages
+```
+
+Expected: both React runtime files lack the directive.
+
+- [ ] **Step 3: Preserve the directive through tsup**
+
+Place `'use client'` as the first statement in `packages/react/src/index.ts`. Add a tsup JavaScript banner for both output formats:
+
+```ts
+banner: {
+  js: "'use client';",
+},
+```
+
+Remove source comments claiming server-component friendliness. The docs task will direct server-only consumers to pure core APIs.
+
+- [ ] **Step 4: Verify and commit**
+
+```sh
+pnpm --filter @glucoseiq/react exec vitest run tests/react.test.tsx
+pnpm --filter @glucoseiq/react build
+pnpm test:packages
+git add packages/react scripts/test-package-contracts.mjs
+git commit -m "fix: preserve the react client boundary"
+```
+
+---
+
+### Task 8: Make API generation isolated, accurate, and drift-gated
+
+**Files:**
+
+- Create: `apps/docs/typedoc.api.json`
+- Create: `apps/docs/scripts/lib/api-renderer.mjs`
+- Create: `apps/docs/scripts/generate-api.test.mjs`
+- Create: `apps/docs/scripts/check-api.mjs`
+- Modify: `apps/docs/scripts/generate-api.mjs`
+- Modify: `apps/docs/package.json`
+- Modify: `packages/core/package.json`
+- Delete: `packages/core/typedoc.json`
+- Modify: `packages/core/src/conversions.ts`
+- Modify: `packages/core/src/interop/types.ts`
+- Modify: `packages/core/src/metrics/index.ts`
+- Modify: `packages/core/src/render/index.ts`
+- Create and regenerate: `apps/docs/content/docs/api/core/**`
+- Remove: superseded generated category pages directly under `apps/docs/content/docs/api/`
+- Modify: `apps/docs/content/docs/api/index.mdx`
+- Modify: `apps/docs/content/docs/api/meta.json`
+- Modify: `pnpm-lock.yaml`
+
+**Interfaces:**
+
+- TypeDoc runs with full type checking, no Markdown plugin, no warnings, and no writes outside an OS temporary directory plus the requested output directory.
+- The generated reference lives under `/docs/api/core` and identifies itself as the `@glucoseiq/core` API.
+- CI compares generated filenames and bytes within the managed `api/core` subtree. Hand-written package reference pages remain outside that subtree.
+
+- [ ] **Step 1: Add renderer unit tests before changing generation**
+
+Export pure helpers from `api-renderer.mjs` and use `node:test` fixtures to assert exact rendering for:
+
+- literal unions such as `'mg/dL' | 'mmol/L'`;
+- type predicates such as `value is GlucoseReading`;
+- `readonly` properties and readonly arrays;
+- tuples, indexed access, and type operators;
+- generic interfaces with defaults;
+- optional and rest parameters;
+- callable reflection types and nested object types;
+- overloads, remarks, deprecation text, examples, returns, throws, and labeled links.
+
+The expected fixture for a generic interface must include its type parameter:
+
+```md
+interface OMHDataPoint<T = unknown>
+```
+
+- [ ] **Step 2: Run the renderer red test**
+
+```sh
+node --test apps/docs/scripts/generate-api.test.mjs
+```
+
+Expected: the current generator has no importable renderer and cannot represent the listed types.
+
+- [ ] **Step 3: Create a dedicated TypeDoc configuration**
+
+Use:
+
+```json
+{
+  "entryPoints": ["../../packages/core/src/index.ts"],
+  "tsconfig": "../../packages/core/tsconfig.json",
+  "excludeInternal": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "plugin": [],
+  "treatWarningsAsErrors": true,
+  "treatValidationWarningsAsErrors": true
+}
+```
+
+Move `typedoc` to the docs app’s direct dev dependencies. Remove the core TypeDoc config, core `docs:api` script, and `typedoc-plugin-markdown` when `pnpm why typedoc-plugin-markdown` shows no remaining consumer.
+
+- [ ] **Step 4: Refactor generation into pure rendering plus a safe CLI**
+
+Use `spawnSync` with an argument array. Create the model and generated candidate tree under `mkdtempSync(join(tmpdir(), 'glucoseiq-api-'))`, clean it in `finally`, and never use `--skipErrorChecking`. Clear only the managed `apps/docs/content/docs/api/core` output directory before writing so deleted pages cannot linger and hand-written package pages remain intact.
+
+Implement each TypeDoc type node used by the public model. Preserve type parameters, `readonly`, overloads, remarks, defaults, source import paths, and TSDoc safety guidance. Render links as Markdown links with labels rather than bare URLs.
+
+Move generated core categories under `api/core`. Keep the top-level API index and metadata hand-written, with `core` as the first package entry. Update existing narrative links to the new core paths before removing the superseded category pages.
+
+- [ ] **Step 5: Remove all six TypeDoc warnings at their source**
+
+Remove unsupported `@file` tags from the two subpath index comments. Align the `convertGlucoseUnit` parameter documentation with its object parameter. Export or directly include `FHIRCodeableConcept` and `FHIRQuantity` so public FHIR types do not reference omitted declarations.
+
+- [ ] **Step 6: Add the byte-for-byte drift check**
+
+`check-api.mjs` must generate into a temporary directory, compare the sorted relative filename sets against `apps/docs/content/docs/api/core`, then compare each file buffer. Print each missing, extra, or changed file and exit nonzero on drift.
+
+Add scripts:
+
+```json
+"docs:api": "node scripts/generate-api.mjs",
+"docs:api:check": "node scripts/check-api.mjs",
+"test:api": "node --test scripts/generate-api.test.mjs"
+```
+
+- [ ] **Step 7: Generate, verify, and commit**
+
+```sh
+pnpm install
+pnpm --filter docs test:api
+pnpm --filter docs docs:api
+pnpm --filter docs docs:api:check
+pnpm --filter docs build
+test ! -e packages/core/docs-md
+git add apps/docs packages/core/package.json packages/core/src pnpm-lock.yaml
+git commit -m "docs: harden the generated api reference"
+```
+
+---
+
+### Task 9: Make package READMEs and public claims match runtime behavior
+
+**Files:**
+
+- Modify: `README.md`
+- Modify: `packages/core/README.md`
+- Modify: `packages/react/README.md`
+- Modify: `packages/tokens/README.md`
+- Modify: `packages/testing/README.md`
+- Modify: `packages/cli/README.md`
+- Modify: `packages/diabetic-utils/README.md`
+- Modify: `packages/react/package.json`
+- Modify: `packages/cli/package.json`
+- Modify: `packages/core/src/index.ts`
+- Modify: `packages/core/src/connectors/index.ts`
+- Modify: `packages/core/src/live.ts`
+- Modify: `packages/core/src/score.ts`
+- Modify: `packages/core/src/csv.ts`
+- Modify: `packages/core/src/metrics/agp-profile.ts`
+- Modify: `apps/docs/app/(home)/page.tsx`
+- Modify: `apps/docs/content/docs/index.mdx`
+- Modify: `apps/docs/content/docs/data-model.mdx`
+- Modify: `apps/docs/content/docs/data-quality.mdx`
+- Modify: `apps/docs/content/docs/metrics.mdx`
+- Modify: `apps/docs/content/docs/migration.mdx`
+- Modify: `apps/docs/content/docs/react.mdx`
+- Modify: `apps/docs/content/docs/cli.mdx`
+- Modify: `apps/docs/content/docs/tokens.mdx`
+- Create: `scripts/doc-snippet-contracts.test.mjs`
+- Create: `scripts/test-doc-snippets.mjs`
+- Modify: `package.json`
+
+**Interfaces:**
+
+- Reading-based APIs can normalize mixed units because each reading carries a unit.
+- Numeric-array APIs require one homogeneous unit and the matching unit option where available.
+- The score is a project-defined wellness heuristic derived from GRI, not a diagnostic or validated clinical score.
+- CSV accepts a header-row delimited file with explicitly mapped timestamp and value columns.
+
+- [ ] **Step 1: Add prose and snippet contract tests**
+
+Create `doc-snippet-contracts.test.mjs` to fail on these stale claims in tracked README, source, manifest, home-page, and narrative-doc files:
+
+```js
+const forbiddenClaims = [
+  /clinician-grade/i,
+  /clinical report/i,
+  /any CGM export/i,
+  /mixed freely/i,
+  /normalized correctly everywhere/i,
+  /headless\s+<[^>]+>\s+components/i,
+  /@glucoseiq\/forecast/,
+]
+```
+
+Exclude generated API pages from this prose scan. Add assertions that every published README contains `Node 24`, its package guide’s absolute URL, and no repository-relative links that will break in a tarball.
+
+- [ ] **Step 2: Mark and compile curated TypeScript examples**
+
+Mark standalone fences with `ts typecheck` in Getting Started, Data Model, Connectors, React, Tokens, Testing, and Interoperability. `test-doc-snippets.mjs` must extract only those fences to an OS temporary project and invoke the existing compiler with:
+
+```sh
+tsc --noEmit --strict --skipLibCheck false --target ES2022 --module ESNext --moduleResolution Bundler --jsx react-jsx
+```
+
+The temporary project must install no packages. Resolve workspace packages through paths to their built declarations. Do not add ambient `any` shims.
+
+Add the root script:
+
+```json
+"test:docs": "node --test scripts/doc-snippet-contracts.test.mjs && node scripts/test-doc-snippets.mjs"
+```
+
+- [ ] **Step 3: Run the red documentation tests**
+
+```sh
+node --test scripts/doc-snippet-contracts.test.mjs
+pnpm build
+node scripts/test-doc-snippets.mjs
+```
+
+Expected: stale claims and nullable flagship examples fail.
+
+- [ ] **Step 4: Correct the public contracts**
+
+Use these terms across source and documentation:
+
+- `CGM analytics summary` instead of clinical or clinician-grade report;
+- `optional SVG renderers` for React and core renderer components;
+- `header-row delimited data with mapped timestamp and value columns` instead of any vendor export;
+- `mixed-unit safe for GlucoseReading APIs` and `homogeneous numeric series` for number-array APIs;
+- `project-defined, non-diagnostic wellness heuristic derived from GRI` for the score.
+
+Remove the legacy core banner, stale version text, old analytics name, and nonexistent forecasting package reference. Replace the broken AGP citation with a stable primary-source or DOI URL.
+
+- [ ] **Step 5: Give each npm README a complete first-use contract**
+
+Each README must contain installation, Node `>=24`, a typed minimal example, valid options, invalid-input behavior, safety limits, absolute documentation and migration links, license, and changelog link. Add these package-specific details:
+
+- React: client-only root, stable option object identity, React `>=18`, core for server use.
+- Tokens: mg/dL-only classifier and its `RangeError` behavior.
+- Testing: synthetic data warning, all generator options, 100,000-reading cap.
+- CLI: exact flags, units, delimiter rule, exit codes, JSON/SVG interaction, mapped CSV columns.
+- Compatibility bridge: `legacy` tag guidance and direct scoped-package migration.
+
+- [ ] **Step 6: Fix strict examples and run green checks**
+
+Narrow nullable report sections before dereference:
+
+```ts
+const report = analyzeGlucose(readings)
+if (!report.valid || !report.timeInRange || !report.risk || !report.episodes || !report.agpProfile) {
+  throw new Error('The input did not contain enough valid CGM data')
+}
+```
+
+Hoist React option objects outside components or memoize them. Keep the visual layout unchanged.
+
+Run:
+
+```sh
+pnpm test:docs
+pnpm --filter docs build
+pnpm test:packages
+```
+
+- [ ] **Step 7: Commit the task**
+
+```sh
+git add README.md packages apps/docs package.json scripts/doc-snippet-contracts.test.mjs scripts/test-doc-snippets.mjs
+git commit -m "docs: clarify package and safety contracts"
+```
+
+---
+
+### Task 10: Finish documentation architecture, metadata, and accessibility semantics
+
+**Files:**
+
+- Create: `apps/docs/content/docs/packages.mdx`
+- Create: `apps/docs/content/docs/safety.mdx`
+- Create: `apps/docs/content/docs/runtime-support.mdx`
+- Create: `apps/docs/content/docs/deployment.mdx`
+- Create: `apps/docs/content/docs/integration-testing.mdx`
+- Create: `apps/docs/content/docs/api/react.mdx`
+- Create: `apps/docs/content/docs/api/tokens.mdx`
+- Create: `apps/docs/content/docs/api/testing.mdx`
+- Create: `apps/docs/content/docs/api/cli.mdx`
+- Create: `docs/LAUNCH_RUNBOOK.md`
+- Create: `apps/docs/app/robots.ts`
+- Create: `apps/docs/app/sitemap.ts`
+- Create: `apps/docs/scripts/site-contracts.test.mjs`
+- Modify: `apps/docs/content/docs/meta.json`
+- Modify: `apps/docs/content/docs/api/meta.json`
+- Modify: `apps/docs/content/docs/api/index.mdx`
+- Modify: `apps/docs/app/layout.tsx`
+- Modify: `apps/docs/app/(home)/layout.tsx`
+- Modify: `apps/docs/app/(home)/page.tsx`
+- Modify: `apps/docs/app/docs/[[...slug]]/page.tsx`
+- Modify: `apps/docs/content/docs/live.mdx`
+- Modify: `apps/docs/content/docs/react.mdx`
+
+**Interfaces:**
+
+- The canonical production origin is `https://glucoseiq.health`.
+- Preview deployments use `noindex` and do not replace production canonicals.
+- The sitemap contains `/` plus every Fumadocs page returned by `source.getPages()`.
+- No visual redesign or palette change is allowed.
+
+- [ ] **Step 1: Add route and metadata tests**
+
+Create a Node test in `apps/docs/scripts/site-contracts.test.mjs` that imports or inspects the route builders and asserts:
+
+- the production root canonical is `/` on the apex origin;
+- `/docs/react` canonicalizes to its own path;
+- preview robots disallow indexing;
+- production robots allow indexing and point to `/sitemap.xml`;
+- sitemap URLs are unique and use HTTPS on the apex origin;
+- every slug in both metadata JSON files resolves to a tracked MDX file.
+
+- [ ] **Step 2: Run the red site contract**
+
+```sh
+node --test apps/docs/scripts/site-contracts.test.mjs
+```
+
+Expected: metadata routes and the new documentation pages do not exist.
+
+- [ ] **Step 3: Add the missing documentation routes**
+
+Write consumer-facing pages for package selection, safety and limitations, runtime support, integration testing, and deployment. Add package references for React exports and props, token exports, testing options/scenarios, and CLI flags, output schema, and exit codes.
+
+Write `docs/LAUNCH_RUNBOOK.md` with checked-command and unchecked-human sections covering Vercel, registrar activation, apex and `www`, npm bootstrap, trusted publishers, Pages shutdown, repository metadata, registry verification, local-folder rename, and partial-publication recovery. Recovery must inventory published versions, retry missing packages, never unpublish a successful package, and use a corrective patch for a bad artifact.
+
+- [ ] **Step 4: Add canonical and discovery metadata**
+
+Set `metadataBase` to the apex origin. Add home Open Graph and Twitter metadata in the home layout. Return page-specific `alternates.canonical`, Open Graph URL, title, and description from the docs page’s `generateMetadata`.
+
+Create `robots.ts` using `process.env.VERCEL_ENV === 'production'` to choose allow or disallow rules. Create `sitemap.ts` from `source.getPages()` plus `/`. Omit `lastModified` unless a stable source date exists so repeated builds remain deterministic.
+
+- [ ] **Step 5: Improve semantics without changing appearance**
+
+Give the package table a caption, `<thead>`, and `<th scope="col">` cells. Add visually hidden trend text beside glyph-only examples. Document an adjacent textual-summary pattern for SVG charts and improve renderer `aria-label` text with data summaries.
+
+- [ ] **Step 6: Verify and commit**
+
+```sh
+node --test apps/docs/scripts/site-contracts.test.mjs
+pnpm --filter docs build
+git diff --check
+git add apps/docs docs/LAUNCH_RUNBOOK.md
+git commit -m "docs: complete the launch information architecture"
+```
+
+---
+
+### Task 11: Add explicit lint, typecheck, and reachable-core size gates
+
+**Files:**
+
+- Create: `eslint.config.mjs`
+- Create: `scripts/measure-core-bundle.mjs`
+- Create: `scripts/measure-core-bundle.test.mjs`
+- Modify: `package.json`
+- Modify: `turbo.json`
+- Modify: every workspace `package.json`
+- Modify: `pnpm-lock.yaml`
+- Modify: `.github/workflows/ci.yml`
+
+**Interfaces:**
+
+- `pnpm lint`, `pnpm typecheck`, and `pnpm test:size` become required local and CI gates.
+- The core size gate measures every reachable production ESM chunk exactly once and enforces 20,000 gzip bytes.
+- Lint dependencies remain development-only.
+
+- [ ] **Step 1: Add size-graph tests before the implementation**
+
+Create temporary fixture modules with shared imports and a cycle. Assert the graph walker includes each reachable `.mjs` file once, excludes maps and declarations, rejects imports that escape the selected dist root, and fails when the injected budget is one byte below the measured gzip size.
+
+- [ ] **Step 2: Run the size red test**
+
+```sh
+node --test scripts/measure-core-bundle.test.mjs
+```
+
+Expected: the measurement module does not exist.
+
+- [ ] **Step 3: Implement reachable-graph measurement**
+
+Start at `packages/core/dist/index.mjs`. Parse relative static import and export specifiers, resolve them inside `packages/core/dist`, traverse with a `Set`, sort the final paths, concatenate each file buffer once with a newline, and pass the result to `gzipSync`. Print the relative file inventory and byte count. Exit nonzero above `20_000`.
+
+Add:
+
+```json
+"test:size": "node scripts/measure-core-bundle.mjs",
+"typecheck": "turbo run typecheck",
+"lint": "eslint . --max-warnings 0"
+```
+
+- [ ] **Step 4: Add workspace typecheck tasks**
+
+Add `"typecheck": "tsc --noEmit"` to all seven workspaces and a cached `typecheck` task to `turbo.json` that depends on dependency typechecks. Update direct `@types/node` ranges to `^24.13.3` where Node types are used.
+
+- [ ] **Step 5: Add the pinned lint stack**
+
+Install these root development dependencies:
+
+```sh
+pnpm add -Dw eslint@10.7.0 @eslint/js@10.0.1 typescript-eslint@8.63.0 eslint-plugin-react-hooks@7.1.1 globals@17.7.0
+```
+
+Create a flat config for JavaScript, TypeScript, and TSX. Ignore build output, coverage, `.next`, generated Fumadocs source, legacy generated `docs/`, and temporary directories. Enable ESLint recommended, TypeScript recommended, and React Hooks recommended rules. Disable style-only rules and allow explicit `any` only in malformed-input test fixtures.
+
+- [ ] **Step 6: Put the gates in CI**
+
+Run `pnpm typecheck`, `pnpm lint`, API drift, documentation snippets, and `pnpm test:size` in `.github/workflows/ci.yml`. Replace the shell gzip check with `pnpm test:size`. Set checkout `persist-credentials: false`. Limit the `push` trigger to `main`; feature branches receive the pull-request check and no duplicate push run.
+
+- [ ] **Step 7: Verify and commit**
+
+```sh
+pnpm install
+pnpm build
+pnpm typecheck
+pnpm lint
+pnpm test:size
+node --test scripts/measure-core-bundle.test.mjs
+git add eslint.config.mjs scripts/measure-core-bundle.mjs scripts/measure-core-bundle.test.mjs package.json turbo.json packages/*/package.json apps/docs/package.json pnpm-lock.yaml .github/workflows/ci.yml
+git commit -m "ci: enforce types lint and bundle size"
+```
+
+---
+
+### Task 12: Harden release permissions, human gates, and registry verification
+
+**Files:**
+
+- Modify: `.github/workflows/release.yml`
+- Modify: `.github/release-pr-body.md`
+- Modify: `.changeset/README.md`
+- Modify: `.changeset/launch-glucoseiq-one.md`
+- Create: `scripts/test-changeset-policy.mjs`
+- Create: `scripts/test-changeset-policy.test.mjs`
+- Create: `scripts/release-preflight.mjs`
+- Create: `scripts/release-preflight.test.mjs`
+- Create: `scripts/verify-published-packages.mjs`
+- Create: `scripts/verify-published-packages.test.mjs`
+- Modify: `scripts/release-metadata.test.mjs`
+- Modify: `scripts/test-package-contracts.mjs`
+- Modify: all six published package manifests
+- Modify: `package.json`
+
+**Interfaces:**
+
+- A read-only quality job must succeed in the same release workflow before versioning or publication.
+- Generated release pull requests stay draft.
+- Publication requires the live domain preflight.
+- Post-publication verification runs only when the publish action reports `published == 'true'`.
+- Each source manifest allows `CHANGELOG.md`; the versioned release-candidate and registry checks require the generated changelog in every tarball.
+
+- [ ] **Step 1: Add failing workflow and script contracts**
+
+Expand `release-metadata.test.mjs` to require separate `quality`, `version`, and `publish` jobs, job-level permissions, `persist-credentials: false`, a draft release pull request, exact check publication for the release-candidate head, domain preflight, the `published` output condition, and every heading in the human checklist.
+
+Add unit tests for changeset policy, domain responses, registry polling, manifest validation, tags, provenance metadata, and partial publication. Inject command execution and fetch functions so tests never contact GitHub, npm, or the production domain.
+
+- [ ] **Step 2: Run the release red tests**
+
+```sh
+node scripts/release-metadata.test.mjs
+node --test scripts/test-changeset-policy.test.mjs scripts/release-preflight.test.mjs scripts/verify-published-packages.test.mjs
+```
+
+Expected: the current single-job workflow, permissive checklist, and missing scripts fail.
+
+- [ ] **Step 3: Enforce Changeset policy**
+
+Compare the pull request diff against `origin/main`. Require a non-README Changeset when release-affecting files under the six public packages change. Exempt `release/glucoseiq-packages` and documentation-only changes. Print each release-affecting path when the check fails.
+
+- [ ] **Step 4: Split release permissions and candidate verification**
+
+Create:
+
+- `quality`: `contents: read`, no persisted credentials, full build and quality suite;
+- `version`: after quality, `contents: write`, `pull-requests: write`, `checks: write`, no OIDC;
+- `publish`: after quality, `contents: write`, `id-token: write`, no pull-request permission.
+
+Use Node 24 and pnpm 11.12.0 in all three jobs. Pin npm 11.17.0 in the publish job. Keep every action SHA-pinned and keep public npm provenance enabled.
+
+The version job must create or update `release/glucoseiq-packages` as a draft, check out the returned head SHA, run the full candidate suite against versioned manifests, and create a `Build & test (Node 24)` check run on that exact SHA with a link to the workflow run and its real conclusion. Remove the detached manual workflow dispatch.
+
+- [ ] **Step 5: Add the live-domain preflight**
+
+Before publish, require:
+
+- apex HTTPS status 200;
+- apex canonical markup pointing to itself;
+- `/robots.txt` and `/sitemap.xml` status 200;
+- `www` status 301 or 308 with apex `Location`;
+- bounded attempts and per-request timeouts with actionable errors.
+
+Keep the command injectable for unit tests. Do not run this preflight locally while the domain remains inactive.
+
+- [ ] **Step 6: Complete release and package verification**
+
+Add `CHANGELOG.md` to each published manifest’s `files` array and assert the allowlist entry on the unversioned launch branch. Do not hand-create changelogs before Changesets versions the packages. The release-candidate job must assert that Changesets created each changelog and that each versioned tarball contains it. Refactor the packed consumer matrix so it can run against local tarballs, a versioned candidate checkout, or exact registry versions.
+
+After a real publication, verify all six versions, `latest` and `legacy` dist-tags, internal dependency ranges, tarball contents, integrity, signatures, provenance or attestation metadata, Git tags, GitHub releases, every ESM/CommonJS entrypoint, NodeNext and Bundler declarations, React 18/19, CLI execution, and all 107 compatibility exports.
+
+Run the legacy-tag and registry verification steps only when:
+
+```yaml
+if: steps.changesets.outputs.published == 'true'
+```
+
+- [ ] **Step 7: Expand the human release gate and release notes**
+
+Use unchecked boxes for domain registration, Vercel production, apex and `www`, search/routes/robots/sitemap, package versions and changelogs, packed manifests, temporary one-day npm credential, metadata scan, final approval, trusted-publisher migration, and credential removal. Expand the launch Changeset with package-specific 1.0 capabilities and the compatibility bridge behavior.
+
+- [ ] **Step 8: Verify and commit**
+
+```sh
+node scripts/release-metadata.test.mjs
+node --test scripts/test-changeset-policy.test.mjs scripts/release-preflight.test.mjs scripts/verify-published-packages.test.mjs
+pnpm test:launch
+pnpm test:packages
+git add .github .changeset scripts package.json packages/*/package.json
+git commit -m "ci: harden release and registry verification"
+```
+
+---
+
+### Task 13: Run the completion audit and independent branch review
+
+**Files:**
+
+- Review: every file changed from `b69ea3bb11a6490bd736f7666a047e8d64d96820`
+- Update only when verification or review identifies a concrete defect.
+
+**Acceptance evidence:**
+
+- Every explicit requirement in the design maps to a passing command or inspected artifact.
+- The tracked worktree and index finish clean after commits.
+- The branch remains local and unmerged unless the owner later requests publication workflow actions.
+
+- [ ] **Step 1: Install and build under Node 24 without cache evidence**
+
+Use an installed Node 24 runtime. Clear only generated outputs inside the isolated worktree, keep the durable progress ledger, and run:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm turbo run build --force
+```
+
+- [ ] **Step 2: Run every local quality gate**
+
+```sh
+pnpm typecheck
+pnpm lint
+pnpm test:errors
+pnpm test:launch
+pnpm test:coverage
+pnpm test:size
+node --test scripts/measure-core-bundle.test.mjs
+pnpm test:packages
+node --test scripts/doc-snippet-contracts.test.mjs
+node scripts/test-doc-snippets.mjs
+pnpm --filter docs test:api
+pnpm --filter docs docs:api:check
+node --test apps/docs/scripts/site-contracts.test.mjs
+pnpm --filter docs build
+node scripts/release-metadata.test.mjs
+node --test scripts/test-changeset-policy.test.mjs scripts/release-preflight.test.mjs scripts/verify-published-packages.test.mjs
+git diff --check
+```
+
+- [ ] **Step 3: Audit public contracts**
+
+Confirm exact release predictions, six packed manifests, ten entrypoints, correct declaration routes, React peer installs, CLI success and failure paths, 107 compatibility exports, changelog inclusion, no `workspace:` ranges in tarballs, and no source-map local paths.
+
+Scan tracked files, the complete branch commit subjects and bodies, and the prepared pull-request text for prohibited attribution, generated-by trailers, task links, and tool-focused names. Do not place the prohibited terms in a tracked scanner or configuration file.
+
+- [ ] **Step 4: Review the complete branch**
+
+Generate one review package for the full merge-base range. A fresh reviewer must return both a specification-compliance verdict and a code-quality verdict. Fix every Critical and Important finding in one follow-up batch, rerun covering tests, and request one re-review.
+
+- [ ] **Step 5: Confirm the final state without merging**
+
+```sh
+git status --short --branch
+git log --format='%h %s%n%b' b69ea3bb11a6490bd736f7666a047e8d64d96820..HEAD
+```
+
+Expected: the hardening branch contains only reviewed project-focused commits, the tracked worktree is clean, the release pull request remains draft, and no merge or publication has occurred.
