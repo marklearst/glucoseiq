@@ -121,6 +121,47 @@ describe('alignToGrid', () => {
     expect(alignToGrid([at(0, 100), at(99_999, 120)], { intervalMin: 1 })).toHaveLength(2)
   })
 
+  it.each([
+    {
+      boundary: 'upper',
+      timestamps: ['+275760-09-12T23:59:00.000Z', '+275760-09-13T00:00:00.000Z'],
+    },
+    {
+      boundary: 'lower',
+      timestamps: ['-271821-04-20T00:00:00.000Z', '-271821-04-20T00:01:00.000Z'],
+    },
+  ])('rejects grid rounding beyond the $boundary date boundary', ({ timestamps }) => {
+    const readings = timestamps.map((timestamp, index) => ({
+      value: 100 + index * 10,
+      unit: 'mg/dL' as const,
+      timestamp,
+    }))
+    expectInvalidOption(
+      () => alignToGrid(readings, { intervalMin: 11 }),
+      'alignToGrid grid timestamps must be valid dates'
+    )
+  })
+
+  it.each([
+    {
+      boundary: 'upper',
+      timestamps: ['+275760-09-12T23:59:00.000Z', '+275760-09-13T00:00:00.000Z'],
+    },
+    {
+      boundary: 'lower',
+      timestamps: ['-271821-04-20T00:00:00.000Z', '-271821-04-20T00:01:00.000Z'],
+    },
+  ])('preserves representable slots at the $boundary date boundary', ({ timestamps }) => {
+    const readings = timestamps.map((timestamp, index) => ({
+      value: 100 + index * 10,
+      unit: 'mg/dL' as const,
+      timestamp,
+    }))
+    expect(alignToGrid(readings, { intervalMin: 1 }).map((point) => point.timestamp)).toEqual(
+      timestamps
+    )
+  })
+
   it('rejects grids larger than 100,000 points', () => {
     expectInvalidOption(
       () => alignToGrid([at(0, 100), at(100_000, 120)], { intervalMin: 1 }),
