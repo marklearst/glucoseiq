@@ -12,6 +12,19 @@
 
 import type { GlucoseReading, GlucoseUnit } from './types'
 import { MG_DL, MGDL_MMOLL_CONVERSION } from './constants'
+import { DomainError } from './errors'
+
+const MAX_GRID_POINTS = 100_000
+
+function assertFiniteOption(name: string, value: number, allowZero = false): void {
+  const valid = Number.isFinite(value) && (allowZero ? value >= 0 : value > 0)
+  if (!valid) {
+    throw new DomainError(
+      `${name} must be ${allowZero ? 'non-negative' : 'positive'} and finite`,
+      'INVALID_OPTION'
+    )
+  }
+}
 
 /** A resampled grid point. */
 export interface GridPoint {
@@ -56,6 +69,9 @@ export function alignToGrid(
   const maxGap = options?.maxInterpolateGapMin ?? 15
   const unit = options?.unit ?? MG_DL
 
+  assertFiniteOption('intervalMin', intervalMin)
+  assertFiniteOption('maxInterpolateGapMin', maxGap, true)
+
   const points: { t: number; v: number }[] = []
   for (const r of readings) {
     const mgdl = r.unit === MG_DL ? r.value : r.value * MGDL_MMOLL_CONVERSION
@@ -71,12 +87,20 @@ export function alignToGrid(
   const intervalMs = intervalMin * 60000
   const startSlot = Math.round((points[0].t * 60000) / intervalMs) * intervalMs
   const endSlot = Math.round((points[points.length - 1].t * 60000) / intervalMs) * intervalMs
+  const slotCount = Math.floor((endSlot - startSlot) / intervalMs) + 1
+  if (!Number.isSafeInteger(slotCount) || slotCount > MAX_GRID_POINTS) {
+    throw new DomainError(
+      `alignToGrid would create more than ${MAX_GRID_POINTS} grid points`,
+      'INVALID_OPTION'
+    )
+  }
 
   const grid: GridPoint[] = []
   const tolerance = intervalMin / 2
   let cursor = 0 // index of the last point at-or-before the slot
 
-  for (let slotMs = startSlot; slotMs <= endSlot; slotMs += intervalMs) {
+  for (let index = 0; index < slotCount; index++) {
+    const slotMs = startSlot + index * intervalMs
     const slotMin = slotMs / 60000
     while (cursor + 1 < points.length && points[cursor + 1].t <= slotMin) cursor++
 

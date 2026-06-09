@@ -11,6 +11,8 @@ import type { GlucoseReading, GlucoseUnit } from '@glucoseiq/core'
 /** mg/dL per mmol/L (matches @glucoseiq/core). */
 const MGDL_PER_MMOLL = 18.0182
 
+const MAX_GENERATED_READINGS = 100_000
+
 /** Options for {@link generateCGMSeries}. */
 export interface GenerateOptions {
   /** Number of days to generate (default 1). */
@@ -62,16 +64,74 @@ export function generateCGMSeries(options?: GenerateOptions): GlucoseReading[] {
   const days = options?.days ?? 1
   const intervalMin = options?.intervalMin ?? 5
   const seed = options?.seed ?? 42
-  const startMs = Date.parse(options?.start ?? '2024-01-01T00:00:00Z')
+  const start = options?.start ?? '2024-01-01T00:00:00Z'
+  const startMs = typeof start === 'string' ? Date.parse(start) : NaN
   const basal = options?.basal ?? 110
   const mealTimes = options?.mealTimes ?? [420, 780, 1140]
   const mealAmplitude = options?.mealAmplitude ?? 70
   const noise = options?.noise ?? 8
-  const hypoDays = new Set(options?.nocturnalHypoDays ?? [])
+  const nocturnalHypoDays = options?.nocturnalHypoDays ?? []
   const unit = options?.unit ?? 'mg/dL'
 
-  const rand = mulberry32(seed)
+  if (!Number.isInteger(days) || days <= 0) {
+    throw new RangeError('days must be a positive integer')
+  }
+  if (!Number.isFinite(intervalMin) || intervalMin <= 0 || intervalMin > 1440) {
+    throw new RangeError('intervalMin must be finite, positive, and no greater than 1440')
+  }
+  if (!Number.isSafeInteger(seed)) {
+    throw new RangeError('seed must be a safe integer')
+  }
+  if (!Number.isFinite(startMs)) {
+    throw new RangeError('start must be a valid timestamp')
+  }
+  if (!Number.isFinite(basal) || basal <= 0) {
+    throw new RangeError('basal must be positive and finite')
+  }
+  if (
+    !Array.isArray(mealTimes) ||
+    !mealTimes.every(
+      (mealTime) =>
+        Number.isFinite(mealTime) && mealTime >= 0 && mealTime <= 1439
+    )
+  ) {
+    throw new RangeError('mealTimes entries must be finite and between 0 and 1439')
+  }
+  if (!Number.isFinite(mealAmplitude) || mealAmplitude < 0) {
+    throw new RangeError('mealAmplitude must be non-negative and finite')
+  }
+  if (!Number.isFinite(noise) || noise < 0) {
+    throw new RangeError('noise must be non-negative and finite')
+  }
+  if (
+    !Array.isArray(nocturnalHypoDays) ||
+    !nocturnalHypoDays.every((day) => Number.isInteger(day) && day >= 0)
+  ) {
+    throw new RangeError('nocturnalHypoDays entries must be non-negative integers')
+  }
+  if (unit !== 'mg/dL' && unit !== 'mmol/L') {
+    throw new RangeError('unit must be mg/dL or mmol/L')
+  }
+
   const perDay = Math.floor(1440 / intervalMin)
+  const totalReadings = days * perDay
+  if (
+    !Number.isSafeInteger(totalReadings) ||
+    totalReadings <= 0 ||
+    totalReadings > MAX_GENERATED_READINGS
+  ) {
+    throw new RangeError(
+      `generateCGMSeries cannot create more than ${MAX_GENERATED_READINGS} readings`
+    )
+  }
+  const lastMinute = (days - 1) * 1440 + (perDay - 1) * intervalMin
+  const lastTimestampMs = startMs + lastMinute * 60000
+  if (!Number.isFinite(lastTimestampMs) || Number.isNaN(new Date(lastTimestampMs).getTime())) {
+    throw new RangeError('start must be a valid timestamp')
+  }
+
+  const hypoDays = new Set(nocturnalHypoDays)
+  const rand = mulberry32(seed)
   const readings: GlucoseReading[] = []
 
   for (let d = 0; d < days; d++) {
