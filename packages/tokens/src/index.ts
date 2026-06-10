@@ -33,6 +33,9 @@ export const ZONE_THRESHOLDS_MGDL = {
  * Classifies a glucose value (mg/dL) into its consensus zone.
  */
 export function classifyGlucoseZone(mgdl: number): GlucoseZone {
+  if (!Number.isFinite(mgdl) || mgdl <= 0) {
+    throw new RangeError('Glucose value must be positive and finite')
+  }
   if (mgdl < ZONE_THRESHOLDS_MGDL.veryLowMax) return 'veryLow'
   if (mgdl < ZONE_THRESHOLDS_MGDL.lowMax) return 'low'
   if (mgdl <= ZONE_THRESHOLDS_MGDL.inRangeMax) return 'inRange'

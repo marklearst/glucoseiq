@@ -21,6 +21,13 @@ describe('classifyGlucoseZone', () => {
     expect(classifyGlucoseZone(250)).toBe('high')
     expect(classifyGlucoseZone(250.1)).toBe('veryHigh')
   })
+
+  it.each([NaN, Infinity, -Infinity, 0, -1])(
+    'rejects the invalid glucose value %s',
+    (value) => {
+      expect(() => classifyGlucoseZone(value)).toThrow(RangeError)
+    }
+  )
 })
 
 describe('palette', () => {

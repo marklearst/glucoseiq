@@ -7,7 +7,7 @@
  * workflows that no single-series metric can provide.
  */
 
-import type { GlucoseReading, GlucoseUnit } from './types'
+import type { GlucoseReading } from './types'
 import { MG_DL, MGDL_MMOLL_CONVERSION } from './constants'
 import { calculateEnhancedTIR } from './tir-enhanced'
 import { glucoseCoefficientOfVariation } from './variability'
@@ -21,12 +21,6 @@ export interface DistributionStats {
   readonly max: number
   readonly p25: number
   readonly p75: number
-}
-
-/** Options for {@link aggregateCohort}. */
-export interface CohortOptions {
-  /** Unit for TIR validation (default 'mg/dL'). */
-  readonly unit?: GlucoseUnit
 }
 
 /** Result of {@link aggregateCohort}. */
@@ -54,9 +48,12 @@ function distribution(values: number[]): DistributionStats {
   }
   const mean = v.reduce((s, x) => s + x, 0) / v.length
   const pct = (p: number): number => v[Math.ceil((p / 100) * v.length) - 1]
+  const middle = Math.floor(v.length / 2)
+  const median =
+    v.length % 2 === 0 ? (v[middle - 1] + v[middle]) / 2 : v[middle]
   return {
     mean: round1(mean),
-    median: round1(pct(50)),
+    median: round1(median),
     min: round1(v[0]),
     max: round1(v[v.length - 1]),
     p25: round1(pct(25)),
@@ -68,7 +65,6 @@ function distribution(values: number[]): DistributionStats {
  * Aggregates per-patient glucose metrics across a cohort.
  *
  * @param patients - One reading array per patient
- * @param options - Unit for TIR validation
  * @returns Distributions of TIR, GMI, CV, and mean glucose across the cohort
  *
  * @example
@@ -80,10 +76,7 @@ function distribution(values: number[]): DistributionStats {
  * @category Cohort
  * @public
  */
-export function aggregateCohort(
-  patients: GlucoseReading[][],
-  options?: CohortOptions
-): CohortResult {
+export function aggregateCohort(patients: GlucoseReading[][]): CohortResult {
   const tirs: number[] = []
   const gmis: number[] = []
   const cvs: number[] = []
@@ -106,7 +99,7 @@ export function aggregateCohort(
     means.push(mean)
     gmis.push(estimateGMI(mean, MG_DL))
     cvs.push(glucoseCoefficientOfVariation(mgdl))
-    tirs.push(calculateEnhancedTIR(clean, { unit: options?.unit }).inRange.percentage)
+    tirs.push(calculateEnhancedTIR(clean).inRange.percentage)
   }
 
   return {

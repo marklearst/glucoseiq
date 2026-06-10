@@ -17,7 +17,7 @@
  * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
  */
 
-import type { GlucoseReading, GlucoseUnit } from '../types'
+import type { GlucoseReading } from '../types'
 import { MG_DL, MGDL_MMOLL_CONVERSION } from '../constants'
 
 /** A detected glucose episode. */
@@ -42,8 +42,6 @@ export interface GlucoseEpisode {
 
 /** Options for {@link detectEpisodes}. Thresholds are in mg/dL. */
 export interface EpisodeOptions {
-  /** Unit of input readings (default 'mg/dL'); mmol/L is converted to mg/dL. */
-  readonly unit?: GlucoseUnit
   /** Hypoglycemia threshold (default 70). */
   readonly hypoThreshold?: number
   /** Level 2 hypoglycemia threshold (default 54). */

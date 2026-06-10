@@ -68,7 +68,7 @@ describe('calculateGVIPGS (Nightscout GVI + PGS)', () => {
       unit: 'mmol/L' as const,
       timestamp: r.timestamp,
     }))
-    expect(calculateGVIPGS(mmol, { unit: 'mmol/L' }).gvi).toBeCloseTo(1.19, 1)
+    expect(calculateGVIPGS(mmol).gvi).toBeCloseTo(1.19, 1)
   })
 
   it('honors custom target range and max gap options', () => {

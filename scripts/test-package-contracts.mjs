@@ -147,6 +147,32 @@ try {
       gmi: module.estimateGMI(154, module.MG_DL),
     }));
   `
+  const tirPaletteCode = `
+    import { tirBarToSVG } from '@glucoseiq/core/render';
+    import { GLUCOSE_ZONES, ZONE_PALETTE } from '@glucoseiq/tokens';
+
+    const values = {
+      veryLow: 40,
+      low: 60,
+      inRange: 100,
+      high: 200,
+      veryHigh: 300,
+    };
+    const actual = Object.fromEntries(GLUCOSE_ZONES.map((zone) => {
+      const svg = tirBarToSVG([{
+        value: values[zone],
+        unit: 'mg/dL',
+        timestamp: '2024-01-01T00:00:00.000Z',
+      }], { theme: 'dark' });
+      const visibleSegments = [...svg.matchAll(/<rect x="16"[^>]*height="([0-9.]+)"[^>]*fill="(#[0-9a-f]{6})"/g)]
+        .filter((match) => Number(match[1]) > 0);
+      if (visibleSegments.length !== 1) {
+        throw new Error(\`Expected one visible TIR segment for \${zone}, received \${visibleSegments.length}\`);
+      }
+      return [zone, visibleSegments[0][2]];
+    }));
+    console.log(JSON.stringify({ actual, expected: ZONE_PALETTE.dark }));
+  `
   const esmSource = `
     import * as core from '@glucoseiq/core'
     import * as metrics from '@glucoseiq/core/metrics'
@@ -160,7 +186,30 @@ try {
     import * as compatibility from 'diabetic-utils'
     import type { GlucoseUnit } from '@glucoseiq/core'
     const unit: GlucoseUnit = 'mg/dL'
-    void [core, metrics, connectors, interop, render, reactAdapter, tokens, testing, cli, compatibility, unit]
+    const readings: core.GlucoseReading[] = []
+    const patients: core.GlucoseReading[][] = []
+    core.calculatePregnancyTIR(readings, { unit: 'mmol/L' })
+    // @ts-expect-error Each reading already carries its unit.
+    core.calculateEnhancedTIR(readings, { unit: 'mg/dL' })
+    // @ts-expect-error Each reading already carries its unit.
+    metrics.detectEpisodes(readings, { unit: 'mg/dL' })
+    // @ts-expect-error Each reading already carries its unit.
+    metrics.calculateGVIPGS(readings, { unit: 'mg/dL' })
+    // @ts-expect-error Each reading already carries its unit.
+    core.analyzeGlucose(readings, { unit: 'mg/dL' })
+    // @ts-expect-error aggregateCohort has no options.
+    core.aggregateCohort(patients, {})
+    // @ts-expect-error glucoseIQScore has no options.
+    core.glucoseIQScore(readings, {})
+    // @ts-expect-error Each reading already carries its unit.
+    reactAdapter.useGlucoseAnalysis(readings, { unit: 'mg/dL' })
+    // @ts-expect-error The score hook has no options.
+    reactAdapter.useGlucoseIQScore(readings, {})
+    // @ts-expect-error CohortOptions was removed before 1.0.
+    type RemovedCohortOptions = import('@glucoseiq/core').CohortOptions
+    // @ts-expect-error GlucoseIQOptions was removed before 1.0.
+    type RemovedGlucoseIQOptions = import('@glucoseiq/core').GlucoseIQOptions
+    void [core, metrics, connectors, interop, render, reactAdapter, tokens, testing, cli, compatibility, unit, readings, patients]
   `
   const cjsSource = `
     import core = require('@glucoseiq/core')
@@ -224,6 +273,15 @@ try {
     assert.equal(compatibility.conversion, 10, `${consumer.label} compatibility conversion`)
     assert.equal(compatibility.timeInRange, 60, `${consumer.label} compatibility time in range`)
     assert.equal(compatibility.gmi, 7, `${consumer.label} compatibility GMI`)
+
+    const tirPalette = JSON.parse(
+      run('node', ['--input-type=module', '--eval', tirPaletteCode], { cwd: consumerRoot }),
+    )
+    assert.deepEqual(
+      tirPalette.actual,
+      tirPalette.expected,
+      `${consumer.label} core TIR dark colors must match @glucoseiq/tokens`,
+    )
 
     const cliOutput = run(
       join(consumerRoot, 'node_modules/.bin/glucoseiq'),
