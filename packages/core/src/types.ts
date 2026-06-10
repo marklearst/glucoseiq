@@ -170,15 +170,15 @@ export interface TIRSummary {
  * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
  */
 export interface EnhancedTIRResult {
-  /** Very Low: <54 mg/dL (3.0 mmol/L) - Level 2 Hypoglycemia */
+  /** Very Low: <54 mg/dL (3.0 mmol/L) - Level 2 Hypoglycemia. Average value is reported in mg/dL. */
   readonly veryLow: RangeMetrics
-  /** Low: 54-69 mg/dL (3.0-3.8 mmol/L) - Level 1 Hypoglycemia */
+  /** Low: 54-69 mg/dL (3.0-3.8 mmol/L) - Level 1 Hypoglycemia. Average value is reported in mg/dL. */
   readonly low: RangeMetrics
-  /** In Range: 70-180 mg/dL (3.9-10.0 mmol/L) - Target Range */
+  /** In Range: 70-180 mg/dL (3.9-10.0 mmol/L) - Target Range. Average value is reported in mg/dL. */
   readonly inRange: RangeMetrics
-  /** High: 181-250 mg/dL (10.1-13.9 mmol/L) - Level 1 Hyperglycemia */
+  /** High: 181-250 mg/dL (10.1-13.9 mmol/L) - Level 1 Hyperglycemia. Average value is reported in mg/dL. */
   readonly high: RangeMetrics
-  /** Very High: >250 mg/dL (>13.9 mmol/L) - Level 2 Hyperglycemia */
+  /** Very High: >250 mg/dL (>13.9 mmol/L) - Level 2 Hyperglycemia. Average value is reported in mg/dL. */
   readonly veryHigh: RangeMetrics
   /** Assessment against clinical targets */
   readonly meetsTargets: TargetAssessment
@@ -229,6 +229,6 @@ export interface PregnancyTIRResult {
  * Options for Pregnancy TIR calculation.
  */
 export interface PregnancyTIROptions {
-  /** Glucose unit for input validation (default: 'mg/dL') */
+  /** Unit used to normalize mixed-unit readings for pregnancy thresholds. Defaults to the predominant reading unit. */
   readonly unit?: GlucoseUnit
 }

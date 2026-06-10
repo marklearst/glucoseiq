@@ -33,6 +33,20 @@ const ZONE_COLORS = {
   veryLow: '#b91c1c',
 } as const
 
+function noDataFrame(
+  width: number,
+  height: number,
+  background: string,
+  text: string
+): string {
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Time in Range">`,
+    `<rect width="${width}" height="${height}" fill="${background}"/>`,
+    `<text x="${width / 2}" y="${height / 2}" fill="${text}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" text-anchor="middle">No data</text>`,
+    '</svg>',
+  ].join('')
+}
+
 /**
  * Renders a Time-in-Range stacked bar as an SVG string.
  *
@@ -62,17 +76,8 @@ export function tirBarToSVG(readings: GlucoseReading[], options?: TIRBarOptions)
     return !Number.isNaN(Date.parse(r.timestamp))
   })
 
-  const parts: string[] = [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Time in Range">`,
-    `<rect width="${width}" height="${height}" fill="${bg}"/>`,
-  ]
-
   if (clean.length === 0) {
-    parts.push(
-      `<text x="${width / 2}" y="${height / 2}" fill="${text}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" text-anchor="middle">No data</text>`
-    )
-    parts.push('</svg>')
-    return parts.join('')
+    return noDataFrame(width, height, bg, text)
   }
 
   const tir = calculateEnhancedTIR(clean)
@@ -89,6 +94,15 @@ export function tirBarToSVG(readings: GlucoseReading[], options?: TIRBarOptions)
   const barW = 44
   const plotH = height - margin.top - margin.bottom
   const total = zones.reduce((s, z) => s + z.pct, 0)
+  if (!Number.isFinite(total) || total <= 0) {
+    return noDataFrame(width, height, bg, text)
+  }
+
+  const summary = zones.map((zone) => `${zone.label} ${zone.pct}%`).join(', ')
+  const parts: string[] = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Time in Range: ${summary}">`,
+    `<rect width="${width}" height="${height}" fill="${bg}"/>`,
+  ]
 
   let y = margin.top
   for (const z of zones) {

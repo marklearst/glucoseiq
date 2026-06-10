@@ -11,6 +11,7 @@ import type {
   TIRAssessment,
   PregnancyTIRResult,
   PregnancyTIROptions,
+  GlucoseUnit,
 } from './types'
 
 import { EmptyDatasetError, DomainError } from './errors'
@@ -19,6 +20,10 @@ import {
   TIR_LOW_THRESHOLD_MGDL,
   TIR_HIGH_THRESHOLD_MGDL,
   TIR_VERY_HIGH_THRESHOLD_MGDL,
+  TIR_VERY_LOW_THRESHOLD_MMOLL,
+  TIR_LOW_THRESHOLD_MMOLL,
+  TIR_HIGH_THRESHOLD_MMOLL,
+  TIR_VERY_HIGH_THRESHOLD_MMOLL,
   TIR_GOAL_STANDARD,
   TBR_LEVEL1_GOAL,
   TBR_LEVEL2_GOAL,
@@ -36,17 +41,39 @@ import {
 } from './constants'
 
 /**
- * Offset for exclusive boundary classification.
- * Used to ensure boundary values are correctly excluded from ranges.
- */
-const BOUNDARY_EPSILON = 0.01
-
-/**
  * Glucose reading with normalized value in target unit.
  *
  * @internal
  */
 type NormalizedReading = GlucoseReading & { normalizedValue: number }
+
+type EnhancedTIRZone =
+  | 'veryLow'
+  | 'low'
+  | 'inRange'
+  | 'high'
+  | 'veryHigh'
+
+interface EnhancedTIRThresholds {
+  readonly veryLow: number
+  readonly low: number
+  readonly high: number
+  readonly veryHigh: number
+}
+
+const DEFAULT_MGDL_THRESHOLDS: EnhancedTIRThresholds = {
+  veryLow: TIR_VERY_LOW_THRESHOLD_MGDL,
+  low: TIR_LOW_THRESHOLD_MGDL,
+  high: TIR_HIGH_THRESHOLD_MGDL,
+  veryHigh: TIR_VERY_HIGH_THRESHOLD_MGDL,
+}
+
+const DEFAULT_MMOLL_THRESHOLDS: EnhancedTIRThresholds = {
+  veryLow: TIR_VERY_LOW_THRESHOLD_MMOLL,
+  low: TIR_LOW_THRESHOLD_MMOLL,
+  high: TIR_HIGH_THRESHOLD_MMOLL,
+  veryHigh: TIR_VERY_HIGH_THRESHOLD_MMOLL,
+}
 
 /**
  * Calculates Enhanced Time-in-Range metrics per International Consensus 2019.
@@ -99,54 +126,82 @@ export function calculateEnhancedTIR(
 
   const population: TIRPopulation = options?.population ?? 'standard'
 
-  const veryLowThreshold =
-    options?.veryLowThreshold ?? TIR_VERY_LOW_THRESHOLD_MGDL
-  const lowThreshold = options?.lowThreshold ?? TIR_LOW_THRESHOLD_MGDL
-  const highThreshold = options?.highThreshold ?? TIR_HIGH_THRESHOLD_MGDL
-  const veryHighThreshold =
-    options?.veryHighThreshold ?? TIR_VERY_HIGH_THRESHOLD_MGDL
+  const thresholds: EnhancedTIRThresholds = {
+    veryLow:
+      options?.veryLowThreshold ?? DEFAULT_MGDL_THRESHOLDS.veryLow,
+    low: options?.lowThreshold ?? DEFAULT_MGDL_THRESHOLDS.low,
+    high: options?.highThreshold ?? DEFAULT_MGDL_THRESHOLDS.high,
+    veryHigh:
+      options?.veryHighThreshold ?? DEFAULT_MGDL_THRESHOLDS.veryHigh,
+  }
+  const thresholdValues = [
+    thresholds.veryLow,
+    thresholds.low,
+    thresholds.high,
+    thresholds.veryHigh,
+  ]
+  if (
+    !thresholdValues.every(Number.isFinite) ||
+    !(
+      thresholdValues[0] < thresholdValues[1] &&
+      thresholdValues[1] < thresholdValues[2] &&
+      thresholdValues[2] < thresholdValues[3]
+    )
+  ) {
+    throw new DomainError(
+      'Enhanced TIR thresholds must be finite and strictly increasing',
+      'INVALID_OPTION'
+    )
+  }
 
-  // Convert all readings to mg/dL for consistent thresholding
-  const normalizedReadings: NormalizedReading[] = readings.map((reading) => {
-    const value =
-      reading.unit === MG_DL
-        ? reading.value
-        : reading.value * MGDL_MMOLL_CONVERSION
-    return { ...reading, normalizedValue: value }
-  })
+  const hasCustomThresholds =
+    options?.veryLowThreshold !== undefined ||
+    options?.lowThreshold !== undefined ||
+    options?.highThreshold !== undefined ||
+    options?.veryHighThreshold !== undefined
+  const customThresholds = hasCustomThresholds ? thresholds : undefined
+  const normalizedReadings: NormalizedReading[] = []
+  const readingsByZone: Record<EnhancedTIRZone, NormalizedReading[]> = {
+    veryLow: [],
+    low: [],
+    inRange: [],
+    high: [],
+    veryHigh: [],
+  }
 
-  // Validate glucose values
-  validateNormalizedReadings(normalizedReadings, 600)
+  for (const reading of readings) {
+    const normalizedReading: NormalizedReading = {
+      ...reading,
+      normalizedValue:
+        reading.unit === MG_DL
+          ? reading.value
+          : reading.value * MGDL_MMOLL_CONVERSION,
+    }
+    validateNormalizedReading(normalizedReading, 600)
+    normalizedReadings.push(normalizedReading)
 
-  // Calculate metrics for each range
-  // Note: Upper bounds are INCLUSIVE for correct boundary classification
+    const zone = classifyEnhancedTIRZone(
+      reading.value,
+      reading.unit,
+      normalizedReading.normalizedValue,
+      customThresholds
+    )
+    readingsByZone[zone].push(normalizedReading)
+  }
+
   const veryLow = calculateRangeMetrics(
-    normalizedReadings,
-    0,
-    veryLowThreshold
+    readingsByZone.veryLow,
+    normalizedReadings
   )
-  const low = calculateRangeMetrics(
-    normalizedReadings,
-    veryLowThreshold,
-    lowThreshold
-  )
+  const low = calculateRangeMetrics(readingsByZone.low, normalizedReadings)
   const inRange = calculateRangeMetrics(
-    normalizedReadings,
-    lowThreshold,
-    highThreshold,
-    true // inclusive upper bound
+    readingsByZone.inRange,
+    normalizedReadings
   )
-  const high = calculateRangeMetrics(
-    normalizedReadings,
-    highThreshold + BOUNDARY_EPSILON, // exclusive lower bound
-    veryHighThreshold,
-    true // inclusive upper bound
-  )
+  const high = calculateRangeMetrics(readingsByZone.high, normalizedReadings)
   const veryHigh = calculateRangeMetrics(
-    normalizedReadings,
-    veryHighThreshold + BOUNDARY_EPSILON, // exclusive lower bound
-    Infinity,
-    true
+    readingsByZone.veryHigh,
+    normalizedReadings
   )
 
   // Calculate summary
@@ -228,8 +283,13 @@ export function calculatePregnancyTIR(
     ? PREGNANCY_TARGET_HIGH_MGDL
     : PREGNANCY_TARGET_HIGH_MMOLL
 
-  // Convert all readings to the appropriate unit for thresholding
-  const normalizedReadings: NormalizedReading[] = readings.map((reading) => {
+  const normalizedReadings: NormalizedReading[] = []
+  const belowRangeReadings: NormalizedReading[] = []
+  const inRangeReadings: NormalizedReading[] = []
+  const aboveRangeReadings: NormalizedReading[] = []
+  const maxValue = useMgdlThresholds ? 600 : 33.3
+
+  for (const reading of readings) {
     let normalizedValue: number
     if (useMgdlThresholds) {
       normalizedValue =
@@ -242,30 +302,27 @@ export function calculatePregnancyTIR(
           ? reading.value / MGDL_MMOLL_CONVERSION
           : reading.value
     }
-    return { ...reading, normalizedValue }
-  })
+    const normalizedReading = { ...reading, normalizedValue }
+    validateNormalizedReading(normalizedReading, maxValue)
+    normalizedReadings.push(normalizedReading)
 
-  // Validate glucose values
-  const maxValue = useMgdlThresholds ? 600 : 33.3
-  validateNormalizedReadings(normalizedReadings, maxValue)
+    if (normalizedValue < lowThreshold) {
+      belowRangeReadings.push(normalizedReading)
+    } else if (normalizedValue <= highThreshold) {
+      inRangeReadings.push(normalizedReading)
+    } else if (normalizedValue > highThreshold) {
+      aboveRangeReadings.push(normalizedReading)
+    }
+  }
 
-  // Calculate metrics for pregnancy ranges using unit-specific thresholds
   const belowRange = calculateRangeMetrics(
-    normalizedReadings,
-    0,
-    lowThreshold
+    belowRangeReadings,
+    normalizedReadings
   )
-  const inRange = calculateRangeMetrics(
-    normalizedReadings,
-    lowThreshold,
-    highThreshold,
-    true // inclusive upper bound
-  )
+  const inRange = calculateRangeMetrics(inRangeReadings, normalizedReadings)
   const aboveRange = calculateRangeMetrics(
-    normalizedReadings,
-    highThreshold + BOUNDARY_EPSILON, // exclusive lower bound
-    Infinity,
-    true
+    aboveRangeReadings,
+    normalizedReadings
   )
 
   // Calculate summary
@@ -303,23 +360,45 @@ export function calculatePregnancyTIR(
  *
  * @internal
  */
-function validateNormalizedReadings(
-  readings: NormalizedReading[],
+function validateNormalizedReading(
+  reading: NormalizedReading,
   maxValue: number
 ): void {
-  for (const reading of readings) {
-    if (
-      reading.normalizedValue < 0 ||
-      reading.normalizedValue > maxValue ||
-      !Number.isFinite(reading.normalizedValue)
-    ) {
-      const unitSuffix = maxValue === 600 ? ' mg/dL' : ''
-      throw new DomainError(
-        `Invalid glucose value: ${reading.value} ${reading.unit} (normalized: ${reading.normalizedValue}${unitSuffix})`,
-        'INVALID_GLUCOSE_VALUE'
-      )
-    }
+  if (
+    reading.normalizedValue < 0 ||
+    reading.normalizedValue > maxValue ||
+    !Number.isFinite(reading.normalizedValue)
+  ) {
+    const unitSuffix = maxValue === 600 ? ' mg/dL' : ''
+    throw new DomainError(
+      `Invalid glucose value: ${reading.value} ${reading.unit} (normalized: ${reading.normalizedValue}${unitSuffix})`,
+      'INVALID_GLUCOSE_VALUE'
+    )
   }
+}
+
+/**
+ * Classifies one Enhanced TIR reading using mutually exclusive comparisons.
+ *
+ * @internal
+ */
+function classifyEnhancedTIRZone(
+  nativeValue: number,
+  unit: GlucoseUnit,
+  normalizedMgDl: number,
+  customThresholds?: EnhancedTIRThresholds
+): EnhancedTIRZone {
+  const useCustomThresholds = customThresholds !== undefined
+  const value = useCustomThresholds ? normalizedMgDl : nativeValue
+  const thresholds =
+    customThresholds ??
+    (unit === MG_DL ? DEFAULT_MGDL_THRESHOLDS : DEFAULT_MMOLL_THRESHOLDS)
+
+  if (value < thresholds.veryLow) return 'veryLow'
+  if (value < thresholds.low) return 'low'
+  if (value <= thresholds.high) return 'inRange'
+  if (value <= thresholds.veryHigh) return 'high'
+  return 'veryHigh'
 }
 
 /**
@@ -364,40 +443,28 @@ function estimateReadingInterval(readings: GlucoseReading[]): number {
 /**
  * Calculates detailed metrics for a specific glucose range.
  *
- * @param readings - Normalized glucose readings with value in mg/dL
- * @param lowerBound - Lower bound of range (mg/dL, inclusive)
- * @param upperBound - Upper bound of range (mg/dL)
- * @param inclusiveUpper - Whether upper bound is inclusive (default: false)
+ * @param rangeReadings - Normalized glucose readings in this range
+ * @param allReadings - All normalized glucose readings in the calculation
  * @returns Range metrics with percentage, duration, count, and average
  *
  * @internal
  */
 function calculateRangeMetrics(
-  readings: NormalizedReading[],
-  lowerBound: number,
-  upperBound: number,
-  inclusiveUpper = false
+  rangeReadings: NormalizedReading[],
+  allReadings: NormalizedReading[]
 ): RangeMetrics {
-  // Filter readings in this range
-  const inRange = readings.filter((r) => {
-    const aboveLower = r.normalizedValue >= lowerBound
-    const belowUpper = inclusiveUpper
-      ? r.normalizedValue <= upperBound
-      : r.normalizedValue < upperBound
-    return aboveLower && belowUpper
-  })
-
-  const readingCount = inRange.length
-  const percentage = (readingCount / readings.length) * 100
+  const readingCount = rangeReadings.length
+  const percentage = (readingCount / allReadings.length) * 100
 
   // Calculate duration (assumes evenly distributed readings)
-  const avgIntervalMinutes = estimateReadingInterval(readings)
+  const avgIntervalMinutes = estimateReadingInterval(allReadings)
   const duration = readingCount * avgIntervalMinutes
 
   // Calculate average value in this range
   const averageValue =
     readingCount > 0
-      ? inRange.reduce((sum, r) => sum + r.normalizedValue, 0) / readingCount
+      ? rangeReadings.reduce((sum, r) => sum + r.normalizedValue, 0) /
+        readingCount
       : null
 
   return {
