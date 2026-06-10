@@ -178,6 +178,18 @@ describe('calculateEnhancedTIR', () => {
       expect(result.high.readingCount).toBe(1)
       expect(result.high.averageValue).toBe(108)
     })
+
+    it('should apply a partial custom high threshold to mmol/L readings', () => {
+      const readings = createReadings([5.5, 6], 'mmol/L')
+
+      const result = calculateEnhancedTIR(readings, {
+        highThreshold: 100,
+      })
+
+      expect(result.inRange.readingCount).toBe(1)
+      expect(result.high.readingCount).toBe(1)
+      expect(classifiedReadingCount(result)).toBe(readings.length)
+    })
   })
 
   describe('Boundary values', () => {

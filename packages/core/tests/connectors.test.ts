@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   // Dexcom
   parseDexcomDate,
@@ -14,6 +14,7 @@ import {
   normalizeNightscoutEntry,
   normalizeNightscoutEntries,
 } from '../src/connectors'
+import { TimestampError } from '../src/errors'
 import type {
   DexcomShareEntry,
   LibreLinkUpEntry,
@@ -44,6 +45,28 @@ describe('Dexcom Share adapter', () => {
       expect(() => parseDexcomDate('not-a-date')).toThrow(
         'Unable to parse Dexcom date'
       )
+    })
+
+    it('throws a timestamp error when the parsed date is invalid', () => {
+      const raw = '2024-01-15T10:30:00Z'
+      const dateParseSpy = vi
+        .spyOn(Date, 'parse')
+        .mockReturnValue(Number.MAX_SAFE_INTEGER)
+      let thrown: unknown
+
+      try {
+        parseDexcomDate(raw)
+      } catch (error) {
+        thrown = error
+      } finally {
+        dateParseSpy.mockRestore()
+      }
+
+      expect(thrown).toBeInstanceOf(TimestampError)
+      expect(thrown).toMatchObject({
+        code: 'TIMESTAMP_UNPARSEABLE',
+        message: `Unable to parse Dexcom date: ${raw}`,
+      })
     })
   })
 
