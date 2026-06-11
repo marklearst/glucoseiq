@@ -80,7 +80,7 @@ export function glucosePercentiles(readings: number[], percentiles: number[]): R
   const sorted = [...readings].sort((a, b) => a - b);
   const result: Record<number, number> = {};
   for (const p of percentiles) {
-    if (typeof p !== 'number' || p < 0 || p > 100) continue;
+    if (typeof p !== 'number' || !Number.isFinite(p) || p < 0 || p > 100) continue;
     // Nearest-rank method
     const rank = Math.ceil((p / 100) * sorted.length);
     result[p] = sorted[Math.max(0, rank - 1)];
