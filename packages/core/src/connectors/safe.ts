@@ -10,6 +10,7 @@ import type { NormalizedCGMReading, DexcomShareEntry, LibreLinkUpEntry, Nightsco
 import { normalizeDexcomEntry } from './dexcom'
 import { normalizeLibreEntry } from './libre'
 import { normalizeNightscoutEntry } from './nightscout'
+import { GlucoseIQError, type GlucoseIQErrorCode } from '../errors'
 
 /** A single entry that failed to normalize. */
 export interface NormalizeError {
@@ -17,6 +18,8 @@ export interface NormalizeError {
   readonly index: number
   /** The error message. */
   readonly message: string
+  /** Stable machine-readable code for intentional library errors. */
+  readonly code?: GlucoseIQErrorCode
 }
 
 /** Result of a safe normalization pass. */
@@ -38,9 +41,12 @@ function safeMap<T>(
     try {
       readings.push(normalize(entry))
     } catch (err) {
-      /* c8 ignore next -- library code only throws Error subclasses; String(err) is a defensive fallback */
       const message = err instanceof Error ? err.message : String(err)
-      errors.push({ index, message })
+      if (err instanceof GlucoseIQError) {
+        errors.push({ index, message, code: err.code })
+      } else {
+        errors.push({ index, message })
+      }
     }
   })
   readings.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))

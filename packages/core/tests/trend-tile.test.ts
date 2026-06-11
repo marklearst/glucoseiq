@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { trendTileToSVG } from '../src/render/trend-tile'
 import { createGlucoseReadings } from './test-helpers'
+import type { GlucoseReading } from '../src/types'
 
 describe('trendTileToSVG', () => {
   it('renders an in-range reading with a trend arrow', () => {
@@ -32,6 +33,45 @@ describe('trendTileToSVG', () => {
 
   it('renders a "No data" frame for empty input', () => {
     expect(trendTileToSVG([])).toContain('No data')
+  })
+
+  it.each([
+    { value: NaN, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+    { value: Infinity, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+    { value: -Infinity, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+    { value: 0, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+    { value: -1, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+    { value: 601, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+    { value: 34, unit: 'mmol/L', timestamp: '2024-01-01T08:00:00Z' },
+    {
+      value: 120,
+      unit: 'other' as GlucoseReading['unit'],
+      timestamp: '2024-01-01T08:00:00Z',
+    },
+    { value: 120, unit: 'mg/dL', timestamp: 'bad' },
+  ] satisfies GlucoseReading[])(
+    'renders a finite no-data frame for an unusable reading ($value, $unit)',
+    (reading) => {
+      const svg = trendTileToSVG([reading])
+      expect(svg).toContain('No data')
+      expect(svg).not.toMatch(/NaN|Infinity/)
+    }
+  )
+
+  it('renders the latest usable reading when a newer reading is malformed', () => {
+    const valid: GlucoseReading = {
+      value: 120,
+      unit: 'mg/dL',
+      timestamp: '2024-01-01T08:00:00Z',
+    }
+    const invalidNewer: GlucoseReading = {
+      value: 601,
+      unit: 'mg/dL',
+      timestamp: '2024-01-01T08:05:00Z',
+    }
+    const svg = trendTileToSVG([valid, invalidNewer])
+    expect(svg).toContain('120')
+    expect(svg).not.toContain('601')
   })
 
   it('honors custom dimensions and light theme', () => {
