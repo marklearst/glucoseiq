@@ -57,6 +57,26 @@ function run(command, args, options = {}) {
   return result.stdout.trim()
 }
 
+function assertCommandFailure(command, args, expectedMessage, options) {
+  const result = spawnSync(command, args, {
+    cwd: options.cwd,
+    encoding: 'utf8',
+    env: process.env,
+  })
+
+  assert.equal(result.error, undefined, `${options.label} must execute`)
+  assert.equal(result.signal, null, `${options.label} must not terminate from a signal`)
+  assert.equal(result.status, 1, `${options.label} exit status`)
+  assert.equal(result.stdout, '', `${options.label} stdout`)
+  const stderrMatch = /^([^\r\n\u2028\u2029]+)(?:\r?\n)?(?![\s\S])/u.exec(result.stderr)
+  assert.ok(stderrMatch, `${options.label} must emit exactly one nonempty stderr line`)
+  const stderr = stderrMatch[1]
+  assert.match(stderr, expectedMessage, `${options.label} stderr`)
+  assert.doesNotMatch(stderr, /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u, `${options.label} unsafe stderr controls`)
+  assert.doesNotMatch(stderr, /^(?:Error|TypeError|RangeError)(?:\s|\[|:)/, `${options.label} stack prefix`)
+  assert.doesNotMatch(stderr, /\bat\s+\S+\s+\(/, `${options.label} stack frame`)
+}
+
 function assertTypeRoute(exportTarget, label) {
   assert.equal(exportTarget.import.types, './dist/index.d.mts', `${label} import types`)
   assert.equal(exportTarget.require.types, './dist/index.d.ts', `${label} require types`)
@@ -283,12 +303,31 @@ try {
       `${consumer.label} core TIR dark colors must match @glucoseiq/tokens`,
     )
 
+    const cliExecutable = join(consumerRoot, 'node_modules/.bin/glucoseiq')
     const cliOutput = run(
-      join(consumerRoot, 'node_modules/.bin/glucoseiq'),
+      cliExecutable,
       ['--help'],
       { cwd: consumerRoot },
     )
     assert.match(cliOutput, /Usage:\s+glucoseiq report/, `${consumer.label} CLI help`)
+
+    const cliFixture = join(consumerRoot, 'cli.csv')
+    writeFileSync(
+      cliFixture,
+      'Timestamp,Glucose Value (mg/dL)\n2024-01-01T00:00:00.000Z,100\n',
+    )
+    assertCommandFailure(
+      cliExecutable,
+      ['report', cliFixture, '--unit', 'other'],
+      /Invalid unit: expected "mg\/dL" or "mmol\/L"\./,
+      { cwd: consumerRoot, label: `${consumer.label} packed CLI invalid unit` },
+    )
+    assertCommandFailure(
+      cliExecutable,
+      ['report', cliFixture, '--unknown'],
+      /Unknown option '--unknown'/,
+      { cwd: consumerRoot, label: `${consumer.label} packed CLI unknown flag` },
+    )
 
     writeFileSync(join(consumerRoot, 'consumer.mts'), esmSource)
     writeFileSync(join(consumerRoot, 'consumer.cts'), cjsSource)
