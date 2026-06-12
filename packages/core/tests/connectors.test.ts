@@ -298,6 +298,19 @@ describe('Libre LinkUp adapter', () => {
       expect(normalizeLibreTrend(4.5 as any)).toBe('unknown')
     })
 
+    it.each([
+      '3',
+      3n,
+      Symbol('trend'),
+      {},
+      NaN,
+      Infinity,
+      -Infinity,
+      3.5,
+    ])('returns unknown for a runtime-invalid trend value (%s)', (trend) => {
+      expect(normalizeLibreTrend(trend as unknown as number)).toBe('unknown')
+    })
+
     it('returns unknown for null or undefined trend', () => {
       expect(normalizeLibreTrend(null)).toBe('unknown')
       expect(normalizeLibreTrend(undefined)).toBe('unknown')
@@ -809,6 +822,53 @@ describe('Nightscout adapter', () => {
       expect(normalizeNightscoutEntries([])).toEqual([])
     })
   })
+})
+
+describe('strict connector validation precedence', () => {
+  it.each([
+    {
+      vendor: 'Dexcom',
+      call: () =>
+        normalizeDexcomEntry({
+          Value: Number.NaN,
+          Trend: 'Flat',
+          WT: 'bad-dexcom-timestamp',
+        }),
+      message: 'Unable to parse Dexcom date: bad-dexcom-timestamp',
+    },
+    {
+      vendor: 'Libre',
+      call: () =>
+        normalizeLibreEntry({
+          Value: Number.NaN,
+          GlucoseUnits: 2 as 0,
+          TrendArrow: 3,
+          Timestamp: 'bad-libre-timestamp',
+        }),
+      message: 'Unable to parse Libre timestamp: bad-libre-timestamp',
+    },
+    {
+      vendor: 'Nightscout',
+      call: () =>
+        normalizeNightscoutEntry({
+          sgv: Number.NaN,
+          date: Number.NaN,
+          dateString: 'bad-nightscout-timestamp',
+        }),
+      message:
+        "Unable to parse Nightscout timestamp from 'dateString': bad-nightscout-timestamp",
+    },
+  ])(
+    '$vendor reports its timestamp error before glucose or unit errors',
+    ({ call, message }) => {
+      expectCodedError(
+        call,
+        TimestampError,
+        'TIMESTAMP_UNPARSEABLE',
+        message
+      )
+    }
+  )
 })
 
 // ---------------------------------------------------------------------------
