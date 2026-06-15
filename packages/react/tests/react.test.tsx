@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, renderHook, cleanup, act } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import ts from 'typescript'
+import * as reactAdapter from '../src'
 import {
   useGlucoseAnalysis,
   useAGPProfile,
@@ -12,6 +16,32 @@ import {
 } from '../src'
 import type { GlucoseReading } from '@glucoseiq/core'
 
+const RUNTIME_EXPORTS = [
+  'AgpChart',
+  'TirBar',
+  'TrendTile',
+  'useAGPProfile',
+  'useGlucoseAnalysis',
+  'useGlucoseIQScore',
+  'useGlucoseLive',
+  'useMealResponse',
+]
+
+function firstDirective(source: string, fileName: string): string | undefined {
+  const sourceFile = ts.createSourceFile(
+    fileName,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  )
+  const first = sourceFile.statements[0]
+  if (!first || !ts.isExpressionStatement(first) || !ts.isStringLiteral(first.expression)) {
+    return undefined
+  }
+  return first.expression.text
+}
+
 afterEach(cleanup)
 
 const base = Date.UTC(2024, 0, 1, 8, 0, 0)
@@ -23,6 +53,17 @@ const mk = (values: number[], stepMin = 5): GlucoseReading[] =>
   }))
 
 const readings = mk([100, 110, 120, 130, 140, 150, 145, 135, 125, 115])
+
+describe('package boundary', () => {
+  it('marks the source entrypoint as a client module in its first statement', () => {
+    const source = readFileSync(resolve('src/index.ts'), 'utf8')
+    expect(firstDirective(source, 'src/index.ts')).toBe('use client')
+  })
+
+  it('preserves the exact runtime export surface', () => {
+    expect(Object.keys(reactAdapter).sort()).toEqual(RUNTIME_EXPORTS)
+  })
+})
 
 describe('analysis hooks', () => {
   it('useGlucoseAnalysis returns the full report and memoizes on identity', () => {
