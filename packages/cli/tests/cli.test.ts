@@ -32,6 +32,20 @@ function expectCleanFailure(argv: string[], message: RegExp): void {
   expect(io.errLines[0]).not.toMatch(/\bat\s+\S+\s+\(/)
 }
 
+function expectExactCleanFailure(argv: string[], message: string): void {
+  const io = makeIO()
+  let code: number | undefined
+
+  expect(() => {
+    code = run(argv, io)
+  }).not.toThrow()
+  expect(code).toBe(1)
+  expect(io.outLines).toEqual([])
+  expect(io.errLines).toEqual([message])
+  expect(io.errLines[0]).not.toMatch(UNSAFE_OUTPUT)
+  expect(io.errLines[0]).not.toMatch(/\bat\s+\S+\s+\(/)
+}
+
 let dir: string
 let csvPath: string
 
@@ -155,6 +169,21 @@ describe('glucoseiq CLI', () => {
       '--json',
     ], io)).toBe(0)
     expect(JSON.parse(io.outLines.join('\n')).report.valid).toBe(true)
+  })
+
+  it.each([
+    { label: 'empty', delimiter: '' },
+    { label: 'multiple code units', delimiter: '||' },
+    { label: 'an astral character', delimiter: '💉' },
+    { label: 'double quote', delimiter: '"' },
+    { label: 'NUL', delimiter: '\0' },
+    { label: 'carriage return', delimiter: '\r' },
+    { label: 'line feed', delimiter: '\n' },
+  ])('rejects a $label delimiter before file access', ({ delimiter }) => {
+    expectExactCleanFailure(
+      ['report', join(dir, 'delimiter-order-missing.csv'), '--delimiter', delimiter],
+      'Invalid delimiter: expected exactly one character other than double quote, NUL, CR, or LF.',
+    )
   })
 
   it('writes the AGP SVG with --agp-svg and honors --timezone', () => {

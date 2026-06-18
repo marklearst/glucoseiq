@@ -263,6 +263,21 @@ describe('typed throws across the library', () => {
       },
     },
     {
+      name: 'parseGlucoseCSV rejects invalid delimiters',
+      call: () =>
+        parseGlucoseCSV('', {
+          timestampColumn: 't',
+          valueColumn: 'v',
+          delimiter: '||',
+        }),
+      expected: {
+        type: DomainError,
+        code: 'INVALID_OPTION',
+        message:
+          'parseGlucoseCSV: delimiter must be exactly one character other than double quote, NUL, CR, or LF',
+      },
+    },
+    {
       name: 'parseDexcomDate reports out-of-range vendor epochs',
       call: () => parseDexcomDate('Date(8640000000000001)'),
       expected: {
