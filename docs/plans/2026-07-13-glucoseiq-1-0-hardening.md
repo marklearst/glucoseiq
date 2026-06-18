@@ -668,9 +668,12 @@ git commit -m "fix: preserve the react client boundary"
 
 - Create: `apps/docs/typedoc.api.json`
 - Create: `apps/docs/scripts/lib/api-renderer.mjs`
+- Create: `apps/docs/scripts/lib/api-redirects.mjs`
+- Create: `apps/docs/scripts/lib/unicode-scalar-compare.mjs`
 - Create: `apps/docs/scripts/generate-api.test.mjs`
 - Create: `apps/docs/scripts/check-api.mjs`
 - Modify: `apps/docs/scripts/generate-api.mjs`
+- Modify: `apps/docs/next.config.mjs`
 - Modify: `apps/docs/package.json`
 - Modify: `packages/core/package.json`
 - Delete: `packages/core/typedoc.json`
@@ -683,10 +686,11 @@ git commit -m "fix: preserve the react client boundary"
 - Modify: `apps/docs/content/docs/api/index.mdx`
 - Modify: `apps/docs/content/docs/api/meta.json`
 - Modify: `pnpm-lock.yaml`
+- Modify: `docs/plans/2026-07-13-glucoseiq-1-0-hardening.md`
 
 **Interfaces:**
 
-- TypeDoc runs with full type checking, no Markdown plugin, no warnings, and no writes outside an OS temporary directory plus the requested output directory.
+- TypeDoc runs with full type checking, no Markdown plugin, no warnings, and no writes outside an OS temporary directory plus the requested output's validated replacement transaction.
 - The generated reference lives under `/docs/api/core` and identifies itself as the `@glucoseiq/core` API.
 - CI compares generated filenames and bytes within the managed `api/core` subtree. Hand-written package reference pages remain outside that subtree.
 
@@ -698,15 +702,30 @@ Export pure helpers from `api-renderer.mjs` and use `node:test` fixtures to asse
 - type predicates such as `value is GlucoseReading`;
 - `readonly` properties and readonly arrays;
 - tuples, indexed access, and type operators;
-- generic interfaces with defaults;
+- generic interfaces with defaults, including `OMHDataPoint<T = OMHBloodGlucose>`;
 - optional and rest parameters;
 - callable reflection types and nested object types;
 - overloads, remarks, deprecation text, examples, returns, throws, and labeled links.
 
+Cover every TypeDoc 0.28.4 type discriminant, callable and nested reflection types,
+defaulted parameters, readonly members, internal and external links, MDX escaping,
+schema and package identity, unsupported discriminants, uncategorized functions,
+generator failures, and byte-level drift. Unknown discriminants and uncategorized
+functions must fail with the owning reflection path. Drift fixtures must prove that
+the hand-written API root files are outside the managed comparison.
+
+Also cover abbreviated TypeDoc defaults backed by structured documented initializers,
+call versus construct signatures, empty and malformed signature shapes, nested type
+precedence, hostile `@see` and `@linkcode` content, Unicode scalar ordering, and
+process-scoped temporary cleanup. Neutralize raw Markdown destinations in ordinary
+TSDoc text, and allow structured links only to validated HTTP(S) URLs or generated
+`/docs/api/core/...` destinations with owner-path failures. The real model must contain
+no rendered `= ...` default.
+
 The expected fixture for a generic interface must include its type parameter:
 
 ```md
-interface OMHDataPoint<T = unknown>
+interface OMHDataPoint<T = OMHBloodGlucose>
 ```
 
 - [ ] **Step 2: Run the renderer red test**
@@ -728,29 +747,83 @@ Use:
   "excludeInternal": true,
   "excludePrivate": true,
   "excludeProtected": true,
+  "excludeExternals": true,
   "plugin": [],
+  "name": "@glucoseiq/core",
+  "readme": "none",
   "treatWarningsAsErrors": true,
   "treatValidationWarningsAsErrors": true
 }
 ```
 
-Move `typedoc` to the docs app’s direct dev dependencies. Remove the core TypeDoc config, core `docs:api` script, and `typedoc-plugin-markdown` when `pnpm why typedoc-plugin-markdown` shows no remaining consumer.
+Move TypeDoc `0.28.4` to the docs app’s direct dev dependencies and require JSON
+schema `2.0`. Remove the core TypeDoc config, core `docs:api` script, and
+`typedoc-plugin-markdown` when `pnpm why typedoc-plugin-markdown` shows no remaining
+consumer.
 
 - [ ] **Step 4: Refactor generation into pure rendering plus a safe CLI**
 
-Use `spawnSync` with an argument array. Create the model and generated candidate tree under `mkdtempSync(join(tmpdir(), 'glucoseiq-api-'))`, clean it in `finally`, and never use `--skipErrorChecking`. Clear only the managed `apps/docs/content/docs/api/core` output directory before writing so deleted pages cannot linger and hand-written package pages remain intact.
+Resolve TypeDoc from the docs package, read its declared binary, and invoke it with
+`process.execPath`, `spawnSync`, and an argument array. Check spawn errors, signals,
+and status. Create the model and complete generated candidate tree under
+`mkdtempSync(join(tmpdir(), 'glucoseiq-api-<pid>-'))`, validate it before touching tracked
+output, and clean it in `finally`. Never use a shell or `--skipErrorChecking`. Replace
+only `apps/docs/content/docs/api/core` through a same-filesystem staging copy and
+rollback-capable rename transaction so failures preserve prior bytes, deleted pages
+cannot linger, and hand-written package pages remain intact.
 
-Implement each TypeDoc type node used by the public model. Preserve type parameters, `readonly`, overloads, remarks, defaults, source import paths, and TSDoc safety guidance. Render links as Markdown links with labels rather than bare URLs.
+Treat the staged-tree-to-canonical rename as the commit point. Roll back the intact
+prior backup only when that rename fails. After it succeeds, never touch the new
+canonical tree during cleanup: a partial prior-backup deletion, empty-staging cleanup,
+or generation-temporary cleanup failure is an ordered, non-fatal warning containing the
+residual path and manual recovery guidance. Aggregate pre-commit rollback and cleanup
+failures in deterministic order, retain nested causes, and preserve both recovery paths.
+Use process-scoped `glucoseiq-api-<pid>-*` temporary roots while retaining the managed
+temporary-root ownership validation.
+
+Implement every TypeDoc 0.28.4 type node. Preserve type parameters and variance,
+`readonly` index signatures, declaration-level optional overloads, static and abstract
+members, abstract classes, implemented types, every child and overload, remarks,
+defaults, source import paths, and TSDoc safety guidance. Reject unknown truthy flags or
+flag combinations that cannot be rendered truthfully with the owning reflection path.
+Assign single construct-reflection arrow types context-sensitive precedence so nested
+arrays, unions, intersections, conditional checks and constraints, indexed access, and
+type operators remain syntactically truthful while object reflections remain atomic.
+Derive stable `@glucoseiq/core` subpath imports from source filenames instead of source
+URLs. Render links as Markdown links with labels rather than bare URLs.
+Validate absolute HTTP(S) link destinations with URL parsing while preserving generated
+internal destinations.
 
 Move generated core categories under `api/core`. Keep the top-level API index and metadata hand-written, with `core` as the first package entry. Update existing narrative links to the new core paths before removing the superseded category pages.
 
+Add permanent redirects from all 19 superseded `/docs/api/<category>` routes to their
+`/docs/api/core/<category>` replacements.
+
 - [ ] **Step 5: Remove all six TypeDoc warnings at their source**
 
-Remove unsupported `@file` tags from the two subpath index comments. Align the `convertGlucoseUnit` parameter documentation with its object parameter. Export or directly include `FHIRCodeableConcept` and `FHIRQuantity` so public FHIR types do not reference omitted declarations.
+Remove unsupported `@file` tags from the two subpath index comments. Name the
+`convertGlucoseUnit` object parameter `input`, destructure it inside the function, and
+retain the property descriptions. Export the type-only `FHIRCoding`,
+`FHIRCodeableConcept`, and `FHIRQuantity` interfaces so public FHIR types do not
+reference omitted declarations.
 
 - [ ] **Step 6: Add the byte-for-byte drift check**
 
-`check-api.mjs` must generate into a temporary directory, compare the sorted relative filename sets against `apps/docs/content/docs/api/core`, then compare each file buffer. Print each missing, extra, or changed file and exit nonzero on drift.
+`check-api.mjs` must generate into a temporary directory, recursively inventory regular
+files, reject symlinks, normalize and code-point-sort POSIX paths, compare filename sets
+against `apps/docs/content/docs/api/core`, then compare each file with `Buffer.equals`.
+Print every missing, extra, or changed file and exit nonzero on drift. Never mutate the
+tracked output during the check. Cover the direct CLI's nonzero status, complete
+diagnostics, and read-only behavior with a subprocess fixture.
+Propagate generation and drift-temporary cleanup warnings to the CLI without turning a
+clean comparison into failure, and never let cleanup mask a primary generation or
+comparison error. If comparison fails after cleanup warnings, preserve the primary error
+identity, retain warnings in deterministic generation-then-drift order, and have the
+direct command print actionable warning guidance before the primary diagnostic while
+exiting nonzero. Format nested errors using active recursion-stack cycle detection so a
+shared non-recursive cause is rendered on every branch.
+Use true Unicode-scalar lexicographic ordering in the renderer, candidate validator,
+and drift checker rather than JavaScript UTF-16 code-unit ordering.
 
 Add scripts:
 
@@ -763,13 +836,17 @@ Add scripts:
 - [ ] **Step 7: Generate, verify, and commit**
 
 ```sh
-pnpm install
+pnpm install --frozen-lockfile
 pnpm --filter docs test:api
 pnpm --filter docs docs:api
 pnpm --filter docs docs:api:check
 pnpm --filter docs build
-test ! -e packages/core/docs-md
-git add apps/docs packages/core/package.json packages/core/src pnpm-lock.yaml
+pnpm --filter @glucoseiq/core build
+pnpm --filter @glucoseiq/core test:coverage
+pnpm test:packages
+pnpm why typedoc-plugin-markdown
+git diff --check
+git add apps/docs packages/core/package.json packages/core/src pnpm-lock.yaml docs/plans/2026-07-13-glucoseiq-1-0-hardening.md
 git commit -m "docs: harden the generated api reference"
 ```
 

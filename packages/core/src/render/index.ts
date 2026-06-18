@@ -1,6 +1,4 @@
 /**
- * @file src/render/index.ts
- *
  * Zero-dependency SVG-string renderers. Each returns a self-contained SVG
  * string that runs anywhere — Node, email, PDF, README, RSC, any framework.
  */

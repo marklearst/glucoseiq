@@ -181,20 +181,19 @@ export function mmolLToMgDl(val: number): number {
 /**
  * Converts clinical glucose value between mg/dL and mmol/L.
  * Used for clinical interoperability and analytics.
- * @param value - Glucose value (number)
- * @param unit - Current glucose unit ('mg/dL' or 'mmol/L')
+ * @param input - Glucose value and its current unit
  * @returns Object with converted value and new unit
  * @throws {DomainError} If value is not a finite number or is negative/zero
  * @throws {DomainError} If unit is not a supported glucose unit
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  */
-export function convertGlucoseUnit({
-  value,
-  unit,
-}: {
+export function convertGlucoseUnit(input: {
+  /** Glucose value (number) */
   value: number
+  /** Current glucose unit ('mg/dL' or 'mmol/L') */
   unit: GlucoseUnit
 }): ConversionResult {
+  const { value, unit } = input
   if (!Number.isFinite(value) || value <= 0)
     throw new DomainError('Invalid glucose value', 'INVALID_GLUCOSE_VALUE')
   if (![MG_DL, MMOL_L].includes(unit))

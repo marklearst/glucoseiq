@@ -1,11 +1,11 @@
 ---
-title: AGP & Metrics Aggregate
-description: The Ambulatory Glucose Profile series and the all-in-one metrics call.
+title: "AGP & Metrics Aggregate"
+description: "Ambulatory Glucose Profile series and aggregate metrics."
 ---
 
-<Callout title="2 functions">Generated from the source TSDoc — every signature, parameter, and example is the real thing.</Callout>
-
 ### buildAGPProfile
+
+**Import:** `@glucoseiq/core/metrics`
 
 ```ts
 buildAGPProfile(readings: GlucoseReading[], options?: AGPProfileOptions): AGPProfileResult
@@ -13,14 +13,9 @@ buildAGPProfile(readings: GlucoseReading[], options?: AGPProfileOptions): AGPPro
 
 Builds the AGP time-of-day percentile-band series from glucose readings.
 
-| Parameter | Description |
-| --- | --- |
-| `readings` | Glucose readings with ISO 8601 timestamps |
-| `options` | Bin width, percentiles, time zone, output unit, and method |
-
 **Returns** — Render-ready AGP profile (full-day bin grid + per-bin percentiles)
 
-**Throws** — If `binMinutes` is not an integer in [1, 1440]
+**Throws** — If `binMinutes` is not an integer in \[1, 1440]
 
 **Throws** — If `timeZone` is not a valid IANA time zone
 
@@ -29,10 +24,17 @@ const profile = buildAGPProfile(readings, { timeZone: 'America/New_York' })
 // profile.bins[i] = { minuteOfDay, percentiles: { 5, 25, 50, 75, 95 }, n }
 ```
 
+| Parameter | Description |
+| --- | --- |
+| `readings` | Glucose readings with ISO 8601 timestamps |
+| `options` | Bin width, percentiles, time zone, output unit, and method |
+
 
 ---
 
 ### calculateAGPMetrics
+
+**Import:** `@glucoseiq/core/metrics`
 
 ```ts
 calculateAGPMetrics(readings: GlucoseReading[], options?: AGPMetricsOptions): AGPMetricsResult
@@ -44,11 +46,11 @@ This is a convenience function that computes all Tier 1 metrics in a
 single call. Individual metric functions are also available for
 selective computation.
 
+**Returns** — Comprehensive AGP metrics result
+
+**Throws** — If readings array is empty
+
 | Parameter | Description |
 | --- | --- |
 | `readings` | Array of GlucoseReading objects with timestamps |
 | `options` | Optional configuration for individual metrics |
-
-**Returns** — Comprehensive AGP metrics result
-
-**Throws** — If readings array is empty

@@ -1,11 +1,11 @@
 ---
-title: Connectors
-description: Dexcom, Libre, and Nightscout normalization, capabilities, and safe variants.
+title: "Connectors"
+description: "Dexcom, Libre, and Nightscout normalization."
 ---
 
-<Callout title="13 functions">Generated from the source TSDoc — every signature, parameter, and example is the real thing.</Callout>
-
 ### normalizeDexcomEntries
+
+**Import:** `@glucoseiq/core/connectors`
 
 ```ts
 normalizeDexcomEntries(entries: DexcomShareEntry[]): NormalizedCGMReading[]
@@ -13,16 +13,18 @@ normalizeDexcomEntries(entries: DexcomShareEntry[]): NormalizedCGMReading[]
 
 Converts an array of Dexcom Share entries into NormalizedCGMReadings.
 
+**Returns** — Array of normalized readings, sorted chronologically
+
 | Parameter | Description |
 | --- | --- |
 | `entries` | Raw Dexcom Share entries from any Dexcom client library |
-
-**Returns** — Array of normalized readings, sorted chronologically
 
 
 ---
 
 ### normalizeDexcomEntry
+
+**Import:** `@glucoseiq/core/connectors`
 
 ```ts
 normalizeDexcomEntry(entry: DexcomShareEntry): NormalizedCGMReading
@@ -30,21 +32,25 @@ normalizeDexcomEntry(entry: DexcomShareEntry): NormalizedCGMReading
 
 Converts a single Dexcom Share entry into a NormalizedCGMReading.
 
-| Parameter | Description |
-| --- | --- |
-| `entry` | Raw Dexcom Share entry |
-
 **Returns** — Normalized reading compatible with all `@glucoseiq/core` analytics functions
 
 **Throws** — If the date string cannot be parsed
+
+**Throws** — If the glucose value is not usable
+
+| Parameter | Description |
+| --- | --- |
+| `entry` | Raw Dexcom Share entry |
 
 
 ---
 
 ### normalizeDexcomTrend
 
+**Import:** `@glucoseiq/core/connectors`
+
 ```ts
-normalizeDexcomTrend(trend: undefined | null | DexcomTrendString | string & { … }): CGMTrend
+normalizeDexcomTrend(trend: undefined | null | DexcomTrendString | string & {}): CGMTrend
 ```
 
 Normalizes a Dexcom Share trend string into a canonical CGMTrend.
@@ -54,22 +60,26 @@ Normalizes a Dexcom Share trend string into a canonical CGMTrend.
 
 ### normalizeLibreEntries
 
+**Import:** `@glucoseiq/core/connectors`
+
 ```ts
 normalizeLibreEntries(entries: LibreLinkUpEntry[]): NormalizedCGMReading[]
 ```
 
 Converts an array of Libre LinkUp entries into NormalizedCGMReadings.
 
+**Returns** — Array of normalized readings, sorted chronologically
+
 | Parameter | Description |
 | --- | --- |
 | `entries` | Raw Libre LinkUp entries from any Libre client library |
-
-**Returns** — Array of normalized readings, sorted chronologically
 
 
 ---
 
 ### normalizeLibreEntry
+
+**Import:** `@glucoseiq/core/connectors`
 
 ```ts
 normalizeLibreEntry(entry: LibreLinkUpEntry): NormalizedCGMReading
@@ -77,18 +87,22 @@ normalizeLibreEntry(entry: LibreLinkUpEntry): NormalizedCGMReading
 
 Converts a single Libre LinkUp entry into a NormalizedCGMReading.
 
-| Parameter | Description |
-| --- | --- |
-| `entry` | Raw Libre LinkUp entry |
-
 **Returns** — Normalized reading compatible with all `@glucoseiq/core` analytics functions
 
 **Throws** — If the timestamp cannot be parsed
+
+**Throws** — If the unit or glucose value is not usable
+
+| Parameter | Description |
+| --- | --- |
+| `entry` | Raw Libre LinkUp entry |
 
 
 ---
 
 ### normalizeLibreTrend
+
+**Import:** `@glucoseiq/core/connectors`
 
 ```ts
 normalizeLibreTrend(trend: undefined | null | number): CGMTrend
@@ -104,6 +118,8 @@ and returns 'unknown' for any invalid or unmapped values.
 
 ### normalizeNightscoutDirection
 
+**Import:** `@glucoseiq/core/connectors`
+
 ```ts
 normalizeNightscoutDirection(direction: undefined | NightscoutDirection): CGMTrend
 ```
@@ -115,22 +131,26 @@ Normalizes a Nightscout direction string into a canonical CGMTrend.
 
 ### normalizeNightscoutEntries
 
+**Import:** `@glucoseiq/core/connectors`
+
 ```ts
 normalizeNightscoutEntries(entries: NightscoutEntry[]): NormalizedCGMReading[]
 ```
 
 Converts an array of Nightscout SGV entries into NormalizedCGMReadings.
 
+**Returns** — Array of normalized readings, sorted chronologically
+
 | Parameter | Description |
 | --- | --- |
 | `entries` | Raw Nightscout entries from the `/api/v1/entries` endpoint |
-
-**Returns** — Array of normalized readings, sorted chronologically
 
 
 ---
 
 ### normalizeNightscoutEntry
+
+**Import:** `@glucoseiq/core/connectors`
 
 ```ts
 normalizeNightscoutEntry(entry: NightscoutEntry): NormalizedCGMReading
@@ -138,16 +158,22 @@ normalizeNightscoutEntry(entry: NightscoutEntry): NormalizedCGMReading
 
 Converts a single Nightscout SGV entry into a NormalizedCGMReading.
 
+**Returns** — Normalized reading compatible with all `@glucoseiq/core` analytics functions
+
+**Throws** — If neither vendor timestamp can be normalized
+
+**Throws** — If the glucose value is not usable
+
 | Parameter | Description |
 | --- | --- |
 | `entry` | Raw Nightscout SGV entry |
-
-**Returns** — Normalized reading compatible with all `@glucoseiq/core` analytics functions
 
 
 ---
 
 ### parseDexcomDate
+
+**Import:** `@glucoseiq/core/connectors`
 
 ```ts
 parseDexcomDate(raw: string): string
@@ -158,10 +184,14 @@ Parses a Dexcom date string into an ISO 8601 string.
 Dexcom Share returns dates in the format `"Date(epochMs)"` or
 `"/Date(epochMs)/"`. This helper handles both, plus plain ISO strings.
 
+**Throws** — If the date string cannot be parsed
+
 
 ---
 
 ### safeNormalizeDexcomEntries
+
+**Import:** `@glucoseiq/core/connectors`
 
 ```ts
 safeNormalizeDexcomEntries(entries: DexcomShareEntry[]): SafeNormalizeResult
@@ -174,6 +204,8 @@ Safe (partial-success) variant of normalizeDexcomEntries.
 
 ### safeNormalizeLibreEntries
 
+**Import:** `@glucoseiq/core/connectors`
+
 ```ts
 safeNormalizeLibreEntries(entries: LibreLinkUpEntry[]): SafeNormalizeResult
 ```
@@ -184,6 +216,8 @@ Safe (partial-success) variant of normalizeLibreEntries.
 ---
 
 ### safeNormalizeNightscoutEntries
+
+**Import:** `@glucoseiq/core/connectors`
 
 ```ts
 safeNormalizeNightscoutEntries(entries: NightscoutEntry[]): SafeNormalizeResult

@@ -1,31 +1,11 @@
 ---
-title: Variability & Risk Metrics
-description: Cited variability and risk indices — every formula golden-tested.
----
-
-<Callout title="19 functions">Generated from the source TSDoc — every signature, parameter, and example is the real thing.</Callout>
-
-### calculateActivePercent
-
-```ts
-calculateActivePercent(readings: GlucoseReading[], options?: ActivePercentOptions): ActivePercentResult
-```
-
-Calculates the CGM active percent (wear time).
-
-| Parameter | Description |
-| --- | --- |
-| `readings` | Array of GlucoseReading objects with timestamps |
-| `options` | Expected interval configuration |
-
-**Returns** — Active percent result, or result with NaN if insufficient data
-
-See: https://doi.org/10.2337/dc17-1600
-
-
+title: "Variability & Risk Metrics"
+description: "Glucose variability and risk indices."
 ---
 
 ### calculateADRR
+
+**Import:** `@glucoseiq/core/metrics`
 
 ```ts
 calculateADRR(readings: GlucoseReading[]): number
@@ -33,18 +13,42 @@ calculateADRR(readings: GlucoseReading[]): number
 
 Calculates the Average Daily Risk Range (ADRR).
 
+**Returns** — ADRR value, or NaN if no valid readings
+
+**See** — [https://doi.org/10.2337/dc06-1085](https://doi.org/10.2337/dc06-1085)
+
 | Parameter | Description |
 | --- | --- |
 | `readings` | Array of GlucoseReading objects with timestamps |
 
-**Returns** — ADRR value, or NaN if no valid readings
 
-See: https://doi.org/10.2337/dc06-1085
+---
+
+### calculateActivePercent
+
+**Import:** `@glucoseiq/core/metrics`
+
+```ts
+calculateActivePercent(readings: GlucoseReading[], options?: ActivePercentOptions): ActivePercentResult
+```
+
+Calculates the CGM active percent (wear time).
+
+**Returns** — Active percent result, or result with NaN if insufficient data
+
+**See** — [https://doi.org/10.2337/dc17-1600](https://doi.org/10.2337/dc17-1600)
+
+| Parameter | Description |
+| --- | --- |
+| `readings` | Array of GlucoseReading objects with timestamps |
+| `options` | Expected interval configuration |
 
 
 ---
 
 ### calculateCONGA
+
+**Import:** `@glucoseiq/core/metrics`
 
 ```ts
 calculateCONGA(readings: GlucoseReading[], options?: CONGAOptions): number
@@ -52,25 +56,31 @@ calculateCONGA(readings: GlucoseReading[], options?: CONGAOptions): number
 
 Calculates CONGA (Continuous Overall Net Glycemic Action).
 
+**Returns** — CONGA value in mg/dL, or NaN if insufficient matched pairs
+
+**See** — [https://doi.org/10.1089/dia.2005.7.253](https://doi.org/10.1089/dia.2005.7.253)
+
 | Parameter | Description |
 | --- | --- |
 | `readings` | Array of GlucoseReading objects with timestamps |
 | `options` | Time lag (hours) and tolerance configuration |
-
-**Returns** — CONGA value in mg/dL, or NaN if insufficient matched pairs
-
-See: https://doi.org/10.1089/dia.2005.7.253
 
 
 ---
 
 ### calculateGRADE
 
+**Import:** `@glucoseiq/core/metrics`
+
 ```ts
-calculateGRADE(readings: number[], hypoThreshold?: number, hyperThreshold?: number, unit?: GlucoseUnit): GRADEResult
+calculateGRADE(readings: number[], hypoThreshold: number = 70, hyperThreshold: number = 140, unit: GlucoseUnit = MG_DL): GRADEResult
 ```
 
 Calculates the GRADE score and its partitioned components.
+
+**Returns** — GRADE result with overall score and percentage breakdown, or NaN fields if no valid data
+
+**See** — [https://doi.org/10.1111/j.1464-5491.2007.02119.x](https://doi.org/10.1111/j.1464-5491.2007.02119.x)
 
 | Parameter | Description |
 | --- | --- |
@@ -79,14 +89,12 @@ Calculates the GRADE score and its partitioned components.
 | `hyperThreshold` | Lower bound for hyperglycemia (default: 140 mg/dL, always mg/dL) |
 | `unit` | Unit of `readings` (default 'mg/dL'); 'mmol/L' is converted to mg/dL first |
 
-**Returns** — GRADE result with overall score and percentage breakdown, or NaN fields if no valid data
-
-See: https://doi.org/10.1111/j.1464-5491.2007.02119.x
-
 
 ---
 
 ### calculateGRI
+
+**Import:** `@glucoseiq/core/metrics`
 
 ```ts
 calculateGRI(input: GRIInput): GRIResult
@@ -94,18 +102,20 @@ calculateGRI(input: GRIInput): GRIResult
 
 Calculates the Glycemia Risk Index (GRI) from TIR zone percentages.
 
+**Returns** — GRI result with composite score and risk zone
+
+**See** — [https://doi.org/10.1177/19322968221085273](https://doi.org/10.1177/19322968221085273)
+
 | Parameter | Description |
 | --- | --- |
 | `input` | Percentages for each out-of-range zone |
-
-**Returns** — GRI result with composite score and risk zone
-
-See: https://doi.org/10.1177/19322968221085273
 
 
 ---
 
 ### calculateGVIPGS
+
+**Import:** `@glucoseiq/core/metrics`
 
 ```ts
 calculateGVIPGS(readings: GlucoseReading[], options?: GVIPGSOptions): GVIPGSResult
@@ -113,17 +123,19 @@ calculateGVIPGS(readings: GlucoseReading[], options?: GVIPGSOptions): GVIPGSResu
 
 Calculates GVI and PGS from glucose readings (Nightscout algorithm).
 
+**Returns** — GVI, PGS, the mean glucose, and PTIR; NaN when there are no valid steps
+
 | Parameter | Description |
 | --- | --- |
 | `readings` | Glucose readings with ISO 8601 timestamps |
-| `options` | Unit, target range, and max gap |
-
-**Returns** — GVI, PGS, the mean glucose, and PTIR; NaN when there are no valid steps
+| `options` | Target range and maximum gap |
 
 
 ---
 
 ### calculateIGC
+
+**Import:** `@glucoseiq/core/metrics`
 
 ```ts
 calculateIGC(readings: number[], options?: IGCOptions): IGCResult
@@ -131,22 +143,24 @@ calculateIGC(readings: number[], options?: IGCOptions): IGCResult
 
 Calculates Rodbard's hypo/hyper indices and IGC.
 
+**Returns** — Hypo index, hyper index, and their sum (IGC); NaN fields if no valid readings
+
+**See** — [https://doi.org/10.1089/dia.2008.0132](https://doi.org/10.1089/dia.2008.0132)
+
 | Parameter | Description |
 | --- | --- |
 | `readings` | Glucose values (mg/dL by default) |
 | `options` | Unit, target limits, exponents, and scale factors |
-
-**Returns** — Hypo index, hyper index, and their sum (IGC); NaN fields if no valid readings
-
-See: https://doi.org/10.1089/dia.2008.0132
 
 
 ---
 
 ### calculateJIndex
 
+**Import:** `@glucoseiq/core/metrics`
+
 ```ts
-calculateJIndex(readings: number[], unit?: GlucoseUnit): number
+calculateJIndex(readings: number[], unit: GlucoseUnit = MG_DL): number
 ```
 
 Calculates the J-Index for a glucose trace.
@@ -154,19 +168,21 @@ Calculates the J-Index for a glucose trace.
 The J-Index captures both central tendency and variability in a
 single score. Higher values indicate worse glycemic control.
 
+**Returns** — J-Index value, or NaN if fewer than 2 valid readings
+
+**See** — [https://doi.org/10.1055/s-2007-979906](https://doi.org/10.1055/s-2007-979906)
+
 | Parameter | Description |
 | --- | --- |
 | `readings` | Array of glucose values (mg/dL by default) |
 | `unit` | Unit of `readings` (default 'mg/dL'); 'mmol/L' is converted to mg/dL first |
 
-**Returns** — J-Index value, or NaN if fewer than 2 valid readings
-
-See: https://doi.org/10.1055/s-2007-979906
-
 
 ---
 
 ### calculateMODD
+
+**Import:** `@glucoseiq/core/metrics`
 
 ```ts
 calculateMODD(readings: GlucoseReading[], options?: MODDOptions): number
@@ -174,33 +190,36 @@ calculateMODD(readings: GlucoseReading[], options?: MODDOptions): number
 
 Calculates Mean of Daily Differences (MODD).
 
+**Returns** — MODD value in mg/dL, or NaN if insufficient matched pairs
+
+**See** — [https://doi.org/10.2337/diacare.3.1.58](https://doi.org/10.2337/diacare.3.1.58)
+
 | Parameter | Description |
 | --- | --- |
 | `readings` | Array of GlucoseReading objects with timestamps |
 | `options` | Optional tolerance configuration |
-
-**Returns** — MODD value in mg/dL, or NaN if insufficient matched pairs
-
-See: https://doi.org/10.2337/diacare.3.1.58
 
 
 ---
 
 ### clinicalMAGE
 
+**Import:** `@glucoseiq/core`
+
 ```ts
-clinicalMAGE(readings: number[], options?: MAGEOptions): number
+clinicalMAGE(readings: number[], options: MAGEOptions = {}): number
 ```
 
 Calculates Mean Amplitude of Glycemic Excursions (MAGE).
 Implements Service FJ et al. (1970) methodology.
 
-| Parameter | Description |
-| --- | --- |
-| `readings` | Array of glucose values (mg/dL or mmol/L) |
-| `options` | Configuration options for MAGE calculation |
-
 **Returns** — MAGE value, or NaN if insufficient data or no valid excursions
+
+**See**
+
+- [Service FJ, et al. 1970](https://pubmed.ncbi.nlm.nih.gov/5469118/)
+- [Fernandes NJ, et al. 2022](https://journals.sagepub.com/doi/10.1177/19322968211061165)
+- [ADA 2019](https://care.diabetesjournals.org/content/42/8/1593)
 
 ```ts
 // Basic usage
@@ -209,14 +228,22 @@ glucoseMAGE([100, 120, 80, 160, 90, 140, 70, 180])
 glucoseMAGE(readings, { shortWindow: 5, longWindow: 32, direction: 'auto' })
 ```
 
-See: - https://pubmed.ncbi.nlm.nih.gov/5469118/ (Service FJ, et al. 1970)
- - https://journals.sagepub.com/doi/10.1177/19322968211061165 (Fernandes NJ, et al. 2022)
- - https://care.diabetesjournals.org/content/42/8/1593 (ADA 2019)
+**Remarks** — - Minimum 24 data points recommended (1 day of hourly readings)
+- Best suited for continuous glucose monitoring (CGM) data
+- Not recommended for sparse or irregular measurements
+- Uses dual moving averages, three-point excursion definition, and prevents double-counting.
+
+| Parameter | Description |
+| --- | --- |
+| `readings` | Array of glucose values (mg/dL or mmol/L) |
+| `options` | Configuration options for MAGE calculation |
 
 
 ---
 
 ### glucoseCoefficientOfVariation
+
+**Import:** `@glucoseiq/core`
 
 ```ts
 glucoseCoefficientOfVariation(readings: number[]): number
@@ -225,13 +252,9 @@ glucoseCoefficientOfVariation(readings: number[]): number
 Calculates the coefficient of variation (CV) for glucose values.
 CV = (SD / mean) × 100. Used to assess glycemic variability.
 
-| Parameter | Description |
-| --- | --- |
-| `readings` | Array of glucose values (numbers) |
-
 **Returns** — Coefficient of variation as a percentage, or NaN if &lt;2 values or mean is 0
 
-**Throws** — If readings is not an array
+**See** — [ADA 2019: Glycemic Targets](https://care.diabetesjournals.org/content/42/8/1593)
 
 ```ts
 glucoseCoefficientOfVariation([100, 120, 140]) // 18.26
@@ -239,12 +262,19 @@ glucoseCoefficientOfVariation([100]) // NaN
 glucoseCoefficientOfVariation([]) // NaN
 ```
 
-See: ADA 2019: Glycemic Targets
+**Remarks** — - If readings contains &lt;2 values or mean is 0, returns NaN.
+- Handles NaN/Infinity values by propagating them in the result.
+
+| Parameter | Description |
+| --- | --- |
+| `readings` | Array of glucose values (numbers) |
 
 
 ---
 
 ### glucoseGVP
+
+**Import:** `@glucoseiq/core/metrics`
 
 ```ts
 glucoseGVP(readings: GlucoseReading[]): number
@@ -256,21 +286,23 @@ the glucose trace exceeds the length of a flat line over the same time.
 `GVP = (L / L0 − 1) × 100`, where `L = Σ √(Δt² + Δglucose²)` and `L0 = Σ Δt`
 (Δt in minutes, Δglucose in mg/dL).
 
+**Returns** — GVP as a percentage, or NaN if &lt; 2 readings or no time span
+
+**See** — [https://doi.org/10.1089/dia.2017.0187](https://doi.org/10.1089/dia.2017.0187)
+
 | Parameter | Description |
 | --- | --- |
 | `readings` | Glucose readings with ISO 8601 timestamps |
-
-**Returns** — GVP as a percentage, or NaN if &lt; 2 readings or no time span
-
-See: https://doi.org/10.1089/dia.2017.0187
 
 
 ---
 
 ### glucoseHBGI
 
+**Import:** `@glucoseiq/core/metrics`
+
 ```ts
-glucoseHBGI(readings: number[], unit?: GlucoseUnit): number
+glucoseHBGI(readings: number[], unit: GlucoseUnit = MG_DL): number
 ```
 
 Calculates the High Blood Glucose Index (HBGI).
@@ -281,24 +313,26 @@ Higher values indicate greater hyperglycemia risk.
 Risk categories (Kovatchev 2006):
  - &lt; 4.5: low risk
  - 4.5 - 9.0: moderate risk
- - > 9.0: high risk
+ - &gt; 9.0: high risk
+
+**Returns** — HBGI value, or NaN if no valid readings
+
+**See** — [https://doi.org/10.2337/dc06-1085](https://doi.org/10.2337/dc06-1085)
 
 | Parameter | Description |
 | --- | --- |
 | `readings` | Array of glucose values (mg/dL by default) |
 | `unit` | Unit of `readings` (default 'mg/dL'); 'mmol/L' is converted to mg/dL first |
 
-**Returns** — HBGI value, or NaN if no valid readings
-
-See: https://doi.org/10.2337/dc06-1085
-
 
 ---
 
 ### glucoseLBGI
 
+**Import:** `@glucoseiq/core/metrics`
+
 ```ts
-glucoseLBGI(readings: number[], unit?: GlucoseUnit): number
+glucoseLBGI(readings: number[], unit: GlucoseUnit = MG_DL): number
 ```
 
 Calculates the Low Blood Glucose Index (LBGI).
@@ -309,21 +343,23 @@ Higher values indicate greater hypoglycemia risk.
 Risk categories (Kovatchev 2006):
  - &lt; 1.1: low risk
  - 1.1 - 2.5: moderate risk
- - > 2.5: high risk
+ - &gt; 2.5: high risk
+
+**Returns** — LBGI value, or NaN if no valid readings
+
+**See** — [https://doi.org/10.2337/dc06-1085](https://doi.org/10.2337/dc06-1085)
 
 | Parameter | Description |
 | --- | --- |
 | `readings` | Array of glucose values (mg/dL by default) |
 | `unit` | Unit of `readings` (default 'mg/dL'); 'mmol/L' is converted to mg/dL first |
 
-**Returns** — LBGI value, or NaN if no valid readings
-
-See: https://doi.org/10.2337/dc06-1085
-
 
 ---
 
 ### glucoseMAG
+
+**Import:** `@glucoseiq/core/metrics`
 
 ```ts
 glucoseMAG(readings: GlucoseReading[]): number
@@ -332,18 +368,20 @@ glucoseMAG(readings: GlucoseReading[]): number
 Mean Absolute Glucose change rate (MAG): total absolute glucose change
 divided by total elapsed time, in mg/dL per hour.
 
+**Returns** — MAG in mg/dL per hour, or NaN if &lt; 2 readings or no time span
+
+**See** — [https://doi.org/10.1186/cc9002](https://doi.org/10.1186/cc9002)
+
 | Parameter | Description |
 | --- | --- |
 | `readings` | Glucose readings with ISO 8601 timestamps |
-
-**Returns** — MAG in mg/dL per hour, or NaN if &lt; 2 readings or no time span
-
-See: https://doi.org/10.1186/cc9002
 
 
 ---
 
 ### glucoseMAGE
+
+**Import:** `@glucoseiq/core`
 
 ```ts
 glucoseMAGE(readings: number[], options?: MAGEOptions): number
@@ -352,26 +390,35 @@ glucoseMAGE(readings: number[], options?: MAGEOptions): number
 Calculates Mean Amplitude of Glycemic Excursions (MAGE) for glucose values.
 Implements Service FJ et al. (1970) methodology.
 
-| Parameter | Description |
-| --- | --- |
-| `readings` | Array of glucose values (mg/dL or mmol/L) |
-| `options` | Optional configuration for MAGE calculation |
-
 **Returns** — MAGE value, or NaN if insufficient data or no valid excursions
+
+**See**
+
+- [Service FJ, et al. 1970](https://pubmed.ncbi.nlm.nih.gov/5469118/)
+- [Fernandes NJ, et al. 2022](https://journals.sagepub.com/doi/10.1177/19322968211061165)
+- [ADA 2019](https://care.diabetesjournals.org/content/42/8/1593)
 
 ```ts
 glucoseMAGE([100, 120, 80, 160, 90, 140, 70, 180])
 glucoseMAGE(readings, { direction: 'ascending', shortWindow: 5, longWindow: 32 })
 ```
 
-See: - https://pubmed.ncbi.nlm.nih.gov/5469118/ (Service FJ, et al. 1970)
- - https://journals.sagepub.com/doi/10.1177/19322968211061165 (Fernandes NJ, et al. 2022)
- - https://care.diabetesjournals.org/content/42/8/1593 (ADA 2019)
+**Remarks** — - Minimum 24 data points recommended (1 day of hourly readings)
+- Best suited for continuous glucose monitoring (CGM) data
+- Not recommended for sparse or irregular measurements
+- Uses dual moving averages, three-point excursion definition, and prevents double-counting.
+
+| Parameter | Description |
+| --- | --- |
+| `readings` | Array of glucose values (mg/dL or mmol/L) |
+| `options` | Optional configuration for MAGE calculation |
 
 
 ---
 
 ### glucoseMValue
+
+**Import:** `@glucoseiq/core/metrics`
 
 ```ts
 glucoseMValue(readings: number[], options?: MValueOptions): number
@@ -379,19 +426,21 @@ glucoseMValue(readings: number[], options?: MValueOptions): number
 
 Calculates the Schlichtkrull M-value for a glucose series.
 
+**Returns** — The M-value, or NaN if there are no valid (finite, &gt; 0) readings
+
+**See** — [https://pubmed.ncbi.nlm.nih.gov/14163158/](https://pubmed.ncbi.nlm.nih.gov/14163158/)
+
 | Parameter | Description |
 | --- | --- |
 | `readings` | Glucose values (mg/dL by default) |
 | `options` | Unit, reference index, and whether to add the W correction |
 
-**Returns** — The M-value, or NaN if there are no valid (finite, > 0) readings
-
-See: https://pubmed.ncbi.nlm.nih.gov/14163158/
-
 
 ---
 
 ### glucosePercentiles
+
+**Import:** `@glucoseiq/core`
 
 ```ts
 glucosePercentiles(readings: number[], percentiles: number[]): Record<number, number>
@@ -400,27 +449,35 @@ glucosePercentiles(readings: number[], percentiles: number[]): Record<number, nu
 Calculates specified percentiles from an array of glucose values using the nearest-rank method.
 Used for glucose variability assessment.
 
-| Parameter | Description |
-| --- | --- |
-| `readings` | Array of glucose values (numbers) |
-| `percentiles` | Array of percentiles to calculate (e.g., [10, 25, 50, 75, 90]) |
-
 **Returns** — Object mapping percentile to value, or &#123;&#125; if input is empty
 
-**Throws** — If readings or percentiles is not an array
+**Throws** — If readings or percentiles is not an array (`INVALID_OPTION`)
+
+**See**
+
+- [https://en.wikipedia.org/wiki/Percentile](https://en.wikipedia.org/wiki/Percentile)
+- [ISPAD 2019](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7445493/)
 
 ```ts
 glucosePercentiles([100, 120, 140, 160, 180], [10, 50, 90]) // { 10: 100, 50: 140, 90: 180 }
 glucosePercentiles([], [10, 50, 90]) // {}
 ```
 
-See: - https://en.wikipedia.org/wiki/Percentile
- - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7445493/ (ISPAD 2019)
+**Remarks** — - Returns the value at the nearest-rank for each percentile.
+- If readings is empty, returns an empty object.
+- Percentiles outside \[0, 100] are ignored.
+
+| Parameter | Description |
+| --- | --- |
+| `readings` | Array of glucose values (numbers) |
+| `percentiles` | Array of percentiles to calculate (e.g., \[10, 25, 50, 75, 90]) |
 
 
 ---
 
 ### glucoseStandardDeviation
+
+**Import:** `@glucoseiq/core`
 
 ```ts
 glucoseStandardDeviation(readings: number[]): number
@@ -429,18 +486,21 @@ glucoseStandardDeviation(readings: number[]): number
 Calculates the unbiased sample standard deviation (SD) of glucose values.
 Uses n-1 in the denominator (sample SD), as recommended in research guidelines.
 
-| Parameter | Description |
-| --- | --- |
-| `readings` | Array of glucose values (numbers) |
-
 **Returns** — Standard deviation, or NaN if fewer than 2 values
 
-**Throws** — If readings is not an array
+**See**
+
+- [ADA 2019: Glycemic Targets](https://care.diabetesjournals.org/content/42/8/1593)
+- [ISPAD 2019](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7445493/)
 
 ```ts
 glucoseStandardDeviation([100, 120, 140]) // 20
 glucoseStandardDeviation([]) // NaN
 ```
 
-See: - ADA 2019: Glycemic Targets
- - ISPAD 2019
+**Remarks** — - If readings contains &lt;2 values, returns NaN (not enough data for SD).
+- Handles NaN/Infinity values by propagating them in the result.
+
+| Parameter | Description |
+| --- | --- |
+| `readings` | Array of glucose values (numbers) |

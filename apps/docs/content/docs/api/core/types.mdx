@@ -1,0 +1,1740 @@
+---
+title: "Types & Interfaces"
+description: "Public contracts for ingestion, analytics, rendering, and integrations."
+---
+
+### A1CReading
+
+```ts
+interface A1CReading
+```
+
+**Import:** `@glucoseiq/core`
+
+Single clinical A1C reading (value and ISO date).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `date` | `string` | — |
+| `value` | `number` | — |
+
+
+---
+
+### AGPChartOptions
+
+```ts
+interface AGPChartOptions
+```
+
+**Import:** `@glucoseiq/core/render`
+
+Options for [agpChartToSVG](/docs/api/core/render#agpcharttosvg).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly binMinutes?` | `number` | Bin width in minutes for the underlying profile (default 5). |
+| `readonly height?` | `number` | SVG height in px (default 320). |
+| `readonly theme?` | `'light' \| 'dark'` | Color theme (default 'dark'). |
+| `readonly timeZone?` | `string` | IANA time zone for time-of-day bucketing (default 'UTC'). |
+| `readonly title?` | `string` | Optional chart title. |
+| `readonly width?` | `number` | SVG width in px (default 800). |
+
+
+---
+
+### AGPMetricsOptions
+
+```ts
+interface AGPMetricsOptions
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Options for the aggregate AGP metrics calculation.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly activePercent?` | `ActivePercentOptions` | Active percent configuration (expected interval) |
+| `readonly conga?` | `CONGAOptions` | CONGA configuration (hours, tolerance) |
+| `readonly modd?` | `MODDOptions` | MODD tolerance configuration |
+
+
+---
+
+### AGPMetricsResult
+
+```ts
+interface AGPMetricsResult
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Comprehensive AGP metrics result.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly activePercent` | `ActivePercentResult` | CGM active percent / wear time |
+| `readonly adrr` | `number` | Average Daily Risk Range |
+| `readonly conga` | `number` | Continuous Overall Net Glycemic Action (mg/dL) |
+| `readonly cv` | `number` | Coefficient of variation (%) |
+| `readonly grade` | `GRADEResult` | GRADE score and partitioned components |
+| `readonly gri` | `GRIResult` | Glycemia Risk Index |
+| `readonly hbgi` | `number` | High Blood Glucose Index |
+| `readonly jIndex` | `number` | J-Index |
+| `readonly lbgi` | `number` | Low Blood Glucose Index |
+| `readonly meanGlucose` | `number` | Mean glucose in mg/dL |
+| `readonly modd` | `number` | Mean of Daily Differences (mg/dL) |
+| `readonly sd` | `number` | Standard deviation in mg/dL |
+| `readonly totalReadings` | `number` | Number of valid readings used |
+
+
+---
+
+### AGPProfileBin
+
+```ts
+interface AGPProfileBin
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+A single time-of-day bin in the AGP profile.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly minuteOfDay` | `number` | Minute-of-day at the start of this bin (0–1439). |
+| `readonly n` | `number` | Number of pooled readings in this bin. |
+| `readonly percentiles` | `Record<number, null \| number>` | Percentile value keyed by percentile; `null` when the bin has no readings. |
+
+
+---
+
+### AGPProfileOptions
+
+```ts
+interface AGPProfileOptions
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Options for [buildAGPProfile](/docs/api/core/agp#buildagpprofile).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly binMinutes?` | `number` | Bin width in minutes (default 5). Integer in \[1, 1440]. |
+| `readonly method?` | `PercentileMethod` | Percentile method (default 'nearest-rank'). |
+| `readonly percentiles?` | `number[]` | Percentiles to compute per bin (default \[5, 25, 50, 75, 95]). Values outside \[0, 100] are ignored. |
+| `readonly timeZone?` | `string` | IANA time zone used to assign readings to a minute-of-day (default 'UTC'). |
+| `readonly unit?` | `GlucoseUnit` | Output unit for percentile values (default 'mg/dL'). Input readings are normalized to this unit. |
+
+
+---
+
+### AGPProfileResult
+
+```ts
+interface AGPProfileResult
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Result of [buildAGPProfile](/docs/api/core/agp#buildagpprofile).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly binMinutes` | `number` | Bin width used (minutes). |
+| `readonly bins` | `AGPProfileBin[]` | All time-of-day bins across the full day (always present, empty bins included). |
+| `readonly percentiles` | `number[]` | Percentiles computed (sanitized to \[0, 100]). |
+| `readonly timeZone` | `string` | IANA time zone used for bucketing. |
+| `readonly totalReadings` | `number` | Count of valid readings pooled into the profile. |
+| `readonly unit` | `GlucoseUnit` | Output unit of percentile values. |
+| `readonly valid` | `boolean` | `false` when no valid readings were available. |
+
+
+---
+
+### AUCOptions
+
+```ts
+interface AUCOptions
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Options for AUC helpers.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly unit?` | `GlucoseUnit` | Output unit for values (default 'mg/dL'); area is expressed in this unit × minutes. |
+
+
+---
+
+### ActivePercentOptions
+
+```ts
+interface ActivePercentOptions
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Options for active percent calculation.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly expectedIntervalMinutes?` | `number` | Expected interval between readings in minutes (default: 5 for CGM) |
+
+
+---
+
+### ActivePercentResult
+
+```ts
+interface ActivePercentResult
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Result of the active percent calculation.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly activePercent` | `number` | Percentage of expected readings that were captured (0-100) |
+| `readonly actualReadings` | `number` | Number of actual readings in the dataset |
+| `readonly expectedReadings` | `number` | Number of expected readings based on time span and interval |
+| `readonly meetsClinicalMinimum` | `boolean` | Whether the active percent meets the clinical minimum (&gt;= 70%) |
+| `readonly totalMinutes` | `number` | Total time span covered in minutes |
+
+
+---
+
+### AlignOptions
+
+```ts
+interface AlignOptions
+```
+
+**Import:** `@glucoseiq/core`
+
+Options for [alignToGrid](/docs/api/core/series#aligntogrid).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly intervalMin?` | `number` | Grid interval in minutes (default 5). |
+| `readonly maxInterpolateGapMin?` | `number` | Interpolate only across gaps up to this many minutes (default 15). |
+| `readonly unit?` | `GlucoseUnit` | Output unit (default 'mg/dL'). Input units are normalized. |
+
+
+---
+
+### AnalyzeGlucoseOptions
+
+```ts
+interface AnalyzeGlucoseOptions
+```
+
+**Import:** `@glucoseiq/core`
+
+Options for [analyzeGlucose](/docs/api/core/reports#analyzeglucose).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly includeProfile?` | `boolean` | Include the AGP percentile-band series (default true). |
+| `readonly minActivePercent?` | `number` | Minimum active/wear percent for the consensus sufficiency flag (default 70). |
+| `readonly minDays?` | `number` | Minimum days of data for the consensus sufficiency flag (default 14). |
+| `readonly timeZone?` | `string` | IANA time zone for the AGP profile (default 'UTC'). |
+
+
+---
+
+### AnalyzeGlucoseResult
+
+```ts
+interface AnalyzeGlucoseResult
+```
+
+**Import:** `@glucoseiq/core`
+
+Result of [analyzeGlucose](/docs/api/core/reports#analyzeglucose).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly agpProfile` | `null \| AGPProfileResult` | — |
+| `readonly cv` | `number` | — |
+| `readonly dataSufficiency` | `DataSufficiency` | — |
+| `readonly episodes` | `null \| EpisodeResult` | — |
+| `readonly gmi` | `number` | — |
+| `readonly meanGlucose` | `number` | — |
+| `readonly risk` | `null \| RiskMetrics` | — |
+| `readonly sd` | `number` | — |
+| `readonly tightRange` | `null \| TITRResult` | — |
+| `readonly timeInRange` | `null \| EnhancedTIRResult` | — |
+| `readonly valid` | `boolean` | — |
+
+
+---
+
+### CONGAOptions
+
+```ts
+interface CONGAOptions
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Options for CONGA calculation.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly hours?` | `number` | Number of hours for the time lag (default: 1) |
+| `readonly toleranceMinutes?` | `number` | Tolerance window in minutes for matching readings (default: 15) |
+
+
+---
+
+### CSVParseOptions
+
+```ts
+interface CSVParseOptions
+```
+
+**Import:** `@glucoseiq/core`
+
+Options for [parseGlucoseCSV](/docs/api/core/ingestion#parseglucosecsv).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly delimiter?` | `string` | Field delimiter (default ','). |
+| `readonly timestampColumn` | `string` | Header name of the timestamp column. |
+| `readonly unit?` | `GlucoseUnit` | Unit of the values (default 'mg/dL'). |
+| `readonly valueColumn` | `string` | Header name of the glucose value column. |
+
+
+---
+
+### CohortResult
+
+```ts
+interface CohortResult
+```
+
+**Import:** `@glucoseiq/core`
+
+Result of [aggregateCohort](/docs/api/core/cohort#aggregatecohort).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly cv` | `DistributionStats` | Distribution of CV% across patients. |
+| `readonly gmi` | `DistributionStats` | Distribution of GMI across patients. |
+| `readonly meanGlucose` | `DistributionStats` | Distribution of mean glucose (mg/dL) across patients. |
+| `readonly patientCount` | `number` | Number of patients with at least one valid reading. |
+| `readonly tir` | `DistributionStats` | Distribution of in-range % across patients. |
+
+
+---
+
+### ConnectorCapabilities
+
+```ts
+interface ConnectorCapabilities
+```
+
+**Import:** `@glucoseiq/core/connectors`
+
+Declarative capabilities of a CGM data source.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly clockModel` | `ClockModel` | Whether timestamps come straight from the device or via a relay. |
+| `readonly historyDepthDays` | `number` | Typical history depth available from the feed, in days. |
+| `readonly maxFreshnessSec` | `number` | Readings older than this (seconds) should be considered stale. |
+| `readonly source` | `CGMSource` | The source this describes. |
+| `readonly tier` | `1 \| 2` | Connector tier: 1 = full-fidelity vendor feed, 2 = community/relay. |
+| `readonly trendVocabulary` | `TrendVocabulary` | Trend-arrow vocabulary coverage. |
+| `readonly updateIntervalSec` | `number` | Typical seconds between new readings. |
+
+
+---
+
+### ConversionResult
+
+```ts
+interface ConversionResult
+```
+
+**Import:** `@glucoseiq/core`
+
+Result of glucose unit conversion.
+Provides converted value and new unit for clinical interoperability.
+
+**See** — [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly unit` | `GlucoseUnit` | New glucose unit after conversion |
+| `readonly value` | `number` | Converted glucose value |
+
+
+---
+
+### DataSufficiency
+
+```ts
+interface DataSufficiency
+```
+
+**Import:** `@glucoseiq/core`
+
+Data-sufficiency assessment for a report.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly activePercent` | `number` | CGM active/wear percent. |
+| `readonly daysOfData` | `number` | Span of the data in days (last − first). |
+| `readonly meetsCGMStandard` | `boolean` | Whether the data meets the consensus recording standard. |
+| `readonly totalReadings` | `number` | Number of valid readings analyzed. |
+
+
+---
+
+### DayNightOptions
+
+```ts
+interface DayNightOptions
+```
+
+**Import:** `@glucoseiq/core`
+
+Options for [splitDayNight](/docs/api/core/series#splitdaynight).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly nightEndHour?` | `number` | Hour the night window ends, exclusive (default 6). |
+| `readonly nightStartHour?` | `number` | Hour the night window begins (default 0). |
+| `readonly timeZone?` | `string` | IANA time zone used to classify each reading's local hour (default 'UTC'). |
+
+
+---
+
+### DayNightSplit
+
+```ts
+interface DayNightSplit
+```
+
+**Import:** `@glucoseiq/core`
+
+Result of [splitDayNight](/docs/api/core/series#splitdaynight).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly day` | `GlucoseReading[]` | — |
+| `readonly night` | `GlucoseReading[]` | — |
+
+
+---
+
+### DexcomShareEntry
+
+```ts
+interface DexcomShareEntry
+```
+
+**Import:** `@glucoseiq/core/connectors`
+
+Raw glucose entry returned by the Dexcom Share service.
+Matches the shape of `@diakem/dexcom-api-client` and `dexcom-share-client` responses.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `DT?` | `string` | Optional: Dexcom device serial or record id |
+| `ST?` | `string` | Stable record identifier |
+| `Trend` | `DexcomTrendString` | Dexcom trend string |
+| `Value` | `number` | Glucose value in mg/dL |
+| `WT` | `string` | Dexcom date string, e.g. "Date(1700000000000)" or ISO 8601 |
+
+
+---
+
+### DistributionStats
+
+```ts
+interface DistributionStats
+```
+
+**Import:** `@glucoseiq/core`
+
+Distribution of a metric across a cohort.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly max` | `number` | — |
+| `readonly mean` | `number` | — |
+| `readonly median` | `number` | — |
+| `readonly min` | `number` | — |
+| `readonly p25` | `number` | — |
+| `readonly p75` | `number` | — |
+
+
+---
+
+### EnhancedTIROptions
+
+```ts
+interface EnhancedTIROptions
+```
+
+**Import:** `@glucoseiq/core`
+
+Options for Enhanced TIR calculation.
+Allows customization for different clinical populations and use cases.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly highThreshold?` | `number` | Override for the high threshold (181-250 mg/dL). Value must be provided in mg/dL. |
+| `readonly lowThreshold?` | `number` | Override for the low threshold (54-69 mg/dL). Value must be provided in mg/dL. |
+| `readonly population?` | `TIRPopulation` | Population type for target assessment (default: 'standard') |
+| `readonly veryHighThreshold?` | `number` | Override for the very high threshold (&gt;250 mg/dL). Value must be provided in mg/dL. |
+| `readonly veryLowThreshold?` | `number` | Override for the very low threshold (&lt;54 mg/dL). Value must be provided in mg/dL. |
+
+
+---
+
+### EnhancedTIRResult
+
+```ts
+interface EnhancedTIRResult
+```
+
+**Import:** `@glucoseiq/core`
+
+Complete Enhanced Time-in-Range result.
+Provides detailed breakdown across five clinical glucose ranges per International Consensus 2019.
+
+**See** — [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly high` | `RangeMetrics` | High: 181-250 mg/dL (10.1-13.9 mmol/L) - Level 1 Hyperglycemia. Average value is reported in mg/dL. |
+| `readonly inRange` | `RangeMetrics` | In Range: 70-180 mg/dL (3.9-10.0 mmol/L) - Target Range. Average value is reported in mg/dL. |
+| `readonly low` | `RangeMetrics` | Low: 54-69 mg/dL (3.0-3.8 mmol/L) - Level 1 Hypoglycemia. Average value is reported in mg/dL. |
+| `readonly meetsTargets` | `TargetAssessment` | Assessment against clinical targets |
+| `readonly summary` | `TIRSummary` | Summary statistics |
+| `readonly veryHigh` | `RangeMetrics` | Very High: &gt;250 mg/dL (&gt;13.9 mmol/L) - Level 2 Hyperglycemia. Average value is reported in mg/dL. |
+| `readonly veryLow` | `RangeMetrics` | Very Low: &lt;54 mg/dL (3.0 mmol/L) - Level 2 Hypoglycemia. Average value is reported in mg/dL. |
+
+
+---
+
+### EpisodeOptions
+
+```ts
+interface EpisodeOptions
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Options for [detectEpisodes](/docs/api/core/episodes#detectepisodes). Thresholds are in mg/dL.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly endDurationMin?` | `number` | Recovery duration that ends an episode, in minutes (default 15). |
+| `readonly hyperLevel2?` | `number` | Level 2 hyperglycemia threshold (default 250). |
+| `readonly hyperThreshold?` | `number` | Hyperglycemia threshold (default 180). |
+| `readonly hypoLevel2?` | `number` | Level 2 hypoglycemia threshold (default 54). |
+| `readonly hypoThreshold?` | `number` | Hypoglycemia threshold (default 70). |
+| `readonly minDurationMin?` | `number` | Minimum episode duration in minutes (default 15). |
+
+
+---
+
+### EpisodeResult
+
+```ts
+interface EpisodeResult
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Result of [detectEpisodes](/docs/api/core/episodes#detectepisodes).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly hyperEvents` | `GlucoseEpisode[]` | — |
+| `readonly hypoEvents` | `GlucoseEpisode[]` | — |
+| `readonly summary` | `EpisodeSummary` | — |
+
+
+---
+
+### EpisodeSummary
+
+```ts
+interface EpisodeSummary
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Summary counts across detected episodes.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly hyperCount` | `number` | — |
+| `readonly hyperLevel2Count` | `number` | — |
+| `readonly hypoCount` | `number` | — |
+| `readonly hypoLevel2Count` | `number` | — |
+| `readonly totalHyperMinutes` | `number` | — |
+| `readonly totalHypoMinutes` | `number` | — |
+
+
+---
+
+### EstimateGMIOptions
+
+```ts
+interface EstimateGMIOptions
+```
+
+**Import:** `@glucoseiq/core`
+
+Options for clinical GMI (Glucose Management Indicator) estimation.
+Used to standardize GMI calculation input.
+
+**See** — [https://diatribe.org/glucose-management-indicator-gmi](https://diatribe.org/glucose-management-indicator-gmi)
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `unit` | `GlucoseUnit` | — |
+| `value` | `number` | — |
+
+
+---
+
+### FHIRCGMComponent
+
+```ts
+interface FHIRCGMComponent
+```
+
+**Import:** `@glucoseiq/core/interop`
+
+LOINC-coded CGM summary observation component.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly code` | `FHIRCodeableConcept` | Coded component descriptor |
+| `readonly valueQuantity` | `FHIRQuantity` | Measured value in FHIR valueQuantity shape |
+
+
+---
+
+### FHIRCGMSensorReading
+
+```ts
+interface FHIRCGMSensorReading
+```
+
+**Import:** `@glucoseiq/core/interop`
+
+Lightweight FHIR-aligned CGM sensor reading.
+Follows the structure of the HL7 CGM IG sensor reading profile.
+
+**See** — [https://build.fhir.org/ig/HL7/cgm/StructureDefinition-cgm-sensor-reading-mass-per-volume.html](https://build.fhir.org/ig/HL7/cgm/StructureDefinition-cgm-sensor-reading-mass-per-volume.html)
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly code` | `FHIRCodeableConcept` | — |
+| `readonly effectiveDateTime` | `string` | — |
+| `readonly resourceType` | `'Observation'` | — |
+| `readonly status` | `'final'` | — |
+| `readonly valueQuantity` | `FHIRQuantity` | — |
+
+
+---
+
+### FHIRCGMSummary
+
+```ts
+interface FHIRCGMSummary
+```
+
+**Import:** `@glucoseiq/core/interop`
+
+Lightweight FHIR-aligned CGM summary observation.
+Follows the structure of the HL7 CGM IG `CGMSummaryObservation` profile
+without requiring a full FHIR library.
+
+**See** — [https://build.fhir.org/ig/HL7/cgm/StructureDefinition-cgm-summary.html](https://build.fhir.org/ig/HL7/cgm/StructureDefinition-cgm-summary.html)
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly code` | `FHIRCodeableConcept` | — |
+| `readonly component` | `readonly FHIRCGMComponent[]` | — |
+| `readonly effectivePeriod` | `{ readonly end: string; readonly start: string }` | — |
+| `readonly resourceType` | `'Observation'` | — |
+| `readonly status` | `'final'` | — |
+
+
+---
+
+### FHIRCodeableConcept
+
+```ts
+interface FHIRCodeableConcept
+```
+
+**Import:** `@glucoseiq/core/interop`
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly coding` | `readonly FHIRCoding[]` | — |
+
+
+---
+
+### FHIRCoding
+
+```ts
+interface FHIRCoding
+```
+
+**Import:** `@glucoseiq/core/interop`
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly code` | `string` | — |
+| `readonly display` | `string` | — |
+| `readonly system` | `string` | — |
+
+
+---
+
+### FHIRQuantity
+
+```ts
+interface FHIRQuantity
+```
+
+**Import:** `@glucoseiq/core/interop`
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly code` | `string` | — |
+| `readonly system` | `string` | — |
+| `readonly unit` | `string` | — |
+| `readonly value` | `number` | — |
+
+
+---
+
+### GRADEResult
+
+```ts
+interface GRADEResult
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Result of the partitioned GRADE calculation.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly grade` | `number` | Mean GRADE score across all valid readings |
+| `readonly gradeEuglycemia` | `number` | % of total GRADE contributed by euglycemic readings (70-140 mg/dL) |
+| `readonly gradeHyperglycemia` | `number` | % of total GRADE contributed by hyperglycemic readings (&gt;140 mg/dL) |
+| `readonly gradeHypoglycemia` | `number` | % of total GRADE contributed by hypoglycemic readings (&lt;70 mg/dL) |
+
+
+---
+
+### GRIInput
+
+```ts
+interface GRIInput
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Input percentages for GRI calculation.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly highPercent` | `number` | % time 181-250 mg/dL |
+| `readonly lowPercent` | `number` | % time 54-69 mg/dL |
+| `readonly veryHighPercent` | `number` | % time &gt; 250 mg/dL |
+| `readonly veryLowPercent` | `number` | % time &lt; 54 mg/dL |
+
+
+---
+
+### GRIResult
+
+```ts
+interface GRIResult
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+GRI result with numeric score and risk zone.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly hyperComponent` | `number` | — |
+| `readonly hypoComponent` | `number` | — |
+| `readonly score` | `number` | — |
+| `readonly zone` | `'A' \| 'B' \| 'C' \| 'D' \| 'E'` | — |
+
+
+---
+
+### GVIPGSOptions
+
+```ts
+interface GVIPGSOptions
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Options for [calculateGVIPGS](/docs/api/core/variability#calculategvipgs).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly maxGapMinutes?` | `number` | Maximum minutes between readings to count a step (default ~5.17). |
+| `readonly targetHigh?` | `number` | In-range upper bound, mg/dL, exclusive (default 180). |
+| `readonly targetLow?` | `number` | In-range lower bound, mg/dL, inclusive (default 70). |
+
+
+---
+
+### GVIPGSResult
+
+```ts
+interface GVIPGSResult
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Result of [calculateGVIPGS](/docs/api/core/variability#calculategvipgs).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly gvi` | `number` | Glucose Variability Index (actual path length / ideal). |
+| `readonly meanGlucose` | `number` | Mean glucose used (mg/dL, floored). |
+| `readonly pgs` | `number` | Patient Glycemic Status. |
+| `readonly timeInRangeFraction` | `number` | Time-in-range fraction used (PTIR). |
+
+
+---
+
+### GapDetectionOptions
+
+```ts
+interface GapDetectionOptions
+```
+
+**Import:** `@glucoseiq/core`
+
+Options for [detectGaps](/docs/api/core/series#detectgaps).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly maxGapMinutes?` | `number` | A gap is any interval longer than this many minutes (default 15). |
+
+
+---
+
+### GlucoseEpisode
+
+```ts
+interface GlucoseEpisode
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+A detected glucose episode.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly durationMinutes` | `number` | Episode duration in minutes (span of flagged readings). |
+| `readonly endTime` | `string` | ISO 8601 timestamp of the last reading in the episode. |
+| `readonly extremeValue` | `number` | Nadir (hypo) or peak (hyper) glucose in mg/dL. |
+| `readonly level` | `1 \| 2` | Clinical level: 1 (moderate) or 2 (clinically significant). |
+| `readonly meanValue` | `number` | Mean glucose of the flagged readings (mg/dL). |
+| `readonly readingCount` | `number` | Number of flagged readings in the episode. |
+| `readonly startTime` | `string` | ISO 8601 timestamp of the first reading in the episode. |
+| `readonly type` | `'hypo' \| 'hyper'` | 'hypo' (below threshold) or 'hyper' (above threshold). |
+
+
+---
+
+### GlucoseGap
+
+```ts
+interface GlucoseGap
+```
+
+**Import:** `@glucoseiq/core`
+
+A detected gap between consecutive readings.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly durationMinutes` | `number` | Gap duration in minutes. |
+| `readonly end` | `string` | ISO 8601 timestamp of the reading after the gap. |
+| `readonly start` | `string` | ISO 8601 timestamp of the reading before the gap. |
+
+
+---
+
+### GlucoseIQScore
+
+```ts
+interface GlucoseIQScore
+```
+
+**Import:** `@glucoseiq/core`
+
+Result of [glucoseIQScore](/docs/api/core/score#glucoseiqscore).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly gri` | `number` | Underlying Glycemia Risk Index. |
+| `readonly rating` | `GlucoseIQRating` | Qualitative rating. |
+| `readonly score` | `number` | 0–100 score, higher is better (100 − GRI). |
+| `readonly valid` | `boolean` | Whether the score could be computed. |
+| `readonly zone` | `null \| 'A' \| 'B' \| 'C' \| 'D' \| 'E'` | GRI risk zone (A best … E worst), or null if not computable. |
+
+
+---
+
+### GlucoseReading
+
+```ts
+interface GlucoseReading
+```
+
+**Import:** `@glucoseiq/core`
+
+Single clinical glucose reading.
+Includes value, unit, and ISO 8601 timestamp for clinical analytics.
+
+**See** — [https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7445493/](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7445493/)
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly timestamp` | `string` | — |
+| `readonly unit` | `GlucoseUnit` | — |
+| `readonly value` | `number` | — |
+
+
+---
+
+### GlucoseStatsOptions
+
+```ts
+interface GlucoseStatsOptions
+```
+
+**Import:** `@glucoseiq/core`
+
+Options for clinical glucose statistics analytics.
+Controls which metrics are calculated and reported.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `a1c?` | `boolean` | — |
+| `gmi?` | `boolean` | — |
+| `range` | `[number, number]` | — |
+| `readings` | `GlucoseReading[]` | — |
+| `tir?` | `boolean` | — |
+| `tirPercent?` | `boolean` | — |
+| `tirPercentAbove?` | `boolean` | — |
+| `tirPercentAboveRounded?` | `boolean` | — |
+| `tirPercentBelow?` | `boolean` | — |
+| `tirPercentBelowRounded?` | `boolean` | — |
+| `tirPercentInRange?` | `boolean` | — |
+| `tirPercentInRangeRounded?` | `boolean` | — |
+| `tirRange?` | `[number, number]` | — |
+| `unit` | `GlucoseUnit` | — |
+
+
+---
+
+### GlucoseTrendOptions
+
+```ts
+interface GlucoseTrendOptions
+```
+
+**Import:** `@glucoseiq/core`
+
+Options for [computeGlucoseTrend](/docs/api/core/live#computeglucosetrend).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly windowMin?` | `number` | Trailing window in minutes over which rate-of-change is fit (default 15). |
+
+
+---
+
+### GlucoseTrendResult
+
+```ts
+interface GlucoseTrendResult
+```
+
+**Import:** `@glucoseiq/core`
+
+Result of [computeGlucoseTrend](/docs/api/core/live#computeglucosetrend).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly readingsUsed` | `number` | Number of readings used in the fit. |
+| `readonly rocPerMin` | `number` | Rate-of-change in mg/dL per minute (NaN when not computable). |
+| `readonly trend` | `CGMTrend` | Derived CGM trend (or 'unknown' when not computable). |
+| `readonly windowMinutes` | `number` | Trailing window used (minutes). |
+
+
+---
+
+### GridPoint
+
+```ts
+interface GridPoint
+```
+
+**Import:** `@glucoseiq/core`
+
+A resampled grid point.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly interpolated` | `boolean` | True when the value was linearly interpolated rather than observed. |
+| `readonly timestamp` | `string` | ISO 8601 timestamp of the grid slot. |
+| `readonly value` | `number` | Glucose value in the output unit. |
+
+
+---
+
+### IGCOptions
+
+```ts
+interface IGCOptions
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Options for [calculateIGC](/docs/api/core/variability#calculateigc). All thresholds are in mg/dL.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly hyperExponent?` | `number` | Hyperglycemia exponent a (default 1.1). |
+| `readonly hyperScale?` | `number` | Hyperglycemia scale factor c (default 30). |
+| `readonly hypoExponent?` | `number` | Hypoglycemia exponent b (default 2.0). |
+| `readonly hypoScale?` | `number` | Hypoglycemia scale factor d (default 30). |
+| `readonly lltr?` | `number` | Lower limit of target range (default 80). |
+| `readonly ultr?` | `number` | Upper limit of target range (default 140). |
+| `readonly unit?` | `GlucoseUnit` | Unit of the input values (default 'mg/dL'); 'mmol/L' is converted to mg/dL. |
+
+
+---
+
+### IGCResult
+
+```ts
+interface IGCResult
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Result of [calculateIGC](/docs/api/core/variability#calculateigc).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly hyperIndex` | `number` | — |
+| `readonly hypoIndex` | `number` | — |
+| `readonly igc` | `number` | — |
+
+
+---
+
+### LibreLinkUpEntry
+
+```ts
+interface LibreLinkUpEntry
+```
+
+**Import:** `@glucoseiq/core/connectors`
+
+Raw glucose entry from the Libre LinkUp API.
+Matches the shape of `librelinkup-api-client` and `libre-client` responses.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `FactoryTimestamp?` | `string` | Factory timestamp |
+| `GlucoseUnits?` | `0 \| 1` | Display unit flag: 1 = mg/dL, 0 = mmol/L |
+| `MeasurementColor?` | `number` | Measurement color (vendor-specific) |
+| `Timestamp` | `string` | ISO 8601 timestamp string |
+| `TrendArrow` | `LibreTrendValue` | Trend arrow (1=falling fast, 2=falling, 3=stable, 4=rising, 5=rising fast) |
+| `Value` | `number` | Glucose value in the account's display unit (see GlucoseUnits) |
+| `ValueInMgPerDl?` | `number` | Glucose value in mg/dL, when provided by the API (preferred) |
+
+
+---
+
+### MAGEOptions
+
+```ts
+interface MAGEOptions
+```
+
+**Import:** `@glucoseiq/core`
+
+Configuration options for MAGE calculation.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `direction?` | `'auto' \| 'ascending' \| 'descending'` | Excursion direction: 'auto', 'ascending', or 'descending' |
+| `longWindow?` | `number` | Long moving average window (default: 32) |
+| `shortWindow?` | `number` | Short moving average window (default: 5) |
+
+
+---
+
+### MODDOptions
+
+```ts
+interface MODDOptions
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Options for MODD calculation.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly toleranceMinutes?` | `number` | Tolerance window in minutes for matching readings across days (default: 15) |
+
+
+---
+
+### MValueOptions
+
+```ts
+interface MValueOptions
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Options for [glucoseMValue](/docs/api/core/variability#glucosemvalue).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly includeCorrection?` | `boolean` | Add the W = range/20 correction term (default true, per the 1965 manuscript). |
+| `readonly index?` | `number` | Ideal reference glucose in mg/dL (default 120). |
+| `readonly unit?` | `GlucoseUnit` | Unit of the input values (default 'mg/dL'); 'mmol/L' is converted to mg/dL. |
+
+
+---
+
+### MealResponseOptions
+
+```ts
+interface MealResponseOptions
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Options for [analyzeMealResponse](/docs/api/core/meals#analyzemealresponse).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly unit?` | `GlucoseUnit` | Output unit for values (default 'mg/dL'). |
+| `readonly windowMin?` | `number` | Minutes after the meal to analyze (default 120). |
+
+
+---
+
+### MealResponseResult
+
+```ts
+interface MealResponseResult
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Result of [analyzeMealResponse](/docs/api/core/meals#analyzemealresponse).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly baseline` | `number` | Pre-meal baseline value (output unit). |
+| `readonly delta` | `number` | Peak minus baseline (output unit). |
+| `readonly iAUC` | `number` | Incremental AUC above baseline (output unit × minutes). |
+| `readonly peakValue` | `number` | Peak glucose value in the window (output unit). |
+| `readonly readingCount` | `number` | Number of readings in the window. |
+| `readonly returnToBaselineMin` | `null \| number` | Minutes from the meal until glucose first returns to baseline after the peak, or null. |
+| `readonly timeToPeakMin` | `number` | Minutes from the meal to the peak. |
+| `readonly valid` | `boolean` | Whether a response could be computed. |
+| `readonly windowMinutes` | `number` | Window analyzed (minutes). |
+
+
+---
+
+### NightscoutEntry
+
+```ts
+interface NightscoutEntry
+```
+
+**Import:** `@glucoseiq/core/connectors`
+
+Nightscout SGV (Sensor Glucose Value) entry.
+Matches the `/api/v1/entries` response shape.
+
+**See** — [https://nightscout.github.io/nightscout/setup_variables/#api](https://nightscout.github.io/nightscout/setup_variables/#api)
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `_id?` | `string` | Nightscout record _id |
+| `date` | `number` | Epoch timestamp in milliseconds |
+| `dateString?` | `string` | ISO 8601 date string |
+| `direction?` | `NightscoutDirection` | Trend direction |
+| `sgv` | `number` | Sensor glucose value in mg/dL |
+| `type?` | `string` | Entry type (usually "sgv") |
+
+
+---
+
+### NormalizeError
+
+```ts
+interface NormalizeError
+```
+
+**Import:** `@glucoseiq/core/connectors`
+
+A single entry that failed to normalize.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly code?` | `GlucoseIQErrorCode` | Stable machine-readable code for intentional library errors. |
+| `readonly index` | `number` | Index of the failing entry in the input array. |
+| `readonly message` | `string` | The error message. |
+
+
+---
+
+### NormalizedCGMReading
+
+```ts
+interface NormalizedCGMReading extends GlucoseReading
+```
+
+**Import:** `@glucoseiq/core/connectors`
+
+Extended glucose reading that preserves vendor metadata.
+Superset of GlucoseReading — can be passed directly to all analytics functions.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly dedupKey?` | `string` | Deterministic key for cross-poll de-duplication. |
+| `readonly nativeUnit?` | `GlucoseUnit` | Unit the vendor natively reported, when it differs from `unit`. |
+| `readonly source` | `CGMSource` | Data source vendor |
+| `readonly timestamp` | `string` | — |
+| `readonly trend` | `CGMTrend` | Trend direction from the CGM device |
+| `readonly unit` | `GlucoseUnit` | — |
+| `readonly value` | `number` | — |
+| `readonly vendorId?` | `string` | Original vendor-specific identifier, if available |
+
+
+---
+
+### OMHBloodGlucose
+
+```ts
+interface OMHBloodGlucose
+```
+
+**Import:** `@glucoseiq/core/interop`
+
+Open mHealth blood-glucose datapoint body.
+
+**See** — [https://www.openmhealth.org/documentation/schema-docs/schema-library/](https://www.openmhealth.org/documentation/schema-docs/schema-library/)
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly blood_glucose` | `{ readonly unit: GlucoseUnit; readonly value: number }` | — |
+| `readonly effective_time_frame` | `{ readonly date_time: string }` | — |
+| `readonly specimen_source` | `'interstitial fluid' \| 'capillary blood' \| 'plasma'` | — |
+
+
+---
+
+### OMHDataPoint
+
+```ts
+interface OMHDataPoint<T = OMHBloodGlucose>
+```
+
+**Import:** `@glucoseiq/core/interop`
+
+Wrapped OMH datapoint with header metadata.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly body` | `T` | — |
+| `readonly header` | `{ readonly creation_date_time: string; readonly id: string; readonly schema_id: { readonly name: string; readonly namespace: string; readonly version: string } }` | — |
+
+
+---
+
+### PregnancyTIROptions
+
+```ts
+interface PregnancyTIROptions
+```
+
+**Import:** `@glucoseiq/core`
+
+Options for Pregnancy TIR calculation.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly unit?` | `GlucoseUnit` | Unit used to normalize mixed-unit readings for pregnancy thresholds. Defaults to the predominant reading unit. |
+
+
+---
+
+### PregnancyTIRResult
+
+```ts
+interface PregnancyTIRResult
+```
+
+**Import:** `@glucoseiq/core`
+
+Pregnancy-specific Time-in-Range result.
+Uses tighter target range per ADA 2024 guidelines for pregnancy.
+
+**See** — [ADA Standards of Care (2024)](https://diabetesjournals.org/care/article/47/Supplement_1/S282)
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly aboveRange` | `RangeMetrics` | Above Range: &gt;140 mg/dL (7.8 mmol/L) |
+| `readonly belowRange` | `RangeMetrics` | Below Range: &lt;63 mg/dL (3.5 mmol/L) |
+| `readonly inRange` | `RangeMetrics` | In Range: 63-140 mg/dL (3.5-7.8 mmol/L) |
+| `readonly meetsPregnancyTargets` | `boolean` | Whether metrics meet pregnancy-specific targets (TIR &gt;70%, TBR &lt;4%, TAR &lt;25%) |
+| `readonly recommendations` | `readonly string[]` | Clinical recommendations |
+| `readonly summary` | `TIRSummary` | Summary statistics |
+
+
+---
+
+### RangeMetrics
+
+```ts
+interface RangeMetrics
+```
+
+**Import:** `@glucoseiq/core`
+
+Detailed metrics for a single glucose range.
+Provides percentage, duration, count, and average value for clinical analysis.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly averageValue` | `null \| number` | Average glucose value in this range (mg/dL or mmol/L) |
+| `readonly duration` | `number` | Total duration in this range (minutes) |
+| `readonly percentage` | `number` | Percentage of readings in this range (0-100) |
+| `readonly readingCount` | `number` | Count of readings in this range |
+
+
+---
+
+### RiskMetrics
+
+```ts
+interface RiskMetrics
+```
+
+**Import:** `@glucoseiq/core`
+
+Risk-metric block of an [AnalyzeGlucoseResult](/docs/api/core/types#analyzeglucoseresult).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly adrr` | `number` | — |
+| `readonly conga` | `number` | — |
+| `readonly grade` | `GRADEResult` | — |
+| `readonly gri` | `GRIResult` | — |
+| `readonly hbgi` | `number` | — |
+| `readonly jIndex` | `number` | — |
+| `readonly lbgi` | `number` | — |
+| `readonly modd` | `number` | — |
+
+
+---
+
+### SafeNormalizeResult
+
+```ts
+interface SafeNormalizeResult
+```
+
+**Import:** `@glucoseiq/core/connectors`
+
+Result of a safe normalization pass.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly errors` | `NormalizeError[]` | Per-entry failures (empty when everything parsed). |
+| `readonly readings` | `NormalizedCGMReading[]` | Successfully normalized readings, sorted chronologically. |
+
+
+---
+
+### TIRBarOptions
+
+```ts
+interface TIRBarOptions
+```
+
+**Import:** `@glucoseiq/core/render`
+
+Options for [tirBarToSVG](/docs/api/core/render#tirbartosvg).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly height?` | `number` | SVG height in px (default 320). |
+| `readonly theme?` | `'light' \| 'dark'` | Color theme (default 'dark'). |
+| `readonly width?` | `number` | SVG width in px (default 180). |
+
+
+---
+
+### TIROptions
+
+```ts
+interface TIROptions
+```
+
+**Import:** `@glucoseiq/core`
+
+Options for clinical Time-in-Range (TIR) analytics.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `range` | `[number, number]` | — |
+| `readings` | `GlucoseReading[]` | — |
+| `unit` | `GlucoseUnit` | — |
+
+
+---
+
+### TIRResult
+
+```ts
+interface TIRResult
+```
+
+**Import:** `@glucoseiq/core`
+
+Result object for clinical Time-in-Range (TIR) analytics.
+Percentages for in-range, below-range, and above-range readings.
+
+**See** — [https://care.diabetesjournals.org/content/42/8/1593](https://care.diabetesjournals.org/content/42/8/1593)
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `aboveRange` | `number` | — |
+| `belowRange` | `number` | — |
+| `inRange` | `number` | — |
+
+
+---
+
+### TIRSummary
+
+```ts
+interface TIRSummary
+```
+
+**Import:** `@glucoseiq/core`
+
+Summary statistics for TIR calculation.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly dataQuality` | `'excellent' \| 'good' \| 'fair' \| 'poor'` | Data quality assessment |
+| `readonly totalDuration` | `number` | Total duration of data analyzed (minutes) |
+| `readonly totalReadings` | `number` | Total number of glucose readings analyzed |
+
+
+---
+
+### TITROptions
+
+```ts
+interface TITROptions
+```
+
+**Import:** `@glucoseiq/core`
+
+Options for [calculateTITR](/docs/api/core/time-in-range#calculatetitr). Thresholds are in mg/dL.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly highThreshold?` | `number` | Upper bound of the tight range (mg/dL, inclusive). Default 140. |
+| `readonly lowThreshold?` | `number` | Lower bound of the tight range (mg/dL, inclusive). Default 70. |
+| `readonly target?` | `number` | Target percentage of readings in the tight range. Default 50. |
+
+
+---
+
+### TITRResult
+
+```ts
+interface TITRResult
+```
+
+**Import:** `@glucoseiq/core`
+
+Result of [calculateTITR](/docs/api/core/time-in-range#calculatetitr).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly aboveRange` | `number` | Percentage of readings above the tight range. |
+| `readonly belowRange` | `number` | Percentage of readings below the tight range. |
+| `readonly inRange` | `number` | Percentage of readings within the tight range (0-100). |
+| `readonly meetsTarget` | `boolean` | Whether inRange meets the target. |
+| `readonly readingCount` | `number` | Number of readings analyzed. |
+| `readonly target` | `number` | Target percentage used. |
+
+
+---
+
+### TargetAssessment
+
+```ts
+interface TargetAssessment
+```
+
+**Import:** `@glucoseiq/core`
+
+Assessment of whether TIR metrics meet clinical targets.
+Based on International Consensus on Time in Range (2019).
+
+**See** — [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly overallAssessment` | `TIRAssessment` | Overall assessment of glycemic control |
+| `readonly recommendations` | `readonly string[]` | Clinical recommendations based on metrics |
+| `readonly tarLevel1Acceptable` | `boolean` | TAR Level 1 &lt;25% (all populations) |
+| `readonly tarLevel2Acceptable` | `boolean` | TAR Level 2 &lt;5% (all populations) |
+| `readonly tbrLevel1Safe` | `boolean` | TBR Level 1 &lt;4% for standard, &lt;1% for older adults |
+| `readonly tbrLevel2Safe` | `boolean` | TBR Level 2 &lt;1% for standard, &lt;0.5% for older adults |
+| `readonly tirMeetsGoal` | `boolean` | TIR ≥70% for standard population, ≥50% for older adults |
+
+
+---
+
+### TrendTileOptions
+
+```ts
+interface TrendTileOptions
+```
+
+**Import:** `@glucoseiq/core/render`
+
+Options for [trendTileToSVG](/docs/api/core/render#trendtiletosvg).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly height?` | `number` | SVG height in px (default 140). |
+| `readonly theme?` | `'light' \| 'dark'` | Color theme (default 'dark'). |
+| `readonly width?` | `number` | SVG width in px (default 240). |
+
+
+---
+
+### CGMSource
+
+```ts
+type CGMSource = 'dexcom' | 'libre' | 'nightscout' | 'unknown'
+```
+
+**Import:** `@glucoseiq/core/connectors`
+
+Known CGM data source vendors.
+
+
+---
+
+### CGMTrend
+
+```ts
+type CGMTrend = 'rapidRising' | 'rising' | 'slightlyRising' | 'flat' | 'slightlyFalling' | 'falling' | 'rapidFalling' | 'unknown'
+```
+
+**Import:** `@glucoseiq/core/connectors`
+
+Trend direction reported by CGM devices.
+Normalized across vendors into a common set.
+
+**See**
+
+- Dexcom: DoubleUp, SingleUp, FortyFiveUp, Flat, FortyFiveDown, SingleDown, DoubleDown
+- Libre: 1-5 numeric scale
+
+
+---
+
+### ClockModel
+
+```ts
+type ClockModel = 'direct' | 'relay'
+```
+
+**Import:** `@glucoseiq/core/connectors`
+
+How a source's clock relates to the sensor's.
+
+
+---
+
+### DexcomTrendString
+
+```ts
+type DexcomTrendString = 'DoubleUp' | 'SingleUp' | 'FortyFiveUp' | 'Flat' | 'FortyFiveDown' | 'SingleDown' | 'DoubleDown' | 'None' | 'NotComputable' | 'RateOutOfRange'
+```
+
+**Import:** `@glucoseiq/core/connectors`
+
+Trend strings returned by the Dexcom Share API.
+
+
+---
+
+### GlucoseIQErrorCode
+
+```ts
+type GlucoseIQErrorCode = 'EMPTY_DATASET' | 'INVALID_GLUCOSE_VALUE' | 'INVALID_A1C_VALUE' | 'INVALID_INSULIN_VALUE' | 'INVALID_UNIT' | 'INVALID_OPTION' | 'INVALID_TIMEZONE' | 'PARSE_FAILED' | 'CSV_COLUMN_NOT_FOUND' | 'TIMESTAMP_UNPARSEABLE'
+```
+
+**Import:** `@glucoseiq/core`
+
+Stable machine-readable error codes.
+
+
+---
+
+### GlucoseIQRating
+
+```ts
+type GlucoseIQRating = 'excellent' | 'good' | 'fair' | 'needs attention' | 'insufficient'
+```
+
+**Import:** `@glucoseiq/core`
+
+Qualitative rating derived from the Glucose IQ score.
+
+
+---
+
+### GlucoseUnit
+
+```ts
+type GlucoseUnit = typeof MG_DL | typeof MMOL_L
+```
+
+**Import:** `@glucoseiq/core`
+
+Supported clinical glucose units.
+Used for all clinical analytics and conversions.
+
+**See** — [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
+
+
+---
+
+### LibreTrendValue
+
+```ts
+type LibreTrendValue = 1 | 2 | 3 | 4 | 5
+```
+
+**Import:** `@glucoseiq/core/connectors`
+
+Trend values returned by Libre LinkUp (numeric 1-5).
+
+
+---
+
+### NightscoutDirection
+
+```ts
+type NightscoutDirection = 'DoubleUp' | 'SingleUp' | 'FortyFiveUp' | 'Flat' | 'FortyFiveDown' | 'SingleDown' | 'DoubleDown' | 'NONE' | 'NOT COMPUTABLE' | 'RATE OUT OF RANGE' | string & {}
+```
+
+**Import:** `@glucoseiq/core/connectors`
+
+Nightscout direction string for trend arrows.
+
+
+---
+
+### PercentileMethod
+
+```ts
+type PercentileMethod = 'nearest-rank' | 'linear'
+```
+
+**Import:** `@glucoseiq/core/metrics`
+
+Percentile estimation method.
+- `nearest-rank` (default): matches [glucosePercentiles](/docs/api/core/variability#glucosepercentiles) for reproducibility with existing library outputs.
+- `linear`: interpolated (type-7) percentiles, an opt-in for smoother bands.
+
+
+---
+
+### TIRAssessment
+
+```ts
+type TIRAssessment = 'excellent' | 'good' | 'needs improvement' | 'concerning'
+```
+
+**Import:** `@glucoseiq/core`
+
+Overall glycemic control assessment based on TIR metrics.
+
+
+---
+
+### TIRPopulation
+
+```ts
+type TIRPopulation = 'standard' | 'older-adults' | 'high-risk'
+```
+
+**Import:** `@glucoseiq/core`
+
+Population type for TIR target assessment.
+Different populations have different clinical goals.
+
+**See** — [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+
+---
+
+### TrendVocabulary
+
+```ts
+type TrendVocabulary = 'full' | 'coarse' | 'none'
+```
+
+**Import:** `@glucoseiq/core/connectors`
+
+How complete a source's trend vocabulary is.
