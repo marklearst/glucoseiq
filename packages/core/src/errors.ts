@@ -27,21 +27,32 @@ export class GlucoseIQError extends Error {
 
   constructor(message: string, code: GlucoseIQErrorCode) {
     super(message)
-    this.name = new.target.name
+    this.name = 'GlucoseIQError'
     this.code = code
   }
 }
 
 /** Input text (CSV, glucose string, payload) could not be parsed. */
-export class ParseError extends GlucoseIQError {}
+export class ParseError extends GlucoseIQError {
+  constructor(message: string, code: GlucoseIQErrorCode) {
+    super(message, code)
+    this.name = 'ParseError'
+  }
+}
 
 /** A value or option is outside its valid domain. */
-export class DomainError extends GlucoseIQError {}
+export class DomainError extends GlucoseIQError {
+  constructor(message: string, code: GlucoseIQErrorCode) {
+    super(message, code)
+    this.name = 'DomainError'
+  }
+}
 
 /** An operation requires data but the dataset is empty. */
 export class EmptyDatasetError extends GlucoseIQError {
   constructor(message: string) {
     super(message, 'EMPTY_DATASET')
+    this.name = 'EmptyDatasetError'
   }
 }
 
@@ -49,5 +60,6 @@ export class EmptyDatasetError extends GlucoseIQError {
 export class TimestampError extends GlucoseIQError {
   constructor(message: string) {
     super(message, 'TIMESTAMP_UNPARSEABLE')
+    this.name = 'TimestampError'
   }
 }
