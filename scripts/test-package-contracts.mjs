@@ -54,6 +54,16 @@ const reactRuntimeExports = [
   'useGlucoseLive',
   'useMealResponse',
 ]
+const renderRuntimeExports = [
+  'agpChartToSVG',
+  'tirBarToSVG',
+  'trendTileToSVG',
+]
+const renderTypeExports = [
+  'AGPChartOptions',
+  'TIRBarOptions',
+  'TrendTileOptions',
+]
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -110,6 +120,58 @@ function firstDirective(source, fileName) {
     return undefined
   }
   return first.expression.text
+}
+
+function renderDeclarationExports(source, fileName) {
+  const sourceFile = ts.createSourceFile(
+    fileName,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  )
+  const runtime = []
+  const types = []
+
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isExportDeclaration(statement) ||
+      !statement.exportClause ||
+      !ts.isNamedExports(statement.exportClause)
+    ) {
+      continue
+    }
+
+    for (const element of statement.exportClause.elements) {
+      const target = statement.isTypeOnly || element.isTypeOnly ? types : runtime
+      target.push(element.name.text)
+    }
+  }
+
+  return {
+    runtime: runtime.sort(),
+    types: types.sort(),
+  }
+}
+
+function assertRenderDeclarationSurface(packedRoot) {
+  for (const file of ['index.d.mts', 'index.d.ts']) {
+    const declarationPath = join(packedRoot, 'dist/render', file)
+    const source = readFileSync(declarationPath, 'utf8')
+    assert.doesNotMatch(
+      source,
+      /svg-options/u,
+      `${file} must not reference the private SVG option helper`,
+    )
+    assert.deepEqual(
+      renderDeclarationExports(source, file),
+      {
+        runtime: [...renderRuntimeExports].sort(),
+        types: [...renderTypeExports].sort(),
+      },
+      `${file} exact render declaration exports`,
+    )
+  }
 }
 
 assert.equal(legacyExports.length, 107, 'the diabetic-utils 1.5 fixture must contain 107 exports')
@@ -195,6 +257,8 @@ try {
     `^${coreVersion}`,
     'React packed core dependency',
   )
+
+  assertRenderDeclarationSurface(packedRoots.get('@glucoseiq/core'))
 
   const packedReactRoot = packedRoots.get('@glucoseiq/react')
   const packedReactDirectives = [
@@ -520,6 +584,22 @@ try {
     for (const [entrypoint, keys] of esmKeys) {
       assert.ok(keys.length > 0, `${consumer.label} ${entrypoint} must expose runtime exports`)
     }
+    const esmRenderExports = esmKeys.find(
+      ([entrypoint]) => entrypoint === '@glucoseiq/core/render',
+    )?.[1]
+    const cjsRenderExports = cjsKeys.find(
+      ([entrypoint]) => entrypoint === '@glucoseiq/core/render',
+    )?.[1]
+    assert.deepEqual(
+      esmRenderExports,
+      renderRuntimeExports,
+      `${consumer.label} ESM render runtime exports`,
+    )
+    assert.deepEqual(
+      cjsRenderExports,
+      renderRuntimeExports,
+      `${consumer.label} CommonJS render runtime exports`,
+    )
     const packedReactExports = esmKeys.find(([entrypoint]) => entrypoint === '@glucoseiq/react')?.[1]
     assert.deepEqual(
       packedReactExports,

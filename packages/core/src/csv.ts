@@ -20,7 +20,10 @@ export interface CSVParseOptions {
   readonly valueColumn: string
   /** Unit of the values (default 'mg/dL'). */
   readonly unit?: GlucoseUnit
-  /** Field delimiter (default ','). */
+  /**
+   * Field delimiter (default `,`). Must be exactly one UTF-16 code unit other
+   * than double quote, NUL, CR, or LF.
+   */
   readonly delimiter?: string
 }
 
@@ -63,10 +66,16 @@ function cell(fields: string[], index: number): string {
 /**
  * Parses CSV text into glucose readings.
  *
+ * Empty and blank-only documents return an empty array. A header-only document
+ * also returns an empty array after validating both mapped columns. Quoted
+ * fields and doubled quotes are supported, but physical newlines inside a
+ * quoted field are not.
+ *
  * @param text - The CSV document
  * @param options - Column names, unit, and delimiter
  * @returns Parsed readings (rows with an unparseable value or timestamp are skipped)
- * @throws {Error} If a named column is not present in the header
+ * @throws {DomainError} If the delimiter is invalid
+ * @throws {ParseError} If a named column is not present in the header
  *
  * @example
  * ```ts
