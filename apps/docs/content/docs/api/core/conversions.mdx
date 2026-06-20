@@ -240,14 +240,18 @@ getA1CCategory(a1c: number, thresholds?: { normalMax?: number; prediabetesMax?: 
 ```
 
 Returns the clinical category for an A1C value (normal, prediabetes, diabetes, or invalid).
-Uses ADA thresholds by default, but allows custom cutoffs for research or population-specific use.
+Uses CDC defaults: normal below 5.7%, prediabetes from 5.7% to below 6.5%,
+and diabetes at 6.5% or above. Explicit custom maxima are inclusive. At
+runtime, nullish threshold objects or fields use the CDC defaults.
 
 **Returns** — 'normal' | 'prediabetes' | 'diabetes' | 'invalid'
+
+**See** — [https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html)
 
 | Parameter | Description |
 | --- | --- |
 | `a1c` | A1C value (percentage) |
-| `thresholds` | Optional custom thresholds: &#123; normalMax?: number; prediabetesMax?: number &#125; |
+| `thresholds` | Optional inclusive custom maxima |
 
 
 ---

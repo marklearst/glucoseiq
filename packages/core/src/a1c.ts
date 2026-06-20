@@ -29,26 +29,33 @@ export function isValidA1C(value: unknown): boolean {
 
 /**
  * Returns the clinical category for an A1C value (normal, prediabetes, diabetes, or invalid).
- * Uses ADA thresholds by default, but allows custom cutoffs for research or population-specific use.
+ * Uses CDC defaults: normal below 5.7%, prediabetes from 5.7% to below 6.5%,
+ * and diabetes at 6.5% or above. Explicit custom maxima are inclusive. At
+ * runtime, nullish threshold objects or fields use the CDC defaults.
  * @param a1c - A1C value (percentage)
+ * @param thresholds - Optional inclusive custom maxima
  * @returns 'normal' | 'prediabetes' | 'diabetes' | 'invalid'
- */
-/**
- * Returns the clinical category for an A1C value (normal, prediabetes, diabetes, or invalid).
- * Uses ADA thresholds by default, but allows custom cutoffs for research or population-specific use.
- * @param a1c - A1C value (percentage)
- * @param thresholds - Optional custom thresholds: { normalMax?: number; prediabetesMax?: number }
- * @returns 'normal' | 'prediabetes' | 'diabetes' | 'invalid'
+ * @see https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html
  */
 export function getA1CCategory(
   a1c: number,
   thresholds?: { normalMax?: number; prediabetesMax?: number }
 ): 'normal' | 'prediabetes' | 'diabetes' | 'invalid' {
-  const normalMax = thresholds?.normalMax ?? 5.7
-  const prediabetesMax = thresholds?.prediabetesMax ?? 6.5
+  const normalMax = thresholds?.normalMax
+  const prediabetesMax = thresholds?.prediabetesMax
   if (!isValidA1C(a1c)) return 'invalid'
-  if (a1c <= normalMax) return 'normal'
-  if (a1c <= prediabetesMax) return 'prediabetes'
+  if (
+    normalMax === undefined || normalMax === null
+      ? a1c < 5.7
+      : a1c <= normalMax
+  )
+    return 'normal'
+  if (
+    prediabetesMax === undefined || prediabetesMax === null
+      ? a1c < 6.5
+      : a1c <= prediabetesMax
+  )
+    return 'prediabetes'
   return 'diabetes'
 }
 

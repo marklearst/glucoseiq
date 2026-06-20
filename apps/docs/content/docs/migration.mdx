@@ -45,9 +45,17 @@ npm install diabetic-utils@legacy
 
 ## Clinical formula compatibility
 
-The clinical formulas keep their 1.5.x numeric behavior. Percentiles use
-nearest-rank by default, while interpolation remains opt-in. Golden-value
-tests preserve cited results across the package move.
+Clinical conversion and metric formulas keep their 1.5.x numeric behavior.
+Percentiles use nearest-rank by default, while interpolation remains opt-in.
+Golden-value tests preserve cited results across the package move.
+
+`getA1CCategory` has one intentional boundary correction in
+`@glucoseiq/core` 1.0 and the `diabetic-utils` 2.0 compatibility bridge. The
+[CDC defaults](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html)
+classify A1C below 5.7% as normal, 5.7% to below 6.5% as prediabetes, and 6.5%
+or higher as diabetes. Explicit custom maxima remain inclusive. The published
+`diabetic-utils` 1.5.x artifacts are unchanged, retain their previous boundary
+behavior, and remain available via the `legacy` dist-tag.
 
 ## Changes in the compatibility major
 
