@@ -2,9 +2,10 @@
  * @glucoseiq/tokens — the canonical GlucoseIQ design tokens.
  *
  * One glucose-zone model (per the 2019 international consensus), one palette
- * (dark-first, colorblind-safe by redundancy — always pair color with a label
- * or position), one trend-glyph set. Shared by web, watch, native, and the
- * zero-dependency SVG renderers so every surface reads identically.
+ * (dark-first; always pair color with a label or position), one trend-glyph
+ * set. These shared values support consistent web, watch, native, and
+ * zero-dependency SVG-renderer surfaces; each host still translates and
+ * integrates them for its own runtime.
  *
  * Zero runtime dependencies.
  */
@@ -104,7 +105,9 @@ export function zoneColor(zone: GlucoseZone, theme: Theme = 'dark'): string {
  * Emits the tokens as a CSS custom-property block, e.g. for a `:root` rule.
  *
  * @example
- * ```ts
+ * ```ts typecheck
+ * import { cssVariables } from '@glucoseiq/tokens'
+ *
  * const style = `:root { ${cssVariables('dark')} }`
  * ```
  */

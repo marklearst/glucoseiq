@@ -1,7 +1,7 @@
 {
   "name": "@glucoseiq/cli",
   "version": "0.0.0",
-  "description": "Zero-code CGM analysis: `npx @glucoseiq/cli report data.csv` prints a clinician-grade glucose report \u2014 metrics, episodes, and optional AGP SVG \u2014 powered by @glucoseiq/core.",
+  "description": "Zero-code CGM analysis: `npx @glucoseiq/cli report data.csv` prints an analytics summary with metrics, episodes, and an optional AGP-style SVG.",
   "bin": {
     "glucoseiq": "./dist/bin.js"
   },

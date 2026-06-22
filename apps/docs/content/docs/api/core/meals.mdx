@@ -7,7 +7,7 @@ description: "Meal-response and area-under-the-curve analysis."
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 analyzeMealResponse(readings: GlucoseReading[], mealTime: string, options?: MealResponseOptions): MealResponseResult
 ```
 
@@ -15,9 +15,18 @@ Analyzes the glucose response to a meal.
 
 **Returns** — Meal-response metrics; `valid: false` if the window has fewer than two readings
 
-```ts
-const r = analyzeMealResponse(readings, '2024-01-01T12:30:00Z')
-// { baseline: 98, peakValue: 162, delta: 64, timeToPeakMin: 45, ... }
+```ts typecheck
+import { type GlucoseReading } from '@glucoseiq/core'
+import { analyzeMealResponse } from '@glucoseiq/core/metrics'
+
+const readings: GlucoseReading[] = [
+  { value: 98, unit: 'mg/dL', timestamp: '2024-01-01T12:25:00Z' },
+  { value: 162, unit: 'mg/dL', timestamp: '2024-01-01T13:15:00Z' },
+  { value: 125, unit: 'mg/dL', timestamp: '2024-01-01T13:45:00Z' },
+]
+const result = analyzeMealResponse(readings, '2024-01-01T12:30:00Z')
+const delta = result.valid ? result.delta : null
+void delta
 ```
 
 | Parameter | Description |
@@ -33,7 +42,7 @@ const r = analyzeMealResponse(readings, '2024-01-01T12:30:00Z')
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 glucoseAUC(readings: GlucoseReading[], options?: AUCOptions): number
 ```
 
@@ -41,8 +50,15 @@ Total area under the glucose-time curve (trapezoidal rule).
 
 **Returns** — Area in (unit × minutes), or NaN if fewer than two valid readings
 
-```ts
-glucoseAUC(readings) // e.g. 18240 (mg/dL·min)
+```ts typecheck
+import { type GlucoseReading } from '@glucoseiq/core'
+import { glucoseAUC } from '@glucoseiq/core/metrics'
+
+const readings: GlucoseReading[] = [
+  { value: 100, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+  { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+]
+const area = glucoseAUC(readings) // mg/dL·min
 ```
 
 | Parameter | Description |
@@ -57,7 +73,7 @@ glucoseAUC(readings) // e.g. 18240 (mg/dL·min)
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 incrementalAUC(readings: GlucoseReading[], baseline: number, options?: AUCOptions): number
 ```
 
@@ -69,8 +85,16 @@ contribute zero. For a meal response, pass the pre-meal value as `baseline`.
 
 **Returns** — Incremental area in (unit × minutes), or NaN if fewer than two valid readings
 
-```ts
-incrementalAUC(readings, preMealValue) // e.g. 4120 (mg/dL·min above baseline)
+```ts typecheck
+import { type GlucoseReading } from '@glucoseiq/core'
+import { incrementalAUC } from '@glucoseiq/core/metrics'
+
+const readings: GlucoseReading[] = [
+  { value: 100, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+  { value: 140, unit: 'mg/dL', timestamp: '2024-01-01T08:30:00Z' },
+]
+const preMealValue: number = 100
+const area = incrementalAUC(readings, preMealValue)
 ```
 
 | Parameter | Description |

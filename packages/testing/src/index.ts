@@ -1,9 +1,10 @@
 /**
  * @glucoseiq/testing — deterministic mock-CGM data for tests, demos, and docs.
  *
- * A seedable generator producing realistic glucose curves (circadian baseline,
+ * A seedable generator producing synthetic glucose curves (circadian baseline,
  * meal spikes, noise, optional nocturnal hypos) plus ready-made scenario
- * fixtures. Same seed → identical output, always — safe for golden tests.
+ * fixtures. Identical complete generator options, including the seed, produce
+ * identical output and are suitable for golden tests.
  */
 
 import type { GlucoseReading, GlucoseUnit } from '@glucoseiq/core'
@@ -50,13 +51,15 @@ function mulberry32(seed: number): () => number {
 }
 
 /**
- * Generates a deterministic, realistic CGM series.
+ * Generates a deterministic synthetic CGM series for tests and demos.
  *
  * @param options - Shape of the generated data
  * @returns Chronological readings; same options (incl. seed) → identical output
  *
  * @example
- * ```ts
+ * ```ts typecheck
+ * import { generateCGMSeries } from '@glucoseiq/testing'
+ *
  * const readings = generateCGMSeries({ days: 14, seed: 7 })
  * ```
  */
@@ -202,7 +205,7 @@ export const scenarios = {
   rollercoaster(): GlucoseReading[] {
     return generateCGMSeries({ seed: 31, mealAmplitude: 130, noise: 14 })
   },
-  /** A day with a 90-minute sensor dropout mid-afternoon. */
+  /** A day with the 15:00-16:30 reading window removed, producing a 100-minute timestamp gap. */
   gappyTrace(): GlucoseReading[] {
     const all = generateCGMSeries({ seed: 41 })
     // Remove 15:00–16:30 (minute-of-day 900–990).

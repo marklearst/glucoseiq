@@ -1,26 +1,40 @@
 ---
 title: "Episodes"
-description: "Hypoglycemia and hyperglycemia episode detection."
+description: "Timestamp-grouped hypoglycemia and hyperglycemia episode candidates."
 ---
 
 ### detectEpisodes
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 detectEpisodes(readings: GlucoseReading[], options?: EpisodeOptions): EpisodeResult
 ```
 
-Detects hypo- and hyperglycemia episodes from a series of readings.
+Groups hypo- and hyperglycemia episode candidates from a series of readings.
 
-**Returns** — Hypo and hyper events plus a summary
+Consecutive beyond-threshold timestamps less than `endDurationMin` apart
+remain grouped. Non-excursion and missing readings are not retained, so a
+candidate does not prove observed recovery or continuous sensor coverage.
 
-```ts
+**Returns** — Hypo and hyper episode candidates plus a summary
+
+```ts typecheck
+import { type GlucoseReading } from '@glucoseiq/core'
+import { detectEpisodes } from '@glucoseiq/core/metrics'
+
+const readings: GlucoseReading[] = [
+  { value: 65, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+  { value: 60, unit: 'mg/dL', timestamp: '2024-01-01T08:10:00Z' },
+  { value: 62, unit: 'mg/dL', timestamp: '2024-01-01T08:20:00Z' },
+]
 const { hypoEvents, summary } = detectEpisodes(readings)
-// hypoEvents[0] = { level: 2, durationMinutes: 45, extremeValue: 48, ... }
+const firstEpisode = hypoEvents[0]
+if (firstEpisode) firstEpisode.durationMinutes
+summary.hypoCount
 ```
 
 | Parameter | Description |
 | --- | --- |
 | `readings` | Glucose readings with ISO 8601 timestamps |
-| `options` | Thresholds, minimum duration, and recovery duration |
+| `options` | Thresholds, minimum candidate duration, and separating gap |

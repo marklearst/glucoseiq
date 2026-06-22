@@ -1388,8 +1388,70 @@ test('uses a dynamic block fence when generated declarations or examples contain
     },
   })
   const page = renderApiModel(project([fencedAlias])).get('types.mdx')
-  assert.match(page, /````ts\ntype FencedType = `before\n```\nafter`\n````/)
-  assert.match(page, /````ts\nconst marker = "```"\n````/)
+  assert.match(
+    page,
+    /````ts fragment="generated API declaration or signature"\ntype FencedType = `before\n```\nafter`\n````/,
+  )
+  assert.match(page, /````ts typecheck\nconst marker = "```"\n````/)
+})
+
+test('classifies generated declaration and signature fences separately from examples', () => {
+  const shape = declaration(KIND.interface, 'GeneratedShape', {
+    sources: [{ fileName: 'src/types.ts' }],
+  })
+  const alias = declaration(KIND.typeAlias, 'GeneratedAlias', {
+    sources: [{ fileName: 'src/types.ts' }],
+    type: intrinsic('string'),
+  })
+  const constant = declaration(KIND.variable, 'GENERATED_VALUE', {
+    sources: [{ fileName: 'src/constants.ts' }],
+    flags: { isConst: true },
+    type: intrinsic('number'),
+  })
+  const callable = declaration(KIND.function, 'generatedFunction', {
+    sources: [{ fileName: 'src/conversions.ts' }],
+    signatures: [
+      signature('generatedFunction', {
+        parameters: [parameter('value', intrinsic('number'))],
+        type: intrinsic('string'),
+        comment: {
+          summary: [],
+          blockTags: [
+            {
+              tag: '@example',
+              content: [code('import { generatedFunction } from \'@glucoseiq/core\'\n\ngeneratedFunction(1)')],
+            },
+          ],
+        },
+      }),
+    ],
+  })
+
+  const pages = renderApiModel(project([shape, alias, constant, callable]))
+  const fragmentMetadata = 'ts fragment="generated API declaration or signature"'
+
+  assert.match(
+    pages.get('types.mdx'),
+    new RegExp('```' + fragmentMetadata + '\\ninterface GeneratedShape'),
+  )
+  assert.match(
+    pages.get('types.mdx'),
+    new RegExp('```' + fragmentMetadata + '\\ntype GeneratedAlias = string'),
+  )
+  assert.match(
+    pages.get('constants.mdx'),
+    new RegExp('```' + fragmentMetadata + '\\nconst GENERATED_VALUE: number'),
+  )
+  assert.match(
+    pages.get('conversions.mdx'),
+    new RegExp(
+      '```' + fragmentMetadata + '\\ngeneratedFunction\\(value: number\\): string',
+    ),
+  )
+  assert.match(
+    pages.get('conversions.mdx'),
+    /```ts typecheck\nimport \{ generatedFunction \} from '@glucoseiq\/core'\n\ngeneratedFunction\(1\)\n```/,
+  )
 })
 
 test('normalizes plain and multi-item see URLs into labeled Markdown links', () => {
@@ -1598,7 +1660,7 @@ test('renders deterministic complete pages with generic interfaces, overloads, r
   assert.match(functionPage, /\*\*Deprecated\*\* — Use the typed overload\./)
   assert.match(functionPage, /\*\*Returns\*\* — A normalized reading\./)
   assert.match(functionPage, /\*\*Throws\*\* — When the value is invalid\./)
-  assert.match(functionPage, /```ts\nnormalizeReading\(100\)\n```/)
+  assert.match(functionPage, /```ts typecheck\nnormalizeReading\(100\)\n```/)
   assert.match(functionPage, /\[Clinical guide\]\(https:\/\/example\.com\/guide\)/)
   assert.doesNotMatch(functionPage, /deadbeef|github\.com\/example\/blob/)
 

@@ -15,6 +15,7 @@ import type {
 } from './types'
 
 import { EmptyDatasetError, DomainError } from './errors'
+import { calculateActivePercent } from './metrics/active-percent'
 import {
   TIR_VERY_LOW_THRESHOLD_MGDL,
   TIR_LOW_THRESHOLD_MGDL,
@@ -32,12 +33,15 @@ import {
   TIR_GOAL_OLDER_ADULTS,
   TBR_LEVEL1_GOAL_OLDER_ADULTS,
   TBR_LEVEL2_GOAL_OLDER_ADULTS,
+  TAR_LEVEL1_GOAL_OLDER_ADULTS,
+  TAR_LEVEL2_GOAL_OLDER_ADULTS,
   PREGNANCY_TARGET_LOW_MGDL,
   PREGNANCY_TARGET_HIGH_MGDL,
   PREGNANCY_TARGET_LOW_MMOLL,
   PREGNANCY_TARGET_HIGH_MMOLL,
   MGDL_MMOLL_CONVERSION,
   MG_DL,
+  MMOL_L,
 } from './constants'
 
 /**
@@ -53,6 +57,12 @@ type EnhancedTIRZone =
   | 'inRange'
   | 'high'
   | 'veryHigh'
+
+type PregnancyDurationZone =
+  | 'belowRangeLevel2'
+  | 'belowRangeLevel1'
+  | 'inRange'
+  | 'aboveRange'
 
 interface EnhancedTIRThresholds {
   readonly veryLow: number
@@ -75,6 +85,8 @@ const DEFAULT_MMOLL_THRESHOLDS: EnhancedTIRThresholds = {
   veryHigh: TIR_VERY_HIGH_THRESHOLD_MMOLL,
 }
 
+const DEFAULT_CGM_INTERVAL_MINUTES = 5
+
 /**
  * Calculates Enhanced Time-in-Range metrics per International Consensus 2019.
  *
@@ -90,27 +102,39 @@ const DEFAULT_MMOLL_THRESHOLDS: EnhancedTIRThresholds = {
  * @returns Enhanced TIR result with detailed metrics and target assessment
  *
  * @example
- * ```typescript
+ * ```ts typecheck
+ * import { calculateEnhancedTIR, type GlucoseReading } from '@glucoseiq/core'
+ *
  * const readings: GlucoseReading[] = [
  *   { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
  *   { value: 95, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
- *   // ... more readings
- * ];
- * const result = calculateEnhancedTIR(readings);
- * console.log(`TIR: ${result.inRange.percentage}%`);
- * console.log(`Meets targets: ${result.meetsTargets.tirMeetsGoal}`);
+ * ]
+ * const result = calculateEnhancedTIR(readings)
+ * console.log(`TIR: ${result.inRange.percentage}%`)
+ * console.log(`Meets targets: ${result.meetsTargets.tirMeetsGoal}`)
  * ```
  *
- * @throws {Error} If readings array is empty
- * @throws {Error} If readings contain invalid glucose values
+ * @throws {EmptyDatasetError} If readings array is empty
+ * @throws {DomainError} If readings contain invalid glucose values or units
+ * @throws {DomainError} If population or thresholds are unsupported
  *
  * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
  *
  * @remarks
- * - Requires minimum 24 hours of data for meaningful results
- * - Consensus targets: TIR ≥70%, TBR Level 1 <4%, TBR Level 2 <1%, TAR Level 1 <25%, TAR Level 2 <5%
+ * - Calculation accepts any nonempty array of valid glucose rows
+ * - `summary.dataQuality` is poor below 3 days, fair from 3 days, good from
+ *   7 days, and excellent from 14 days; coverage below 70% is always poor
+ * - For retrospective interpretation, separately assess the documented
+ *   14-day and 70% timestamp-coverage sufficiency guidance
+ * - Standard targets: TIR >70%, cumulative TBR <4%, Level 2 TBR <1%, cumulative TAR <25%, Level 2 TAR <5%
+ * - Overriding any range threshold changes `targetBasis` to `configured-ranges`; population percentage goals then apply to those configured ranges, not consensus ranges
  * - Verify data quality and sensor accuracy before drawing conclusions
- * - Readings are assumed to be evenly distributed for duration calculations
+ * - Summary duration estimates occupied 5-minute timestamp slots; invalid
+ *   timestamps do not add duration
+ * - Each occupied slot is divided among its distinct observations and zones;
+ *   exact duplicates count once and integer minutes are conserved
+ * - Percentages and reading counts still classify raw input rows, so callers
+ *   should resolve conflicting duplicate observations before analysis
  *
  * @category Enhanced TIR
  * @public
@@ -125,6 +149,16 @@ export function calculateEnhancedTIR(
   }
 
   const population: TIRPopulation = options?.population ?? 'standard'
+  if (
+    population !== 'standard' &&
+    population !== 'older-adults' &&
+    population !== 'high-risk'
+  ) {
+    throw new DomainError(
+      'population must be standard, older-adults, or high-risk',
+      'INVALID_OPTION'
+    )
+  }
 
   const thresholds: EnhancedTIRThresholds = {
     veryLow:
@@ -170,6 +204,7 @@ export function calculateEnhancedTIR(
   }
 
   for (const reading of readings) {
+    assertSupportedGlucoseUnit(reading.unit)
     const normalizedReading: NormalizedReading = {
       ...reading,
       normalizedValue:
@@ -189,28 +224,43 @@ export function calculateEnhancedTIR(
     readingsByZone[zone].push(normalizedReading)
   }
 
+  const summary = calculateSummary(readings)
+  const durations = allocateSlotDurations(
+    readingsByZone,
+    normalizedReadings,
+    summary.totalDuration
+  )
   const veryLow = calculateRangeMetrics(
     readingsByZone.veryLow,
-    normalizedReadings
+    normalizedReadings,
+    durations.veryLow
   )
-  const low = calculateRangeMetrics(readingsByZone.low, normalizedReadings)
+  const low = calculateRangeMetrics(
+    readingsByZone.low,
+    normalizedReadings,
+    durations.low
+  )
   const inRange = calculateRangeMetrics(
     readingsByZone.inRange,
-    normalizedReadings
+    normalizedReadings,
+    durations.inRange
   )
-  const high = calculateRangeMetrics(readingsByZone.high, normalizedReadings)
+  const high = calculateRangeMetrics(
+    readingsByZone.high,
+    normalizedReadings,
+    durations.high
+  )
   const veryHigh = calculateRangeMetrics(
     readingsByZone.veryHigh,
-    normalizedReadings
+    normalizedReadings,
+    durations.veryHigh
   )
-
-  // Calculate summary
-  const summary = calculateSummary(readings)
 
   // Assess targets
   const meetsTargets = assessTargets(
     { veryLow, low, inRange, high, veryHigh },
-    population
+    population,
+    hasCustomThresholds ? 'configured-ranges' : 'consensus-ranges'
   )
 
   return {
@@ -225,36 +275,45 @@ export function calculateEnhancedTIR(
 }
 
 /**
- * Calculates Pregnancy-specific Time-in-Range metrics per ADA 2024 guidelines.
+ * Calculates pregnancy-specific Time-in-Range metrics per ADA 2024 guidelines.
  *
  * Uses tighter target range for pregnancy: 63-140 mg/dL (3.5-7.8 mmol/L).
- * Consensus targets: TIR >70%, TBR <4% (Level 1) and <1% (Level 2), TAR <25%.
+ * The quantified type 1 diabetes pregnancy targets are TIR >70%, total TBR
+ * <4%, Level 2 TBR <1%, and TAR <25%.
  *
  * @param readings - Array of glucose readings with timestamp, value, and unit
  * @param options - Optional configuration for glucose unit
  * @returns Pregnancy TIR result with target assessment and recommendations
  *
  * @example
- * ```typescript
+ * ```ts typecheck
+ * import { calculatePregnancyTIR, type GlucoseReading } from '@glucoseiq/core'
+ *
  * const readings: GlucoseReading[] = [
  *   { value: 100, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
- *   // ... more readings
- * ];
- * const result = calculatePregnancyTIR(readings);
- * console.log(`TIR: ${result.inRange.percentage}%`);
- * console.log(`Meets pregnancy targets: ${result.meetsPregnancyTargets}`);
+ * ]
+ * const result = calculatePregnancyTIR(readings)
+ * console.log(`TIR: ${result.inRange.percentage}%`)
+ * console.log(`Meets pregnancy targets: ${result.meetsPregnancyTargets}`)
  * ```
  *
- * @throws {Error} If readings array is empty
- * @throws {Error} If readings contain invalid glucose values
+ * @throws {EmptyDatasetError} If readings array is empty
+ * @throws {DomainError} If readings contain invalid glucose values or units
+ * @throws {DomainError} If `options.unit` is unsupported
  *
  * @see {@link https://diabetesjournals.org/care/article/47/Supplement_1/S282 | ADA Standards of Care (2024)}
  *
  * @remarks
  * - Target range: 63-140 mg/dL (3.5-7.8 mmol/L)
- * - Tighter targets per published guidelines
+ * - `meetsPregnancyTargets` applies the quantified type 1 diabetes pregnancy targets
+ * - For type 2 and gestational diabetes, the range is endorsed but the cited guideline does not quantify percentage goals
+ * - Summary duration estimates occupied 5-minute timestamp slots; invalid
+ *   timestamps do not add duration
+ * - Each occupied slot is divided among its distinct observations and primary
+ *   ranges; exact duplicates count once and integer minutes are conserved
+ * - Percentages and reading counts still classify raw input rows, so callers
+ *   should resolve conflicting duplicate observations before analysis
  * - This is informational only and does not constitute medical advice
- * - Applies to Type 1, Type 2, and gestational diabetes during pregnancy
  *
  * @category Pregnancy TIR
  * @public
@@ -270,6 +329,13 @@ export function calculatePregnancyTIR(
 
   // Determine thresholds based on either supplied unit preference or predominant unit
   const preferredUnit = options?.unit
+  if (
+    preferredUnit !== undefined &&
+    preferredUnit !== MG_DL &&
+    preferredUnit !== MMOL_L
+  ) {
+    throw new DomainError('unit must be mg/dL or mmol/L', 'INVALID_OPTION')
+  }
   const mgdlCount = readings.filter((r) => r.unit === MG_DL).length
   const useMgdlThresholds = preferredUnit
     ? preferredUnit === MG_DL
@@ -285,11 +351,16 @@ export function calculatePregnancyTIR(
 
   const normalizedReadings: NormalizedReading[] = []
   const belowRangeReadings: NormalizedReading[] = []
+  const belowRangeLevel2Readings: NormalizedReading[] = []
   const inRangeReadings: NormalizedReading[] = []
   const aboveRangeReadings: NormalizedReading[] = []
   const maxValue = useMgdlThresholds ? 600 : 33.3
+  const level2Threshold = useMgdlThresholds
+    ? TIR_VERY_LOW_THRESHOLD_MGDL
+    : TIR_VERY_LOW_THRESHOLD_MMOLL
 
   for (const reading of readings) {
+    assertSupportedGlucoseUnit(reading.unit)
     let normalizedValue: number
     if (useMgdlThresholds) {
       normalizedValue =
@@ -308,6 +379,9 @@ export function calculatePregnancyTIR(
 
     if (normalizedValue < lowThreshold) {
       belowRangeReadings.push(normalizedReading)
+      if (normalizedValue < level2Threshold) {
+        belowRangeLevel2Readings.push(normalizedReading)
+      }
     } else if (normalizedValue <= highThreshold) {
       inRangeReadings.push(normalizedReading)
     } else if (normalizedValue > highThreshold) {
@@ -315,39 +389,94 @@ export function calculatePregnancyTIR(
     }
   }
 
+  const summary = calculateSummary(readings)
+  const belowRangeLevel2Set = new Set(belowRangeLevel2Readings)
+  const belowRangeLevel1Readings = belowRangeReadings.filter(
+    (reading) => !belowRangeLevel2Set.has(reading)
+  )
+  const durations = allocateSlotDurations<PregnancyDurationZone>(
+    {
+      belowRangeLevel2: belowRangeLevel2Readings,
+      belowRangeLevel1: belowRangeLevel1Readings,
+      inRange: inRangeReadings,
+      aboveRange: aboveRangeReadings,
+    },
+    normalizedReadings,
+    summary.totalDuration
+  )
+  const belowRangeDuration =
+    durations.belowRangeLevel2 + durations.belowRangeLevel1
   const belowRange = calculateRangeMetrics(
     belowRangeReadings,
-    normalizedReadings
+    normalizedReadings,
+    belowRangeDuration
   )
-  const inRange = calculateRangeMetrics(inRangeReadings, normalizedReadings)
+  const belowRangeLevel2 = calculateRangeMetrics(
+    belowRangeLevel2Readings,
+    normalizedReadings,
+    durations.belowRangeLevel2
+  )
+  const inRange = calculateRangeMetrics(
+    inRangeReadings,
+    normalizedReadings,
+    durations.inRange
+  )
   const aboveRange = calculateRangeMetrics(
     aboveRangeReadings,
-    normalizedReadings
+    normalizedReadings,
+    durations.aboveRange
   )
-
-  // Calculate summary
-  const summary = calculateSummary(readings)
+  const rawPregnancyPercentages = {
+    belowRange: rawPercentage(
+      belowRangeReadings.length,
+      normalizedReadings.length
+    ),
+    belowRangeLevel2: rawPercentage(
+      belowRangeLevel2Readings.length,
+      normalizedReadings.length
+    ),
+    inRange: rawPercentage(inRangeReadings.length, normalizedReadings.length),
+    aboveRange: rawPercentage(
+      aboveRangeReadings.length,
+      normalizedReadings.length
+    ),
+  }
 
   // Assess pregnancy targets
   const meetsPregnancyTargets =
-    inRange.percentage >= TIR_GOAL_STANDARD && // TIR >70%
-    belowRange.percentage < TBR_LEVEL1_GOAL && // TBR <4%
-    aboveRange.percentage < TAR_LEVEL1_GOAL // TAR <25%
+    rawPregnancyPercentages.inRange > TIR_GOAL_STANDARD && // TIR >70%
+    rawPregnancyPercentages.belowRange < TBR_LEVEL1_GOAL && // TBR <4%
+    rawPregnancyPercentages.belowRangeLevel2 < TBR_LEVEL2_GOAL && // Level 2 TBR <1%
+    rawPregnancyPercentages.aboveRange < TAR_LEVEL1_GOAL // TAR <25%
 
   // Generate recommendations
   const recommendations = generatePregnancyRecommendations({
     belowRange,
+    belowRangeLevel2,
     inRange,
     aboveRange,
-  })
+  }, rawPregnancyPercentages)
 
   return {
     belowRange,
+    belowRangeLevel2,
     inRange,
     aboveRange,
     meetsPregnancyTargets,
     recommendations,
     summary,
+  }
+}
+
+/** Validates a runtime glucose-unit value before any unit-dependent branch. */
+function assertSupportedGlucoseUnit(
+  unit: unknown
+): asserts unit is GlucoseUnit {
+  if (unit !== MG_DL && unit !== MMOL_L) {
+    throw new DomainError(
+      `Unsupported glucose unit: ${String(unit)}`,
+      'INVALID_UNIT'
+    )
   }
 }
 
@@ -365,7 +494,7 @@ function validateNormalizedReading(
   maxValue: number
 ): void {
   if (
-    reading.normalizedValue < 0 ||
+    reading.normalizedValue <= 0 ||
     reading.normalizedValue > maxValue ||
     !Number.isFinite(reading.normalizedValue)
   ) {
@@ -402,42 +531,91 @@ function classifyEnhancedTIRZone(
 }
 
 /**
- * Estimates average interval between readings in minutes.
- *
- * @param readings - Array of glucose readings
- * @returns Average interval in minutes (defaults to 5 for CGM standard)
+ * Allocates each occupied five-minute slot across its distinct observations.
+ * Invalid timestamps contribute no duration, exact duplicate observations are
+ * collapsed, and largest-remainder apportionment conserves integer minutes.
  *
  * @internal
  */
-function estimateReadingInterval(readings: GlucoseReading[]): number {
-  if (readings.length < 2) {
-    return 5 // Default: 5-minute intervals (CGM standard)
-  }
+function allocateSlotDurations<Zone extends string>(
+  readingsByZone: Readonly<Record<Zone, readonly NormalizedReading[]>>,
+  allReadings: readonly NormalizedReading[],
+  totalDuration: number
+): Record<Zone, number> {
+  const zones = Object.keys(readingsByZone) as Zone[]
+  const durations = Object.fromEntries(
+    zones.map((zone) => [zone, 0])
+  ) as Record<Zone, number>
+  if (totalDuration === 0) return durations
 
-  const timestamps = readings
-    .map((r) => new Date(r.timestamp).getTime())
-    .filter(Number.isFinite)
-    .sort((a, b) => a - b)
-
-  if (timestamps.length < 2) {
-    return 5
-  }
-
-  const intervals: number[] = []
-
-  for (let i = 1; i < Math.min(10, timestamps.length); i++) {
-    const delta = timestamps[i] - timestamps[i - 1]
-    if (delta > 0) {
-      intervals.push(delta)
+  const zoneByReading = new Map<NormalizedReading, Zone>()
+  for (const zone of zones) {
+    for (const reading of readingsByZone[zone]) {
+      zoneByReading.set(reading, zone)
     }
   }
 
-  if (intervals.length === 0) {
-    return 5
+  const timestampByReading = new Map<NormalizedReading, number>()
+  let earliestTimestamp = Infinity
+  for (const reading of allReadings) {
+    const timestamp = new Date(reading.timestamp).getTime()
+    if (!Number.isFinite(timestamp)) continue
+    timestampByReading.set(reading, timestamp)
+    if (timestamp < earliestTimestamp) earliestTimestamp = timestamp
   }
 
-  const avgIntervalMs = intervals.reduce((a, b) => a + b, 0) / intervals.length
-  return avgIntervalMs / (1000 * 60)
+  const intervalMs = DEFAULT_CGM_INTERVAL_MINUTES * 60_000
+  const observationsBySlot = new Map<number, Map<string, Zone>>()
+  for (const reading of allReadings) {
+    const timestamp = timestampByReading.get(reading)
+    if (timestamp === undefined) continue
+    const slot = Math.floor((timestamp - earliestTimestamp) / intervalMs)
+    const observationKey = JSON.stringify([
+      reading.timestamp,
+      reading.unit,
+      reading.value,
+    ])
+    let observations = observationsBySlot.get(slot)
+    if (observations === undefined) {
+      observations = new Map()
+      observationsBySlot.set(slot, observations)
+    }
+    if (!observations.has(observationKey)) {
+      observations.set(observationKey, zoneByReading.get(reading)!)
+    }
+  }
+
+  const rawDurations = Object.fromEntries(
+    zones.map((zone) => [zone, 0])
+  ) as Record<Zone, number>
+  for (const observations of observationsBySlot.values()) {
+    const counts = Object.fromEntries(
+      zones.map((zone) => [zone, 0])
+    ) as Record<Zone, number>
+    for (const zone of observations.values()) counts[zone] += 1
+    for (const zone of zones) {
+      rawDurations[zone] +=
+        (counts[zone] / observations.size) * DEFAULT_CGM_INTERVAL_MINUTES
+    }
+  }
+
+  for (const zone of zones) durations[zone] = Math.floor(rawDurations[zone])
+  let remaining =
+    totalDuration - zones.reduce((sum, zone) => sum + durations[zone], 0)
+  const zoneOrder = new Map(zones.map((zone, index) => [zone, index]))
+  const remainderOrder = [...zones].sort((a, b) => {
+    const difference =
+      rawDurations[b] - Math.floor(rawDurations[b]) -
+      (rawDurations[a] - Math.floor(rawDurations[a]))
+    return difference || zoneOrder.get(a)! - zoneOrder.get(b)!
+  })
+  for (const zone of remainderOrder) {
+    if (remaining === 0) break
+    durations[zone] += 1
+    remaining -= 1
+  }
+
+  return durations
 }
 
 /**
@@ -445,20 +623,18 @@ function estimateReadingInterval(readings: GlucoseReading[]): number {
  *
  * @param rangeReadings - Normalized glucose readings in this range
  * @param allReadings - All normalized glucose readings in the calculation
+ * @param duration - Conserved timestamp-slot duration for this range
  * @returns Range metrics with percentage, duration, count, and average
  *
  * @internal
  */
 function calculateRangeMetrics(
   rangeReadings: NormalizedReading[],
-  allReadings: NormalizedReading[]
+  allReadings: NormalizedReading[],
+  duration: number
 ): RangeMetrics {
   const readingCount = rangeReadings.length
   const percentage = (readingCount / allReadings.length) * 100
-
-  // Calculate duration (assumes evenly distributed readings)
-  const avgIntervalMinutes = estimateReadingInterval(allReadings)
-  const duration = readingCount * avgIntervalMinutes
 
   // Calculate average value in this range
   const averageValue =
@@ -469,7 +645,7 @@ function calculateRangeMetrics(
 
   return {
     percentage: Math.round(percentage * 10) / 10, // Round to 1 decimal
-    duration: Math.round(duration),
+    duration,
     readingCount,
     averageValue: averageValue ? Math.round(averageValue) : null,
   }
@@ -485,15 +661,20 @@ function calculateRangeMetrics(
  */
 function calculateSummary(readings: GlucoseReading[]): TIRSummary {
   const totalReadings = readings.length
-
-  // Calculate total duration
-  const avgIntervalMinutes = estimateReadingInterval(readings)
-  const totalDuration = totalReadings * avgIntervalMinutes
-
-  // Assess data quality based on number of days
-  const daysOfData = totalDuration / (60 * 24)
+  const coverage = calculateActivePercent(readings, {
+    expectedIntervalMinutes: DEFAULT_CGM_INTERVAL_MINUTES,
+  })
+  const hasDefensibleSpan = coverage.expectedReadings > 0
+  const totalDuration = hasDefensibleSpan
+    ? coverage.actualReadings * DEFAULT_CGM_INTERVAL_MINUTES
+    : 0
+  const daysOfData = hasDefensibleSpan
+    ? (coverage.expectedReadings * DEFAULT_CGM_INTERVAL_MINUTES) / (60 * 24)
+    : 0
   let dataQuality: 'excellent' | 'good' | 'fair' | 'poor'
-  if (daysOfData >= 14) {
+  if (!coverage.meetsClinicalMinimum) {
+    dataQuality = 'poor'
+  } else if (daysOfData >= 14) {
     dataQuality = 'excellent'
   } else if (daysOfData >= 7) {
     dataQuality = 'good'
@@ -505,7 +686,7 @@ function calculateSummary(readings: GlucoseReading[]): TIRSummary {
 
   return {
     totalReadings,
-    totalDuration: Math.round(totalDuration),
+    totalDuration,
     dataQuality,
   }
 }
@@ -514,7 +695,7 @@ function calculateSummary(readings: GlucoseReading[]): TIRSummary {
  * Selects population-specific consensus goals.
  *
  * @param population - Population type
- * @returns Object with TIR and TBR goals for the population
+ * @returns Object with TIR, TBR, and TAR goals for the population
  *
  * @internal
  */
@@ -524,6 +705,52 @@ function getPopulationGoals(population: TIRPopulation) {
     tirGoal: isStandard ? TIR_GOAL_STANDARD : TIR_GOAL_OLDER_ADULTS,
     tbrLevel1Goal: isStandard ? TBR_LEVEL1_GOAL : TBR_LEVEL1_GOAL_OLDER_ADULTS,
     tbrLevel2Goal: isStandard ? TBR_LEVEL2_GOAL : TBR_LEVEL2_GOAL_OLDER_ADULTS,
+    tarLevel1Goal: isStandard ? TAR_LEVEL1_GOAL : TAR_LEVEL1_GOAL_OLDER_ADULTS,
+    tarLevel2Goal: isStandard ? TAR_LEVEL2_GOAL : TAR_LEVEL2_GOAL_OLDER_ADULTS,
+  }
+}
+
+interface RawRangePercentages {
+  readonly veryLow: number
+  readonly low: number
+  readonly inRange: number
+  readonly high: number
+  readonly veryHigh: number
+  readonly totalTbr: number
+  readonly totalTar: number
+}
+
+function rawPercentage(readingCount: number, totalReadings: number): number {
+  return (readingCount / totalReadings) * 100
+}
+
+function calculateRawRangePercentages(ranges: {
+  veryLow: RangeMetrics
+  low: RangeMetrics
+  inRange: RangeMetrics
+  high: RangeMetrics
+  veryHigh: RangeMetrics
+}): RawRangePercentages {
+  const totalReadings =
+    ranges.veryLow.readingCount +
+    ranges.low.readingCount +
+    ranges.inRange.readingCount +
+    ranges.high.readingCount +
+    ranges.veryHigh.readingCount
+  return {
+    veryLow: rawPercentage(ranges.veryLow.readingCount, totalReadings),
+    low: rawPercentage(ranges.low.readingCount, totalReadings),
+    inRange: rawPercentage(ranges.inRange.readingCount, totalReadings),
+    high: rawPercentage(ranges.high.readingCount, totalReadings),
+    veryHigh: rawPercentage(ranges.veryHigh.readingCount, totalReadings),
+    totalTbr: rawPercentage(
+      ranges.veryLow.readingCount + ranges.low.readingCount,
+      totalReadings
+    ),
+    totalTar: rawPercentage(
+      ranges.high.readingCount + ranges.veryHigh.readingCount,
+      totalReadings
+    ),
   }
 }
 
@@ -544,40 +771,41 @@ function assessTargets(
     high: RangeMetrics
     veryHigh: RangeMetrics
   },
-  population: TIRPopulation
+  population: TIRPopulation,
+  targetBasis: TargetAssessment['targetBasis']
 ): TargetAssessment {
   // Select goals based on population
-  const { tirGoal, tbrLevel1Goal, tbrLevel2Goal } = getPopulationGoals(population)
+  const {
+    tirGoal,
+    tbrLevel1Goal,
+    tbrLevel2Goal,
+    tarLevel1Goal,
+    tarLevel2Goal,
+  } = getPopulationGoals(population)
+  const raw = calculateRawRangePercentages(ranges)
 
-  // Assess each metric
-  const tirMeetsGoal = ranges.inRange.percentage >= tirGoal
-  const tbrLevel1Safe = ranges.low.percentage < tbrLevel1Goal
-  const tbrLevel2Safe = ranges.veryLow.percentage < tbrLevel2Goal
-  const tarLevel1Acceptable = ranges.high.percentage < TAR_LEVEL1_GOAL
-  const tarLevel2Acceptable = ranges.veryHigh.percentage < TAR_LEVEL2_GOAL
+  // Assess unrounded percentages; public RangeMetrics remain rounded for display.
+  const tirMeetsGoal = raw.inRange > tirGoal
+  const tbrLevel1Safe = raw.totalTbr < tbrLevel1Goal
+  const tbrLevel2Safe = raw.veryLow < tbrLevel2Goal
+  const tarLevel1Acceptable = raw.totalTar < tarLevel1Goal
+  const tarLevel2Acceptable = raw.veryHigh < tarLevel2Goal
 
   // Determine overall assessment
   let overallAssessment: TIRAssessment
   const criticalIssues = !tbrLevel2Safe || !tarLevel2Acceptable
 
-  // TAR Level 1 slightly over (26-30%) is a minor issue, not major
-  const minorTARIssue = !tarLevel1Acceptable && ranges.high.percentage <= 30
-
-  // Major issues: hypoglycemia or poor TIR (but not minor TAR overage)
-  const majorIssues = !tbrLevel1Safe || !tirMeetsGoal
+  const majorIssues = !tbrLevel1Safe || !tirMeetsGoal || !tarLevel1Acceptable
 
   if (criticalIssues) {
     overallAssessment = 'concerning'
   } else if (majorIssues) {
     overallAssessment = 'needs improvement'
   } else if (
-    ranges.inRange.percentage >= tirGoal + 10 &&
-    ranges.veryLow.percentage < 0.5
+    raw.inRange > tirGoal + 10 &&
+    raw.veryLow < 0.5
   ) {
     overallAssessment = 'excellent'
-  } else if (minorTARIssue && tirMeetsGoal && tbrLevel1Safe) {
-    // Minor TAR overage (25-30%) but TIR good and no hypos - still "good"
-    overallAssessment = 'good'
   } else {
     overallAssessment = 'good'
   }
@@ -591,6 +819,8 @@ function assessTargets(
     tarLevel1Acceptable,
     tarLevel2Acceptable,
     population,
+    targetBasis,
+    raw,
   })
 
   return {
@@ -599,6 +829,7 @@ function assessTargets(
     tbrLevel2Safe,
     tarLevel1Acceptable,
     tarLevel2Acceptable,
+    targetBasis,
     overallAssessment,
     recommendations,
   }
@@ -626,14 +857,20 @@ function generateRecommendations(params: {
   tarLevel1Acceptable: boolean
   tarLevel2Acceptable: boolean
   population: TIRPopulation
+  targetBasis: TargetAssessment['targetBasis']
+  raw: RawRangePercentages
 }): readonly string[] {
   const recommendations: string[] = []
+  const targetLabel =
+    params.targetBasis === 'consensus-ranges'
+      ? 'consensus target'
+      : 'configured-range target'
 
   if (!params.tbrLevel2Safe) {
     recommendations.push(
       `Level 2 hypoglycemia (${params.ranges.veryLow.percentage.toFixed(
         1
-      )}%) exceeds the consensus target.`
+      )}%) exceeds the ${targetLabel}.`
     )
   }
 
@@ -641,23 +878,23 @@ function generateRecommendations(params: {
     recommendations.push(
       `Level 2 hyperglycemia (${params.ranges.veryHigh.percentage.toFixed(
         1
-      )}%) exceeds the consensus target.`
+      )}%) exceeds the ${targetLabel}.`
     )
   }
 
   if (!params.tbrLevel1Safe && params.tbrLevel2Safe) {
     recommendations.push(
-      `Level 1 hypoglycemia (${params.ranges.low.percentage.toFixed(
+      `Total time below range (${params.raw.totalTbr.toFixed(
         1
-      )}%) is elevated.`
+      )}%) is elevated against the ${targetLabel}.`
     )
   }
 
   if (!params.tarLevel1Acceptable && params.tarLevel2Acceptable) {
     recommendations.push(
-      `Level 1 hyperglycemia (${params.ranges.high.percentage.toFixed(
+      `Total time above range (${params.raw.totalTar.toFixed(
         1
-      )}%) is elevated.`
+      )}%) is elevated against the ${targetLabel}.`
     )
   }
 
@@ -665,7 +902,7 @@ function generateRecommendations(params: {
     recommendations.push(
       `Time-in-range (${params.ranges.inRange.percentage.toFixed(
         1
-      )}%) is below the consensus target.`
+      )}%) does not exceed the ${targetLabel}.`
     )
   }
 
@@ -677,7 +914,9 @@ function generateRecommendations(params: {
     params.tarLevel2Acceptable
   ) {
     recommendations.push(
-      'All metrics meet consensus targets.'
+      params.targetBasis === 'consensus-ranges'
+        ? 'All metrics meet consensus targets.'
+        : 'All metrics meet the population percentage goals for the configured ranges.'
     )
     /* c8 ignore start -- defensive fallback when no recommendations were generated */
   } else if (
@@ -686,7 +925,9 @@ function generateRecommendations(params: {
     recommendations.length === 0
   ) {
     recommendations.push(
-      'Some metrics are outside consensus targets.'
+      params.targetBasis === 'consensus-ranges'
+        ? 'Some metrics are outside consensus targets.'
+        : 'Some metrics are outside the population percentage goals for the configured ranges.'
     )
   }
   /* c8 ignore stop */
@@ -696,7 +937,9 @@ function generateRecommendations(params: {
     params.population === 'high-risk'
   ) {
     recommendations.push(
-      'Older/high-risk population targets applied (lower TIR goal, stricter hypoglycemia limits).'
+      params.targetBasis === 'consensus-ranges'
+        ? 'Older/high-risk population targets applied (lower TIR goal, stricter total TBR limit, and wider TAR limits).'
+        : 'Older/high-risk percentage goals applied to the configured ranges.'
     )
   }
 
@@ -713,12 +956,18 @@ function generateRecommendations(params: {
  */
 function generatePregnancyRecommendations(ranges: {
   belowRange: RangeMetrics
+  belowRangeLevel2: RangeMetrics
   inRange: RangeMetrics
   aboveRange: RangeMetrics
+}, raw: {
+  belowRange: number
+  belowRangeLevel2: number
+  inRange: number
+  aboveRange: number
 }): readonly string[] {
   const recommendations: string[] = []
 
-  if (ranges.belowRange.percentage >= TBR_LEVEL1_GOAL) {
+  if (raw.belowRange >= TBR_LEVEL1_GOAL) {
     recommendations.push(
       `Time below range (${ranges.belowRange.percentage.toFixed(
         1
@@ -726,7 +975,15 @@ function generatePregnancyRecommendations(ranges: {
     )
   }
 
-  if (ranges.aboveRange.percentage >= TAR_LEVEL1_GOAL) {
+  if (raw.belowRangeLevel2 >= TBR_LEVEL2_GOAL) {
+    recommendations.push(
+      `Level 2 time below range (${ranges.belowRangeLevel2.percentage.toFixed(
+        1
+      )}%) does not meet the pregnancy target of <1%.`
+    )
+  }
+
+  if (raw.aboveRange >= TAR_LEVEL1_GOAL) {
     recommendations.push(
       `Time above range (${ranges.aboveRange.percentage.toFixed(
         1
@@ -734,18 +991,19 @@ function generatePregnancyRecommendations(ranges: {
     )
   }
 
-  if (ranges.inRange.percentage < TIR_GOAL_STANDARD) {
+  if (raw.inRange <= TIR_GOAL_STANDARD) {
     recommendations.push(
       `Time-in-range (${ranges.inRange.percentage.toFixed(
         1
-      )}%) is below the pregnancy target of 70%.`
+      )}%) does not exceed the pregnancy target of 70%.`
     )
   }
 
   if (
-    ranges.inRange.percentage >= TIR_GOAL_STANDARD &&
-    ranges.belowRange.percentage < TBR_LEVEL1_GOAL &&
-    ranges.aboveRange.percentage < TAR_LEVEL1_GOAL
+    raw.inRange > TIR_GOAL_STANDARD &&
+    raw.belowRange < TBR_LEVEL1_GOAL &&
+    raw.belowRangeLevel2 < TBR_LEVEL2_GOAL &&
+    raw.aboveRange < TAR_LEVEL1_GOAL
   ) {
     recommendations.push(
       'All metrics meet pregnancy consensus targets.'

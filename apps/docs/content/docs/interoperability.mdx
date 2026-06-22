@@ -34,7 +34,7 @@ All builders are available from `@glucoseiq/core` and the
 
 ## 1. Start with normalized readings
 
-```ts
+```ts typecheck
 import type { GlucoseReading } from '@glucoseiq/core'
 
 const readings: GlucoseReading[] = [
@@ -49,9 +49,14 @@ builders intentionally do not discard or repair input.
 
 ## Export FHIR sensor readings
 
-```ts
+```ts typecheck
+import type { GlucoseReading } from '@glucoseiq/core'
 import { buildFHIRSensorReadings } from '@glucoseiq/core/interop'
 
+const readings: GlucoseReading[] = [
+  { value: 104, unit: 'mg/dL', timestamp: '2026-07-12T12:00:00Z' },
+  { value: 5.9, unit: 'mmol/L', timestamp: '2026-07-12T12:05:00Z' },
+]
 const observations = buildFHIRSensorReadings(readings)
 
 observations[0]
@@ -78,7 +83,7 @@ Observation per reading and does not wrap the array in a FHIR Bundle.
 Build the analytics once, then pass its five-range Time-in-Range result into
 the summary builder:
 
-```ts
+```ts typecheck
 import {
   analyzeGlucose,
   buildFHIRCGMSummary,
@@ -102,6 +107,10 @@ export function buildSummaryObservation(
   })
 }
 
+const readings: GlucoseReading[] = [
+  { value: 104, unit: 'mg/dL', timestamp: '2026-07-12T12:00:00Z' },
+  { value: 112, unit: 'mg/dL', timestamp: '2026-07-12T12:05:00Z' },
+]
 const summary = buildSummaryObservation(readings, {
   start: '2026-06-29T00:00:00Z',
   end: '2026-07-12T23:59:59Z',
@@ -124,7 +133,7 @@ GMI, and coefficient of variation become additional components.
 After adding the references and metadata required by your FHIR server, transmit
 the resource using that server's authentication and error-handling policy:
 
-```ts
+```ts typecheck
 async function createObservation(
   baseUrl: string,
   accessToken: string,
@@ -156,9 +165,14 @@ the output of `buildFHIRSensorReadings`.
 Use body-only builders when another system supplies its own headers or storage
 envelope:
 
-```ts
+```ts typecheck
+import type { GlucoseReading } from '@glucoseiq/core'
 import { buildOMHBloodGlucoseList } from '@glucoseiq/core/interop'
 
+const readings: GlucoseReading[] = [
+  { value: 104, unit: 'mg/dL', timestamp: '2026-07-12T12:00:00Z' },
+  { value: 5.9, unit: 'mmol/L', timestamp: '2026-07-12T12:05:00Z' },
+]
 const bodies = buildOMHBloodGlucoseList(readings)
 
 bodies[0]
@@ -172,14 +186,20 @@ bodies[0]
 Use `buildOMHDataPoint` when you want the Open mHealth header and schema
 identifier as well:
 
-```ts
+```ts typecheck
+import type { GlucoseReading } from '@glucoseiq/core'
 import { buildOMHDataPoint } from '@glucoseiq/core/interop'
 
+const readings: GlucoseReading[] = [
+  { value: 104, unit: 'mg/dL', timestamp: '2026-07-12T12:00:00Z' },
+]
 const dataPoints = readings.map((reading) =>
   buildOMHDataPoint(reading, crypto.randomUUID()),
 )
 
-dataPoints[0].header.schema_id
+const firstDataPoint = dataPoints.at(0)
+if (!firstDataPoint) throw new Error('Expected one Open mHealth datapoint')
+firstDataPoint.header.schema_id
 // { namespace: 'omh', name: 'blood-glucose', version: '3.0' }
 ```
 
@@ -190,26 +210,25 @@ own stable IDs when repeated exports must refer to the same datapoints.
 
 The payloads are plain objects, so contract tests do not need a FHIR runtime:
 
-```ts
-import { describe, expect, it } from 'vitest'
+```ts typecheck
 import { buildFHIRSensorReading } from '@glucoseiq/core/interop'
 
-describe('CGM export', () => {
-  it('emits a UCUM-coded FHIR quantity', () => {
-    const observation = buildFHIRSensorReading({
-      value: 104,
-      unit: 'mg/dL',
-      timestamp: '2026-07-12T12:00:00Z',
-    })
-
-    expect(observation.valueQuantity).toEqual({
-      value: 104,
-      unit: 'mg/dL',
-      system: 'http://unitsofmeasure.org',
-      code: 'mg/dL',
-    })
-  })
+const observation = buildFHIRSensorReading({
+  value: 104,
+  unit: 'mg/dL',
+  timestamp: '2026-07-12T12:00:00Z',
 })
+
+const expectedQuantity = {
+  value: 104,
+  unit: 'mg/dL',
+  system: 'http://unitsofmeasure.org',
+  code: 'mg/dL',
+}
+
+if (JSON.stringify(observation.valueQuantity) !== JSON.stringify(expectedQuantity)) {
+  throw new Error('FHIR quantity did not match the expected UCUM contract')
+}
 ```
 
 Also run representative payloads through the validator or sandbox supplied by

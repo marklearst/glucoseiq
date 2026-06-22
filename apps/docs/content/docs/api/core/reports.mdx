@@ -1,25 +1,33 @@
 ---
 title: "Reports"
-description: "Composed CGM analytics summaries from the full engine."
+description: "Selected composed CGM analytics summaries."
 ---
 
 ### analyzeGlucose
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 analyzeGlucose(readings: GlucoseReading[], options?: AnalyzeGlucoseOptions): AnalyzeGlucoseResult
 ```
 
-Produces a comprehensive clinical report from glucose readings in one call.
+Produces a selected CGM analytics summary from glucose readings in one call.
 
-**Returns** — A typed report; `valid: false` when there are no in-range readings
+**Returns** — A typed report; `valid: false` when no usable readings remain after screening
 
-```ts
+```ts typecheck
+import { analyzeGlucose, type GlucoseReading } from '@glucoseiq/core'
+
+const readings: GlucoseReading[] = [
+  { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+  { value: 145, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+]
 const report = analyzeGlucose(readings, { timeZone: 'America/New_York' })
-report.timeInRange?.inRange.percentage // 72.5
-report.gmi                             // 6.8
-report.agpProfile?.bins                // 288 time-of-day bins
+if (report.valid && report.timeInRange && report.agpProfile) {
+  const tir = report.timeInRange.inRange.percentage
+  const bins = report.agpProfile.bins
+  void { tir, bins }
+}
 ```
 
 | Parameter | Description |

@@ -53,8 +53,15 @@ function timedPoints(
  * @returns Area in (unit × minutes), or NaN if fewer than two valid readings
  *
  * @example
- * ```ts
- * glucoseAUC(readings) // e.g. 18240 (mg/dL·min)
+ * ```ts typecheck
+ * import { type GlucoseReading } from '@glucoseiq/core'
+ * import { glucoseAUC } from '@glucoseiq/core/metrics'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 100, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ *   { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+ * ]
+ * const area = glucoseAUC(readings) // mg/dL·min
  * ```
  *
  * @category AUC
@@ -86,8 +93,16 @@ export function glucoseAUC(readings: GlucoseReading[], options?: AUCOptions): nu
  * @returns Incremental area in (unit × minutes), or NaN if fewer than two valid readings
  *
  * @example
- * ```ts
- * incrementalAUC(readings, preMealValue) // e.g. 4120 (mg/dL·min above baseline)
+ * ```ts typecheck
+ * import { type GlucoseReading } from '@glucoseiq/core'
+ * import { incrementalAUC } from '@glucoseiq/core/metrics'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 100, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ *   { value: 140, unit: 'mg/dL', timestamp: '2024-01-01T08:30:00Z' },
+ * ]
+ * const preMealValue: number = 100
+ * const area = incrementalAUC(readings, preMealValue)
  * ```
  *
  * @category AUC

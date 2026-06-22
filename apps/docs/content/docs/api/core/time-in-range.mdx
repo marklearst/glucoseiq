@@ -7,7 +7,7 @@ description: "Time-in-range, pregnancy, and tight-range calculations."
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 calculateEnhancedTIR(readings: GlucoseReading[], options?: EnhancedTIROptions): EnhancedTIRResult
 ```
 
@@ -22,27 +22,40 @@ Provides detailed breakdown of glucose readings across five clinical ranges:
 
 **Returns** — Enhanced TIR result with detailed metrics and target assessment
 
-```typescript
+```ts typecheck
+import { calculateEnhancedTIR, type GlucoseReading } from '@glucoseiq/core'
+
 const readings: GlucoseReading[] = [
   { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
   { value: 95, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
-  // ... more readings
-];
-const result = calculateEnhancedTIR(readings);
-console.log(`TIR: ${result.inRange.percentage}%`);
-console.log(`Meets targets: ${result.meetsTargets.tirMeetsGoal}`);
+]
+const result = calculateEnhancedTIR(readings)
+console.log(`TIR: ${result.inRange.percentage}%`)
+console.log(`Meets targets: ${result.meetsTargets.tirMeetsGoal}`)
 ```
 
 **Throws** — If readings array is empty
 
-**Throws** — If readings contain invalid glucose values
+**Throws** — If readings contain invalid glucose values or units
+
+**Throws** — If population or thresholds are unsupported
 
 **See** — [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
 
-**Remarks** — - Requires minimum 24 hours of data for meaningful results
-- Consensus targets: TIR ≥70%, TBR Level 1 &lt;4%, TBR Level 2 &lt;1%, TAR Level 1 &lt;25%, TAR Level 2 &lt;5%
+**Remarks** — - Calculation accepts any nonempty array of valid glucose rows
+- `summary.dataQuality` is poor below 3 days, fair from 3 days, good from
+  7 days, and excellent from 14 days; coverage below 70% is always poor
+- For retrospective interpretation, separately assess the documented
+  14-day and 70% timestamp-coverage sufficiency guidance
+- Standard targets: TIR &gt;70%, cumulative TBR &lt;4%, Level 2 TBR &lt;1%, cumulative TAR &lt;25%, Level 2 TAR &lt;5%
+- Overriding any range threshold changes `targetBasis` to `configured-ranges`; population percentage goals then apply to those configured ranges, not consensus ranges
 - Verify data quality and sensor accuracy before drawing conclusions
-- Readings are assumed to be evenly distributed for duration calculations
+- Summary duration estimates occupied 5-minute timestamp slots; invalid
+  timestamps do not add duration
+- Each occupied slot is divided among its distinct observations and zones;
+  exact duplicates count once and integer minutes are conserved
+- Percentages and reading counts still classify raw input rows, so callers
+  should resolve conflicting duplicate observations before analysis
 
 | Parameter | Description |
 | --- | --- |
@@ -56,37 +69,47 @@ console.log(`Meets targets: ${result.meetsTargets.tirMeetsGoal}`);
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 calculatePregnancyTIR(readings: GlucoseReading[], options?: PregnancyTIROptions): PregnancyTIRResult
 ```
 
-Calculates Pregnancy-specific Time-in-Range metrics per ADA 2024 guidelines.
+Calculates pregnancy-specific Time-in-Range metrics per ADA 2024 guidelines.
 
 Uses tighter target range for pregnancy: 63-140 mg/dL (3.5-7.8 mmol/L).
-Consensus targets: TIR &gt;70%, TBR &lt;4% (Level 1) and &lt;1% (Level 2), TAR &lt;25%.
+The quantified type 1 diabetes pregnancy targets are TIR &gt;70%, total TBR
+&lt;4%, Level 2 TBR &lt;1%, and TAR &lt;25%.
 
 **Returns** — Pregnancy TIR result with target assessment and recommendations
 
-```typescript
+```ts typecheck
+import { calculatePregnancyTIR, type GlucoseReading } from '@glucoseiq/core'
+
 const readings: GlucoseReading[] = [
   { value: 100, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
-  // ... more readings
-];
-const result = calculatePregnancyTIR(readings);
-console.log(`TIR: ${result.inRange.percentage}%`);
-console.log(`Meets pregnancy targets: ${result.meetsPregnancyTargets}`);
+]
+const result = calculatePregnancyTIR(readings)
+console.log(`TIR: ${result.inRange.percentage}%`)
+console.log(`Meets pregnancy targets: ${result.meetsPregnancyTargets}`)
 ```
 
 **Throws** — If readings array is empty
 
-**Throws** — If readings contain invalid glucose values
+**Throws** — If readings contain invalid glucose values or units
+
+**Throws** — If `options.unit` is unsupported
 
 **See** — [ADA Standards of Care (2024)](https://diabetesjournals.org/care/article/47/Supplement_1/S282)
 
 **Remarks** — - Target range: 63-140 mg/dL (3.5-7.8 mmol/L)
-- Tighter targets per published guidelines
+- `meetsPregnancyTargets` applies the quantified type 1 diabetes pregnancy targets
+- For type 2 and gestational diabetes, the range is endorsed but the cited guideline does not quantify percentage goals
+- Summary duration estimates occupied 5-minute timestamp slots; invalid
+  timestamps do not add duration
+- Each occupied slot is divided among its distinct observations and primary
+  ranges; exact duplicates count once and integer minutes are conserved
+- Percentages and reading counts still classify raw input rows, so callers
+  should resolve conflicting duplicate observations before analysis
 - This is informational only and does not constitute medical advice
-- Applies to Type 1, Type 2, and gestational diabetes during pregnancy
 
 | Parameter | Description |
 | --- | --- |
@@ -100,12 +123,15 @@ console.log(`Meets pregnancy targets: ${result.meetsPregnancyTargets}`);
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 calculateTIR(readings: GlucoseReading[], target: { max: number; min: number }): TIRResult
 ```
 
-Calculates clinical Time in Range (TIR) metrics for glucose readings.
-Returns the percentage of readings in, below, and above the specified clinical target range.
+Calculates Time in Range (TIR) metrics for glucose readings.
+Returns the percentage of readings in, below, and above the specified target range.
+This legacy API compares numeric values directly: every reading and both
+target bounds must use one homogeneous unit. Use `calculateEnhancedTIR` when
+readings carry mixed units that need normalization.
 
 **Returns** — Object with in-range, below-range, and above-range percentages
 
@@ -113,8 +139,8 @@ Returns the percentage of readings in, below, and above the specified clinical t
 
 | Parameter | Description |
 | --- | --- |
-| `readings` | Array of glucose readings to analyze |
-| `target` | Object specifying the target range (&#123; min, max &#125;) |
+| `readings` | Glucose readings expressed in one homogeneous unit |
+| `target` | Target range in the same unit as every reading (&#123; min, max &#125;) |
 
 
 ---
@@ -123,21 +149,28 @@ Returns the percentage of readings in, below, and above the specified clinical t
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 calculateTITR(readings: GlucoseReading[], options?: TITROptions): TITRResult
 ```
 
 Calculates Time in Tight Range (TITR), the percentage of readings within a
-tighter 70-140 mg/dL band than standard TIR (70-180). Emerging consensus
-target is &gt;50%.
+tighter 70-140 mg/dL band than standard TIR (70-180). The library's
+configurable default benchmark is 50%.
 
 Unlike [calculateTIR](/docs/api/core/time-in-range#calculatetir), input readings are normalized to mg/dL first,
 so mixed-unit series are handled correctly. Thresholds are always mg/dL.
 
 **Returns** — Tight-range breakdown with target assessment
 
-```ts
-calculateTITR(readings).inRange // e.g. 58.3
+```ts typecheck
+import { calculateTITR, type GlucoseReading } from '@glucoseiq/core'
+
+const readings: GlucoseReading[] = [
+  { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+  { value: 7.2, unit: 'mmol/L', timestamp: '2024-01-01T08:05:00Z' },
+]
+const result = calculateTITR(readings, { target: 50 })
+result.inRange
 ```
 
 **See** — [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
@@ -154,12 +187,12 @@ calculateTITR(readings).inRange // e.g. 58.3
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 calculateTimeInRange(readings: number[], lower: number, upper: number): number
 ```
 
 Calculates the percentage of glucose readings within a specified numeric range.
-Used for clinical TIR analytics and custom range assessments.
+Used for TIR analytics and custom range assessments.
 
 **Returns** — Percentage of readings within the specified range (0-100)
 
@@ -176,11 +209,11 @@ Used for clinical TIR analytics and custom range assessments.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 getTIRSummary(result: TIRResult): string
 ```
 
-Generates a clinical summary string from a TIRResult object.
+Generates a text summary from a TIRResult object.
 Used for reporting and visualization of TIR analytics.
 
 **Returns** — String summarizing in-range, below-range, and above-range percentages (e.g., 'In Range: 70%, Below: 10%, Above: 20%')
@@ -196,7 +229,7 @@ Used for reporting and visualization of TIR analytics.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 groupByDay(readings: GlucoseReading[]): Record<string, GlucoseReading[]>
 ```
 

@@ -11,7 +11,7 @@ import type { JSX } from 'react'
 
 // ---------------------------------------------------------------------------
 // Every number and chart below is computed at build time by @glucoseiq/core
-// over deterministic @glucoseiq/testing data. No chart library. No client JS.
+// over deterministic @glucoseiq/testing data. No chart library or chart-specific client runtime.
 // ---------------------------------------------------------------------------
 
 const readings = generateCGMSeries({
@@ -38,6 +38,35 @@ const current = recent[0].value
 const ARROW: Record<string, string> = {
   rapidRising: '↑↑', rising: '↑', slightlyRising: '↗', flat: '→',
   slightlyFalling: '↘', falling: '↓', rapidFalling: '↓↓', unknown: '·',
+}
+
+const HOME_REPORT_SNIPPET = `import { analyzeGlucose, type GlucoseReading } from '@glucoseiq/core'
+const readings: GlucoseReading[] = [{ value: 112, unit: 'mg/dL', timestamp: '2026-07-01T08:00:00Z' }]
+const report = analyzeGlucose(readings)
+if (!report.valid || !report.timeInRange) throw new Error('No usable readings')
+report.gmi
+report.timeInRange.inRange.percentage`
+
+const CODE_KEYWORDS = new Set(['const', 'from', 'if', 'import', 'new', 'throw', 'type'])
+const CODE_TOKEN = /(\/\/[^\n]*|'(?:\\.|[^'\\])*'|\b(?:const|from|if|import|new|throw|type)\b)/gu
+
+function HighlightedCode({ source }: { source: string }): JSX.Element {
+  return (
+    <>
+      {source.split(CODE_TOKEN).map((token, index) => {
+        const className = token.startsWith('//')
+          ? 'c'
+          : token.startsWith("'")
+            ? 's'
+            : CODE_KEYWORDS.has(token)
+              ? 'k'
+              : undefined
+        return className
+          ? <span className={className} key={index}>{token}</span>
+          : token
+      })}
+    </>
+  )
 }
 
 function Drop(): JSX.Element {
@@ -87,20 +116,20 @@ function Tile(props: { label: string; labelColor?: string; children: JSX.Element
 }
 
 const FEATURES: { title: string; body: string }[] = [
-  { title: 'The AGP series, finally.', body: 'buildAGPProfile() returns the time-of-day percentile bands every CGM dashboard renders — render-ready for any chart library, or use the built-in SVG.' },
-  { title: '25+ cited metrics.', body: 'TIR, TITR, GMI, MAGE, LBGI/HBGI, ADRR, GRADE, GRI, MODD, CONGA, M-value, IGC, GVI/PGS, MAG, GVP — every formula traces to a published source, golden-tested.' },
+  { title: 'AGP-style percentile bands.', body: 'buildAGPProfile() returns time-of-day percentile bands for your chart library, or you can use the optional SVG renderer.' },
+  { title: '25+ analytics primitives.', body: 'TIR, TITR, GMI, MAGE, LBGI/HBGI, ADRR, GRADE, GRI, MODD, CONGA, M-value, IGC, GVI/PGS, MAG, and GVP — with documented implementation references and golden-value tests.' },
   { title: 'Meal response.', body: 'Baseline, peak, delta, time-to-peak, return-to-baseline, and Wolever iAUC. The “what did that bagel do?” card in one pure function.' },
   { title: 'A live model.', body: 'Rate-of-change, derived trend arrows, and sensor staleness — backfilled even when a feed lacks trend. The beating heart of a CGM home screen.' },
-  { title: 'Events, not just percentages.', body: 'Consensus ≥15-minute hypo/hyper episodes with level, duration, and nadir — the overnight low that percent-time hides.' },
-  { title: 'Zero dependencies.', body: '~15 KB gzipped. 100% test coverage. Strict TypeScript. Unit-safe in mg/dL and mmol/L. FHIR CGM IG and Open mHealth interop included.' },
+  { title: 'Events, not just percentages.', body: 'Consensus ≥15-minute hypo/hyper episodes with level, duration, and nadir or peak — the excursion that percent-time hides.' },
+  { title: 'A zero-runtime-dependency core.', body: '100% test coverage. Strict TypeScript. Mixed-unit-aware GlucoseReading APIs; explicit homogeneous-series contracts. FHIR CGM IG and Open mHealth interop included.' },
 ]
 
 const PACKAGES: { name: string; desc: string }[] = [
   { name: '@glucoseiq/core', desc: 'The zero-dependency headless engine — analytics, series, live model, SVG renderers, interop.' },
-  { name: '@glucoseiq/react', desc: 'Memoized hooks + headless <AgpChart/>, <TirBar/>, <TrendTile/> components.' },
+  { name: '@glucoseiq/react', desc: 'Memoized hooks plus optional <AgpChart/>, <TirBar/>, and <TrendTile/> SVG components.' },
   { name: '@glucoseiq/tokens', desc: 'The canonical five-zone palette, trend glyphs, and CSS variables.' },
-  { name: '@glucoseiq/testing', desc: 'Seedable mock-CGM generator and scenario fixtures.' },
-  { name: '@glucoseiq/cli', desc: 'npx @glucoseiq/cli report data.csv — zero-code analysis of any CGM export.' },
+  { name: '@glucoseiq/testing', desc: 'Seedable synthetic CGM-shaped generator and scenario fixtures.' },
+  { name: '@glucoseiq/cli', desc: 'npx @glucoseiq/cli report data.csv — mapped header-row input and zero-code analysis.' },
   { name: 'diabetic-utils', desc: '2.0 compatibility bridge for projects moving from diabetic-utils 1.5.x.' },
 ]
 
@@ -234,8 +263,8 @@ export default function HomePage(): JSX.Element {
           <div className="mark"><LogoMark size={72} /></div>
           <h1 className="giq-h1">Glucose intelligence. On every screen.</h1>
           <p className="giq-sub">
-            The zero-dependency TypeScript engine for CGM analytics — the AGP, Time-in-Range,
-            25+ cited metrics, meal response, and a live trend model. Headless by design.
+            The zero-dependency TypeScript engine for CGM analytics — AGP-style percentile bands,
+            Time-in-Range, 25+ analytics primitives, meal response, and a live trend model. Headless by design.
           </p>
           <div className="giq-ctas">
             <a className="giq-btn giq-btn-primary" href="/docs">Get started</a>
@@ -280,7 +309,7 @@ export default function HomePage(): JSX.Element {
         {/* DASHBOARD */}
         <section>
           <div className="giq-panel">
-            <h2>Ambulatory Glucose Profile · 14 days</h2>
+            <h2>AGP-style percentile bands · 14 days</h2>
             <div dangerouslySetInnerHTML={{ __html: agpSvg }} />
           </div>
           <div className="giq-row">
@@ -304,16 +333,10 @@ export default function HomePage(): JSX.Element {
               </div>
             </div>
             <div className="giq-panel">
-              <h2>One call. The whole report.</h2>
-              <pre className="giq-code"><code>
-<span className="k">import</span> {'{ analyzeGlucose }'} <span className="k">from</span> <span className="s">'@glucoseiq/core'</span>{'\n\n'}
-<span className="k">const</span> report = analyzeGlucose(readings){'\n\n'}
-report.gmi                <span className="c">// {report.gmi}</span>{'\n'}
-report.timeInRange        <span className="c">// {report.timeInRange!.inRange.percentage}% in 70–180</span>{'\n'}
-report.risk.gri.zone      <span className="c">// '{report.risk!.gri.zone}'</span>{'\n'}
-report.episodes.summary   <span className="c">// {report.episodes!.summary.hypoCount} hypo · {report.episodes!.summary.hyperCount} hyper</span>{'\n'}
-report.agpProfile.bins    <span className="c">// 288 time-of-day bins</span>
-</code></pre>
+              <h2>One call. One analytics summary.</h2>
+              <pre className="giq-code" data-doc-snippet="home-report">
+                <code><HighlightedCode source={HOME_REPORT_SNIPPET} /></code>
+              </pre>
             </div>
           </div>
         </section>
@@ -322,7 +345,7 @@ report.agpProfile.bins    <span className="c">// 288 time-of-day bins</span>
         <section>
           <div className="giq-kicker">The engine</div>
           <h2 className="giq-h2">Everything a CGM app needs.<br />Nothing it doesn’t.</h2>
-          <p className="giq-h2-sub">Researcher-grade math. Dashboard-grade primitives. Apple-grade restraint.</p>
+          <p className="giq-h2-sub">Typed analytics. Dashboard-ready primitives. A deliberately restrained core.</p>
           <div className="giq-grid">
             {FEATURES.map((f) => (
               <div className="giq-feature" key={f.title}>
@@ -349,7 +372,7 @@ report.agpProfile.bins    <span className="c">// 288 time-of-day bins</span>
 
         <footer className="giq-footer">
           Every chart and number on this page is computed at build time by <code>@glucoseiq/core</code> over
-          deterministic <code>@glucoseiq/testing</code> data — no chart library, no client JS.<br />
+          deterministic <code>@glucoseiq/testing</code> data — static chart markup with no chart library.<br />
           Informational and educational purposes only — not medical advice. MIT © Mark Learst.
         </footer>
       </div>

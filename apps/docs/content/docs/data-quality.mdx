@@ -12,19 +12,25 @@ interpolation as derived data rather than new sensor evidence.
 The vendor array normalizers are strict at the batch level. If one entry throws,
 the array call throws and does not return the other normalized readings:
 
-```ts
+```ts typecheck
 import { normalizeDexcomEntries } from '@glucoseiq/core/connectors'
 
-const readings = normalizeDexcomEntries(payload)
+const readings = normalizeDexcomEntries([
+  { Value: 112, Trend: 'Flat', WT: '/Date(1705320000000)/' },
+  { Value: 118, Trend: 'SingleUp', WT: '/Date(1705320300000)/' },
+])
 ```
 
 For long-running feeds and imported history, the safe variants retain valid
 entries and collect failures by original array index:
 
-```ts
+```ts typecheck
 import { safeNormalizeDexcomEntries } from '@glucoseiq/core/connectors'
 
-const { readings, errors } = safeNormalizeDexcomEntries(payload)
+const { readings, errors } = safeNormalizeDexcomEntries([
+  { Value: 112, Trend: 'Flat', WT: '/Date(1705320000000)/' },
+  { Value: 118, Trend: 'SingleUp', WT: 'not-a-date' },
+])
 
 for (const error of errors) {
   console.warn(`Rejected source row ${error.index}: ${error.message}`)
@@ -47,8 +53,11 @@ chronological order. Each error currently contains `index` and `message`.
 requested header is absent. After it finds the columns, it skips rows whose
 value is not positive and finite or whose timestamp cannot be parsed.
 
-```ts
+```ts typecheck
 import { GlucoseIQError, parseGlucoseCSV } from '@glucoseiq/core'
+
+const csvText = `Timestamp,Glucose Value (mg/dL)
+2026-07-01T08:00:00Z,112`
 
 try {
   const readings = parseGlucoseCSV(csvText, {
@@ -65,7 +74,16 @@ try {
 }
 ```
 
-The CSV result does not include per-row rejection details. If an import audit is
+The parser accepts header-row delimited data with exact mapped timestamp and
+value columns. Blank lines are ignored. A header-only document returns no
+readings after both mapped columns are validated. Quoted fields and doubled
+quotes work within one physical line, but a quoted field cannot contain a
+physical newline. Rows with a non-positive or non-finite value or an
+unparseable timestamp are skipped without per-row rejection details.
+
+The delimiter defaults to comma and must be exactly one UTF-16 code unit other
+than double quote, NUL, carriage return, or line feed. An invalid delimiter
+throws a `DomainError` with code `INVALID_OPTION`. If an import audit is
 required, compare the source row count with the returned reading count or
 validate rows in your ingestion layer before calling the parser.
 
@@ -76,16 +94,20 @@ parseable timestamp and a positive, finite value no greater than 600 mg/dL
 after unit conversion. If no reading survives, it returns a non-throwing empty
 result:
 
-```ts
-import { analyzeGlucose } from '@glucoseiq/core'
+```ts typecheck
+import { analyzeGlucose, type GlucoseReading } from '@glucoseiq/core'
+
+const readings: GlucoseReading[] = [
+  { value: 112, unit: 'mg/dL', timestamp: '2026-07-01T08:00:00Z' },
+]
 
 const report = analyzeGlucose(readings)
 
 if (!report.valid) {
   // meanGlucose, gmi, cv, sd, and activePercent are NaN.
   // timeInRange, tightRange, risk, agpProfile, and episodes are null.
-  renderEmptyState()
-  return
+  const emptyState = 'No valid glucose readings are available.'
+  console.info(emptyState)
 }
 ```
 
@@ -93,7 +115,13 @@ Do not rely on truthiness for numeric metrics: zero can be meaningful and `NaN`
 is truthy. Use the result's `valid` field and `Number.isFinite` when reading a
 metric that may be non-computable.
 
-```ts
+```ts typecheck
+import { analyzeGlucose, type GlucoseReading } from '@glucoseiq/core'
+
+const readings: GlucoseReading[] = [
+  { value: 112, unit: 'mg/dL', timestamp: '2026-07-01T08:00:00Z' },
+]
+const report = analyzeGlucose(readings)
 const label = Number.isFinite(report.cv) ? `${report.cv}%` : 'Not computable'
 ```
 
@@ -102,12 +130,18 @@ Individual functions have their own documented behavior. For example,
 returns `valid: false`, and `calculateActivePercent` returns `NaN` for active
 percent when fewer than two valid timestamps are available.
 
-## Measure sufficiency and wear time
+## Measure sufficiency and timestamp coverage
 
 A valid report is not automatically a sufficient report. Inspect its
 `dataSufficiency` block:
 
-```ts
+```ts typecheck
+import { analyzeGlucose, type GlucoseReading } from '@glucoseiq/core'
+
+const readings: GlucoseReading[] = [
+  { value: 112, unit: 'mg/dL', timestamp: '2026-07-01T08:00:00Z' },
+  { value: 118, unit: 'mg/dL', timestamp: '2026-07-01T08:05:00Z' },
+]
 const report = analyzeGlucose(readings, {
   minDays: 14,
   minActivePercent: 70,
@@ -121,37 +155,68 @@ const {
 } = report.dataSufficiency
 ```
 
-`daysOfData` is the span between the earliest and latest accepted readings.
-`activePercent` compares actual readings with the number expected across that
-span. `meetsCGMStandard` is true only when both configured thresholds are met.
+`daysOfData` is the span between the earliest and latest accepted readings. Its
+display value is rounded to one decimal place, while the minimum-days decision
+uses the unrounded span. `activePercent` is the percentage of expected
+five-minute timestamp slots occupied by at least one reading.
+`meetsCGMStandard` is true only when both configured thresholds are met, using
+the unrounded slot ratio for the coverage decision.
 
 The report's active-percent calculation uses the default five-minute expected
-interval. For another sampling cadence, calculate wear time separately:
+interval. For another sampling cadence, calculate timestamp coverage
+separately:
 
-```ts
+```ts typecheck
+import type { GlucoseReading } from '@glucoseiq/core'
 import { calculateActivePercent } from '@glucoseiq/core/metrics'
 
+const readings: GlucoseReading[] = [
+  { value: 112, unit: 'mg/dL', timestamp: '2026-07-01T08:00:00Z' },
+  { value: 118, unit: 'mg/dL', timestamp: '2026-07-01T08:05:00Z' },
+]
 const coverage = calculateActivePercent(readings, {
   expectedIntervalMinutes: 1,
 })
 
 if (!coverage.meetsClinicalMinimum) {
-  showCoverageWarning(coverage.activePercent)
+  console.warn(`Coverage is ${coverage.activePercent}%`)
 }
 ```
 
-`calculateActivePercent` caps the result at 100%. Duplicate readings can still
-inflate `actualReadings`, so deduplicate upstream when the same source record
-can arrive more than once. Normalized readings expose a `dedupKey` when the
-adapter can construct one.
+Slots are half-open and anchored to the earliest parseable timestamp. Exact
+duplicates and multiple readings inside one slot count once; `actualReadings`
+therefore reports occupied slots rather than raw input rows. Invalid timestamps
+are excluded. Fewer than two distinct parseable timestamps produce `NaN`
+coverage and fail the minimum-coverage flag.
+
+This is a data-coverage estimate, not proof of sensor wear, sensor accuracy, or
+clinical suitability. Conflicting duplicate rows still participate separately
+in analytical percentages, so deduplicate by stable source identity before
+analysis when the same source record can arrive more than once. Normalized
+readings expose a `dedupKey` when the adapter can construct one.
+
+Enhanced and pregnancy TIR summaries use the same five-minute slot model.
+`summary.totalDuration` is occupied-slot coverage, and `summary.dataQuality`
+requires at least 70% slot coverage before grading the observed span. Invalid
+or duplicate-only timestamps therefore produce zero summary duration and
+`poor` quality. Within each occupied slot, its five minutes are divided across
+the distinct observations and ranges represented in that slot. Exact duplicate
+observations count once, invalid timestamps receive no duration, and the final
+integer-minute allocation conserves the summary total. Percentages and reading
+counts still classify raw input rows.
 
 ## Detect gaps explicitly
 
-Wear time is one aggregate number. `detectGaps` identifies the exact breaks a
+Timestamp coverage is one aggregate number. `detectGaps` identifies the exact breaks a
 chart or review workflow may need to show:
 
-```ts
-import { detectGaps } from '@glucoseiq/core'
+```ts typecheck
+import { detectGaps, type GlucoseReading } from '@glucoseiq/core'
+
+const readings: GlucoseReading[] = [
+  { value: 112, unit: 'mg/dL', timestamp: '2026-07-01T08:00:00Z' },
+  { value: 118, unit: 'mg/dL', timestamp: '2026-07-01T08:30:00Z' },
+]
 
 const gaps = detectGaps(readings, { maxGapMinutes: 15 })
 
@@ -167,9 +232,14 @@ Choose the threshold for the source and surface you are building. Connector
 capability descriptors expose typical update and freshness intervals when you
 need a source-aware default:
 
-```ts
+```ts typecheck
+import { detectGaps, type GlucoseReading } from '@glucoseiq/core'
 import { DEXCOM_CAPABILITIES } from '@glucoseiq/core/connectors'
 
+const readings: GlucoseReading[] = [
+  { value: 112, unit: 'mg/dL', timestamp: '2026-07-01T08:00:00Z' },
+  { value: 118, unit: 'mg/dL', timestamp: '2026-07-01T08:30:00Z' },
+]
 const gaps = detectGaps(readings, {
   maxGapMinutes: DEXCOM_CAPABILITIES.maxFreshnessSec / 60,
 })
@@ -181,8 +251,13 @@ const gaps = detectGaps(readings, {
 comparisons. It snaps observations to the nearest slot, interpolates only
 inside short bracketing gaps, and leaves longer gaps absent:
 
-```ts
-import { alignToGrid } from '@glucoseiq/core'
+```ts typecheck
+import { alignToGrid, type GlucoseReading } from '@glucoseiq/core'
+
+const readings: GlucoseReading[] = [
+  { value: 112, unit: 'mg/dL', timestamp: '2026-07-01T08:00:00Z' },
+  { value: 118, unit: 'mg/dL', timestamp: '2026-07-01T08:10:00Z' },
+]
 
 const grid = alignToGrid(readings, {
   intervalMin: 5,
@@ -207,8 +282,18 @@ interpolated values as data.
 Many validation and parsing paths throw a `GlucoseIQError` subclass with a
 stable `code`:
 
-```ts
-import { GlucoseIQError, buildAGPProfile } from '@glucoseiq/core'
+```ts typecheck
+import {
+  GlucoseIQError,
+  buildAGPProfile,
+  type GlucoseReading,
+} from '@glucoseiq/core'
+
+const readings: GlucoseReading[] = [
+  { value: 112, unit: 'mg/dL', timestamp: '2026-07-01T08:00:00Z' },
+]
+const selectedTimeZone = 'America/Detroit'
+let feedback = ''
 
 try {
   const profile = buildAGPProfile(readings, {
@@ -218,10 +303,10 @@ try {
   if (error instanceof GlucoseIQError) {
     switch (error.code) {
       case 'INVALID_TIMEZONE':
-        showFieldError('Choose a valid IANA time zone.')
+        feedback = 'Choose a valid IANA time zone.'
         break
       case 'INVALID_OPTION':
-        showFieldError(error.message)
+        feedback = error.message
         break
       default:
         throw error
@@ -230,6 +315,8 @@ try {
     throw error
   }
 }
+
+console.info(feedback)
 ```
 
 Other public helpers may return a sentinel result, skip malformed rows, or

@@ -25,6 +25,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   or higher. Explicit custom maxima remain inclusive. The published
   `diabetic-utils` 1.5.x artifacts are unchanged and remain available via the
   `legacy` dist-tag.
+- Corrected Enhanced and pregnancy TIR target assessment to use strict,
+  unrounded population boundaries and cumulative TBR/TAR checks, with separate
+  Level 2 checks and explicit configured-range disclosure.
+- Added the pregnancy Level 2 below-range subset and rejected zero glucose
+  values that previously entered Enhanced or pregnancy TIR calculations.
+- Changed active percent and TIR summary duration to timestamp-slot coverage so
+  duplicates, invalid timestamps, and sparse spans cannot fabricate duration or
+  quality. These values estimate data coverage, not sensor wear.
+- Tightened glucose-string and GMI-option guards to reject non-finite,
+  non-positive, or unsupported runtime values.
+- Rejected unsupported Enhanced TIR population values and Enhanced or pregnancy
+  TIR unit values instead of silently selecting a different target model.
 
 ## [1.5.0] - 2026-03-12
 
@@ -70,10 +82,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `GMI_COEFFICIENTS` constant with documented formula coefficients for GMI/A1C calculations
-- [ConversionResult](src/types.ts:55:0-60:1) interface for type-safe glucose unit conversion returns
-- Type predicates for better TypeScript type narrowing ([isValidInsulin](src/validators.ts:2:0-16:1))
-- Test helpers module ([tests/test-helpers.ts](tests/test-helpers.ts:0:0-0:0)) with shared test utilities
-- Enhanced TIR functions: [calculateEnhancedTIR()](src/tir-enhanced.ts:49:0-168:1) and [calculatePregnancyTIR()](src/tir-enhanced.ts:170:0-293:1)
+- [ConversionResult](https://github.com/marklearst/glucoseiq/blob/v1.4.0/src/types.ts) interface for type-safe glucose unit conversion returns
+- Type predicates for better TypeScript type narrowing ([isValidInsulin](https://github.com/marklearst/glucoseiq/blob/v1.4.0/src/validators.ts))
+- Test helpers module ([tests/test-helpers.ts](https://github.com/marklearst/glucoseiq/blob/v1.4.0/tests/test-helpers.ts)) with shared test utilities
+- Enhanced TIR functions: [calculateEnhancedTIR()](https://github.com/marklearst/glucoseiq/blob/v1.4.0/src/tir-enhanced.ts) and [calculatePregnancyTIR()](https://github.com/marklearst/glucoseiq/blob/v1.4.0/src/tir-enhanced.ts)
 - Comprehensive test suite for Enhanced TIR (205 tests, 100% coverage)
 
 ### Changed

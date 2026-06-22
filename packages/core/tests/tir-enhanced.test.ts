@@ -331,11 +331,11 @@ describe('calculateEnhancedTIR', () => {
     })
 
     it('should assess "good" for meeting targets', () => {
-      // 72% TIR, minimal lows/highs
+      // 74% TIR, minimal lows/highs
       const readings = createReadings([
-        ...Array(72).fill(120), // 72% in range
+        ...Array(74).fill(120), // 74% in range
         ...Array(2).fill(60), // 2% low (safe)
-        ...Array(26).fill(190), // 26% high (acceptable)
+        ...Array(24).fill(190), // 24% high (acceptable)
       ])
 
       const result = calculateEnhancedTIR(readings)
@@ -343,6 +343,19 @@ describe('calculateEnhancedTIR', () => {
       expect(result.meetsTargets.tirMeetsGoal).toBe(true)
       expect(result.meetsTargets.tbrLevel1Safe).toBe(true)
       expect(result.meetsTargets.overallAssessment).toBe('good')
+    })
+
+    it('should assess a cumulative Level 1 target miss as needing improvement', () => {
+      const readings = createReadings([
+        ...Array(72).fill(120),
+        ...Array(2).fill(60),
+        ...Array(26).fill(190),
+      ])
+
+      const result = calculateEnhancedTIR(readings)
+
+      expect(result.meetsTargets.tarLevel1Acceptable).toBe(false)
+      expect(result.meetsTargets.overallAssessment).toBe('needs improvement')
     })
 
     it('should assess "needs improvement" for suboptimal control', () => {
@@ -412,6 +425,35 @@ describe('calculateEnhancedTIR', () => {
       expect(hasOlderAdultsText).toBe(true)
     })
 
+    it('should require TIR to exceed the exact population boundary', () => {
+      const standard = calculateEnhancedTIR(
+        createReadings([...Array(70).fill(120), ...Array(30).fill(200)]),
+        { population: 'standard' }
+      )
+      const older = calculateEnhancedTIR(
+        createReadings([...Array(50).fill(120), ...Array(50).fill(200)]),
+        { population: 'older-adults' }
+      )
+
+      expect(standard.meetsTargets.tirMeetsGoal).toBe(false)
+      expect(older.meetsTargets.tirMeetsGoal).toBe(false)
+    })
+
+    it('should apply older/high-risk hyperglycemia limits', () => {
+      const level1 = calculateEnhancedTIR(
+        createReadings([...Array(60).fill(120), ...Array(40).fill(200)]),
+        { population: 'older-adults' }
+      )
+      const level2 = calculateEnhancedTIR(
+        createReadings([...Array(93).fill(120), ...Array(7).fill(300)]),
+        { population: 'high-risk' }
+      )
+
+      expect(level1.meetsTargets.tarLevel1Acceptable).toBe(true)
+      expect(level2.meetsTargets.tarLevel2Acceptable).toBe(true)
+      expect(level2.meetsTargets.overallAssessment).not.toBe('concerning')
+    })
+
     it('should apply stricter hypoglycemia targets for older adults', () => {
       // 2% Level 1 hypoglycemia - safe for standard, not for older adults
       const readings = createReadings([...Array(2).fill(60), ...Array(98).fill(120)])
@@ -426,17 +468,90 @@ describe('calculateEnhancedTIR', () => {
       expect(standardResult.meetsTargets.tbrLevel1Safe).toBe(true)
       expect(olderAdultsResult.meetsTargets.tbrLevel1Safe).toBe(false)
     })
+
+    it('should use cumulative TBR and TAR percentages', () => {
+      const tbr = calculateEnhancedTIR(
+        createReadings([
+          ...Array(80).fill(45),
+          ...Array(350).fill(60),
+          ...Array(9570).fill(120),
+        ])
+      )
+      const tar = calculateEnhancedTIR(
+        createReadings([
+          ...Array(7200).fill(120),
+          ...Array(2400).fill(200),
+          ...Array(400).fill(300),
+        ])
+      )
+
+      expect(tbr.meetsTargets.tbrLevel1Safe).toBe(false)
+      expect(tar.meetsTargets.tarLevel1Acceptable).toBe(false)
+    })
+
+    it('should assess raw percentages rather than rounded display values', () => {
+      const justBelowTir = calculateEnhancedTIR(
+        createReadings([
+          ...Array(6996).fill(120),
+          ...Array(3004).fill(200),
+        ])
+      )
+      const justAboveTir = calculateEnhancedTIR(
+        createReadings([
+          ...Array(7004).fill(120),
+          ...Array(2996).fill(200),
+        ])
+      )
+      const justBelowLevel2Limit = calculateEnhancedTIR(
+        createReadings([
+          ...Array(96).fill(45),
+          ...Array(9904).fill(120),
+        ])
+      )
+
+      expect(justBelowTir.inRange.percentage).toBe(70)
+      expect(justBelowTir.meetsTargets.tirMeetsGoal).toBe(false)
+      expect(justAboveTir.inRange.percentage).toBe(70)
+      expect(justAboveTir.meetsTargets.tirMeetsGoal).toBe(true)
+      expect(justBelowLevel2Limit.veryLow.percentage).toBe(1)
+      expect(justBelowLevel2Limit.meetsTargets.tbrLevel2Safe).toBe(true)
+    })
+
+    it('should disclose when custom ranges replace consensus ranges', () => {
+      const defaultResult = calculateEnhancedTIR(createReadings([100, 120]))
+      const customResult = calculateEnhancedTIR(createReadings([100, 120]), {
+        highThreshold: 150,
+      })
+
+      expect(defaultResult.meetsTargets.targetBasis).toBe('consensus-ranges')
+      expect(customResult.meetsTargets.targetBasis).toBe('configured-ranges')
+      expect(customResult.meetsTargets.recommendations.join(' ')).not.toContain(
+        'consensus target'
+      )
+    })
+
+    it('should disclose configured ranges for older-adult goals', () => {
+      const result = calculateEnhancedTIR(createReadings([100, 120]), {
+        population: 'older-adults',
+        highThreshold: 150,
+      })
+
+      expect(result.meetsTargets.targetBasis).toBe('configured-ranges')
+      expect(result.meetsTargets.recommendations).toContain(
+        'Older/high-risk percentage goals applied to the configured ranges.'
+      )
+    })
   })
 
   describe('Recommendations', () => {
-    it('should note elevated Level 1 hypoglycemia', () => {
+    it('should note elevated cumulative time below range', () => {
       const readings = createReadings([...Array(5).fill(60), ...Array(95).fill(120)])
 
       const result = calculateEnhancedTIR(readings)
 
       expect(result.meetsTargets.recommendations).toEqual(
         expect.arrayContaining([
-          expect.stringContaining('Level 1 hypoglycemia'),
+          expect.stringContaining('Total time below range'),
           expect.stringContaining('is elevated'),
         ])
       )
@@ -492,7 +607,7 @@ describe('calculateEnhancedTIR', () => {
       expect(result.meetsTargets.recommendations).toEqual(
         expect.arrayContaining([
           expect.stringContaining('Time-in-range'),
-          expect.stringContaining('below the consensus target'),
+          expect.stringContaining('does not exceed the consensus target'),
         ])
       )
     })
@@ -537,24 +652,97 @@ describe('calculateEnhancedTIR', () => {
       expect(unsortedResult.summary.totalDuration).toBeGreaterThan(0)
     })
 
-    it('should fall back to default interval when timestamps are invalid', () => {
+    it('should fail closed when timestamps are invalid', () => {
       const readings: GlucoseReading[] = [
         { value: 120, unit: 'mg/dL', timestamp: '' },
         { value: 130, unit: 'mg/dL', timestamp: 'not-a-date' },
       ]
 
       const result = calculateEnhancedTIR(readings)
-      expect(result.summary.totalDuration).toBe(10) // 2 readings * 5 min default
+      expect(result.summary).toMatchObject({
+        totalDuration: 0,
+        dataQuality: 'poor',
+      })
+      expect(result.inRange.duration).toBe(0)
     })
 
-    it('should fall back to default interval when all timestamp deltas are non-positive', () => {
+    it('should fail closed when timestamps occupy only one instant', () => {
       const readings: GlucoseReading[] = [
         { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
         { value: 130, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
       ]
 
       const result = calculateEnhancedTIR(readings)
-      expect(result.summary.totalDuration).toBe(10) // 2 readings * 5 min default
+      expect(result.summary).toMatchObject({
+        totalDuration: 0,
+        dataQuality: 'poor',
+      })
+      expect(result.inRange.duration).toBe(0)
+    })
+
+    it('should allocate duration only from parseable timestamp evidence', () => {
+      const valid: GlucoseReading[] = [
+        { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+        { value: 130, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+      ]
+      const invalid: GlucoseReading[] = Array.from({ length: 100 }, () => ({
+        value: 300,
+        unit: 'mg/dL',
+        timestamp: 'not-a-date',
+      }))
+
+      const result = calculateEnhancedTIR([...valid, ...invalid])
+      const allocatedDuration = ENHANCED_ZONES.reduce(
+        (total, zone) => total + result[zone].duration,
+        0
+      )
+
+      expect(result.summary.totalDuration).toBe(10)
+      expect(result.inRange.duration).toBe(10)
+      expect(result.veryHigh.duration).toBe(0)
+      expect(allocatedDuration).toBe(result.summary.totalDuration)
+    })
+
+    it('should not let exact duplicate rows change slot-duration allocation', () => {
+      const conflict: GlucoseReading = {
+        value: 300,
+        unit: 'mg/dL',
+        timestamp: '2024-01-01T08:00:00Z',
+      }
+      const base: GlucoseReading[] = [
+        { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+        conflict,
+        { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+      ]
+
+      const baseline = calculateEnhancedTIR(base)
+      const duplicated = calculateEnhancedTIR([
+        ...base,
+        ...Array(100).fill(conflict),
+      ])
+
+      expect(duplicated.inRange.duration).toBe(baseline.inRange.duration)
+      expect(duplicated.veryHigh.duration).toBe(baseline.veryHigh.duration)
+    })
+
+    it('should conserve integer minutes across fractional zone allocations', () => {
+      const readings: GlucoseReading[] = [
+        { value: 45, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+        { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+        { value: 300, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+        { value: 45, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+        { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+        { value: 300, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+      ]
+
+      const result = calculateEnhancedTIR(readings)
+      const allocatedDuration = ENHANCED_ZONES.reduce(
+        (total, zone) => total + result[zone].duration,
+        0
+      )
+
+      expect(result.summary.totalDuration).toBe(10)
+      expect(allocatedDuration).toBe(result.summary.totalDuration)
     })
   })
 
@@ -623,6 +811,53 @@ describe('calculateEnhancedTIR', () => {
 
       expect(result.summary.dataQuality).toBe('poor')
     })
+
+    it('should not infer duration or quality from many invalid timestamps', () => {
+      const readings: GlucoseReading[] = Array.from({ length: 4032 }, () => ({
+        value: 120,
+        unit: 'mg/dL',
+        timestamp: 'not-a-date',
+      }))
+
+      const result = calculateEnhancedTIR(readings)
+
+      expect(result.summary).toMatchObject({
+        totalReadings: 4032,
+        totalDuration: 0,
+        dataQuality: 'poor',
+      })
+      expect(result.inRange.duration).toBe(0)
+    })
+
+    it('should not infer duration or quality from duplicate timestamps', () => {
+      const reading: GlucoseReading = {
+        value: 120,
+        unit: 'mg/dL',
+        timestamp: '2024-01-01T08:00:00.000Z',
+      }
+
+      const result = calculateEnhancedTIR(Array(4032).fill(reading))
+
+      expect(result.summary).toMatchObject({
+        totalReadings: 4032,
+        totalDuration: 0,
+        dataQuality: 'poor',
+      })
+      expect(result.inRange.duration).toBe(0)
+    })
+
+    it('should rate a sparse fourteen-day span as poor coverage', () => {
+      const start = Date.parse('2024-01-01T08:00:00.000Z')
+      const readings: GlucoseReading[] = Array.from({ length: 100 }, (_, index) => ({
+        value: 120,
+        unit: 'mg/dL',
+        timestamp: new Date(start + index * 205 * MINUTE_IN_MS).toISOString(),
+      }))
+
+      const result = calculateEnhancedTIR(readings)
+
+      expect(result.summary.dataQuality).toBe('poor')
+    })
   })
 
   describe('Error handling', () => {
@@ -634,6 +869,12 @@ describe('calculateEnhancedTIR', () => {
 
     it('should throw error for invalid glucose value (negative)', () => {
       const readings = createReadings([-10, 100, 110])
+
+      expect(() => calculateEnhancedTIR(readings)).toThrow('Invalid glucose value')
+    })
+
+    it('should throw error for a zero glucose value', () => {
+      const readings = createReadings([0, 100, 110])
 
       expect(() => calculateEnhancedTIR(readings)).toThrow('Invalid glucose value')
     })
@@ -687,6 +928,39 @@ describe('calculateEnhancedTIR', () => {
         })
       }
     )
+
+    it('should reject an unsupported population before target assessment', () => {
+      expect(() =>
+        calculateEnhancedTIR(createReadings([120]), {
+          population: 'standrad' as never,
+        })
+      ).toThrowError(
+        expect.objectContaining({
+          name: 'DomainError',
+          code: 'INVALID_OPTION',
+          message:
+            'population must be standard, older-adults, or high-risk',
+        })
+      )
+    })
+
+    it('should reject an unsupported reading unit', () => {
+      expect(() =>
+        calculateEnhancedTIR([
+          {
+            value: 5,
+            unit: 'grams' as never,
+            timestamp: '2024-01-01T08:00:00Z',
+          },
+        ])
+      ).toThrowError(
+        expect.objectContaining({
+          name: 'DomainError',
+          code: 'INVALID_UNIT',
+          message: 'Unsupported glucose unit: grams',
+        })
+      )
+    })
   })
 
   describe('Edge cases', () => {
@@ -748,6 +1022,7 @@ describe('calculatePregnancyTIR', () => {
 
       expect(result.inRange.percentage).toBe(70) // 7 out of 10
       expect(result.belowRange.percentage).toBe(10) // 1 out of 10
+      expect(result.belowRangeLevel2.percentage).toBe(0)
       expect(result.aboveRange.percentage).toBe(20) // 2 out of 10
     })
 
@@ -778,6 +1053,15 @@ describe('calculatePregnancyTIR', () => {
 
       expect(result.belowRange.readingCount).toBe(0)
       expect(result.inRange.readingCount).toBe(3) // 63 is in range
+    })
+
+    it('should use a strict <54 mg/dL Level 2 boundary', () => {
+      const readings = createReadings([53.9, 54, 100])
+
+      const result = calculatePregnancyTIR(readings)
+
+      expect(result.belowRangeLevel2.readingCount).toBe(1)
+      expect(result.belowRange.readingCount).toBe(2)
     })
 
     it('should correctly classify value at 140 mg/dL (upper boundary)', () => {
@@ -905,6 +1189,20 @@ describe('calculatePregnancyTIR', () => {
       expect(result.meetsPregnancyTargets).toBe(false)
     })
 
+    it('should not meet pregnancy targets when TIR is exactly 70%', () => {
+      const readings = createReadings([
+        ...Array(70).fill(100), // 70% in range
+        ...Array(30).fill(150), // 30% above
+      ])
+
+      const result = calculatePregnancyTIR(readings)
+
+      expect(result.meetsPregnancyTargets).toBe(false)
+      expect(result.recommendations).toContain(
+        'Time-in-range (70.0%) does not exceed the pregnancy target of 70%.'
+      )
+    })
+
     it('should not meet pregnancy targets if TBR >4%', () => {
       const readings = createReadings([
         ...Array(71).fill(100), // 71% in range
@@ -915,6 +1213,39 @@ describe('calculatePregnancyTIR', () => {
       const result = calculatePregnancyTIR(readings)
 
       expect(result.meetsPregnancyTargets).toBe(false)
+    })
+
+    it('should not meet pregnancy targets when Level 2 TBR is at least 1%', () => {
+      const readings = createReadings([
+        ...Array(2).fill(50), // 2% Level 2 below range
+        ...Array(74).fill(100), // 74% in range
+        ...Array(24).fill(150), // 24% above range
+      ])
+
+      const result = calculatePregnancyTIR(readings)
+
+      expect(result.belowRange.percentage).toBe(2)
+      expect(result.belowRangeLevel2.percentage).toBe(2)
+      expect(result.meetsPregnancyTargets).toBe(false)
+      expect(result.recommendations).toContain(
+        'Level 2 time below range (2.0%) does not meet the pregnancy target of <1%.'
+      )
+    })
+
+    it('should assess pregnancy targets from raw rather than rounded percentages', () => {
+      const readings = createReadings([
+        ...Array(96).fill(50), // 0.96% Level 2 below range
+        ...Array(7500).fill(100), // 75% in range
+        ...Array(2404).fill(150), // 24.04% above range
+      ])
+
+      const result = calculatePregnancyTIR(readings)
+
+      expect(result.belowRangeLevel2.percentage).toBe(1)
+      expect(result.meetsPregnancyTargets).toBe(true)
+      expect(result.recommendations).not.toContain(
+        'Level 2 time below range (1.0%) does not meet the pregnancy target of <1%.'
+      )
     })
 
     it('should not meet pregnancy targets if TAR >25%', () => {
@@ -1013,6 +1344,38 @@ describe('calculatePregnancyTIR', () => {
 
       expect(() => calculatePregnancyTIR(readings)).toThrow('Invalid glucose value')
     })
+
+    it('should reject an unsupported unit option', () => {
+      expect(() =>
+        calculatePregnancyTIR(createReadings([100]), {
+          unit: 'grams' as never,
+        })
+      ).toThrowError(
+        expect.objectContaining({
+          name: 'DomainError',
+          code: 'INVALID_OPTION',
+          message: 'unit must be mg/dL or mmol/L',
+        })
+      )
+    })
+
+    it('should reject an unsupported reading unit', () => {
+      expect(() =>
+        calculatePregnancyTIR([
+          {
+            value: 5,
+            unit: 'grams' as never,
+            timestamp: '2024-01-01T08:00:00Z',
+          },
+        ])
+      ).toThrowError(
+        expect.objectContaining({
+          name: 'DomainError',
+          code: 'INVALID_UNIT',
+          message: 'Unsupported glucose unit: grams',
+        })
+      )
+    })
   })
 
   describe('Summary statistics', () => {
@@ -1024,6 +1387,28 @@ describe('calculatePregnancyTIR', () => {
       expect(result.summary.totalReadings).toBe(100)
       expect(result.summary.totalDuration).toBeGreaterThan(0)
       expect(result.summary.dataQuality).toBeDefined()
+    })
+
+    it('should conserve primary range duration without double-counting Level 2', () => {
+      const readings: GlucoseReading[] = [
+        { value: 45, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+        { value: 100, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+        { value: 200, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+        { value: 45, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+        { value: 100, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+        { value: 200, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+      ]
+
+      const result = calculatePregnancyTIR(readings)
+      const primaryDuration =
+        result.belowRange.duration +
+        result.inRange.duration +
+        result.aboveRange.duration
+
+      expect(primaryDuration).toBe(result.summary.totalDuration)
+      expect(result.belowRangeLevel2.duration).toBeLessThanOrEqual(
+        result.belowRange.duration
+      )
     })
   })
 })

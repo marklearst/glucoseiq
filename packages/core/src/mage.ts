@@ -12,10 +12,15 @@
  * @see https://journals.sagepub.com/doi/10.1177/19322968211061165 (Fernandes NJ, et al. 2022)
  * @see https://care.diabetesjournals.org/content/42/8/1593 (ADA 2019)
  * @example
- * // Basic usage
- * glucoseMAGE([100, 120, 80, 160, 90, 140, 70, 180])
- * // Advanced usage
- * glucoseMAGE(readings, { shortWindow: 5, longWindow: 32, direction: 'auto' })
+ * ```ts typecheck
+ * import { clinicalMAGE } from '@glucoseiq/core'
+ *
+ * const readings: number[] = Array.from(
+ *   { length: 100 },
+ *   (_, index) => (index % 2 === 0 ? 90 : 160)
+ * )
+ * const mage = clinicalMAGE(readings)
+ * ```
  * @remarks
  * - Minimum 24 data points recommended (1 day of hourly readings)
  * - Best suited for continuous glucose monitoring (CGM) data
@@ -111,15 +116,15 @@ export function glucoseMAGE(
 
 /**
  * Configuration options for MAGE calculation.
- * @property shortWindow - Short moving average window (default: 5)
- * @property longWindow - Long moving average window (default: 32)
+ * @property shortWindow - Short moving-average window; defaults to `max(3, min(5, floor(usableLength / 8)))`
+ * @property longWindow - Long moving-average window; defaults to `max(shortWindow + 2, min(32, floor(usableLength / 3)))`
  * @property direction - Excursion direction: 'auto', 'ascending', or 'descending'
  */
 export interface MAGEOptions {
-  /** Short moving average window size (default: 5, recommended range: 1-7) */
+  /** Short moving-average window size (default: `max(3, min(5, floor(usableLength / 8)))`; recommended range: 1-7) */
   shortWindow?: number
 
-  /** Long moving average window size (default: 32, recommended range: 16-38) */
+  /** Long moving-average window size (default: `max(shortWindow + 2, min(32, floor(usableLength / 3)))`; recommended range: 16-38) */
   longWindow?: number
 
   /**

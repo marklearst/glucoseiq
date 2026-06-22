@@ -1,15 +1,16 @@
 /**
  * @file src/render/agp-svg.ts
  *
- * "AGP-in-a-tag": renders an Ambulatory Glucose Profile as a self-contained,
- * themeable SVG **string** — no DOM, no canvas, no framework. It runs
+ * Renders an AGP-style percentile-band chart as a self-contained, themeable
+ * SVG **string** — no DOM, no canvas, no framework. It runs
  * {@link buildAGPProfile} internally and draws the 5–95 and 25–75 percentile
- * bands, the median line, and the target range. Works anywhere a string does:
- * Node, email, PDF, a README, RSC, or any UI framework.
+ * bands, the median line, and the target range. Server and browser hosts can
+ * embed the result. Email, PDF, README, native, and watch hosts require
+ * host-specific embedding, conversion, or application integration.
  *
  * Scoped to mg/dL (the standard AGP unit). Pure and dependency-free.
  *
- * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
+ * @see {@link https://doi.org/10.2337/dci19-0028 | International Consensus on Time in Range (2019)}
  */
 
 import type { GlucoseReading } from '../types'
@@ -114,7 +115,7 @@ function fmt(n: number): number {
 }
 
 /**
- * Renders an Ambulatory Glucose Profile chart as an SVG string.
+ * Renders an AGP-style percentile-band chart as an SVG string.
  *
  * @param readings - Glucose readings with ISO 8601 timestamps (mg/dL or mmol/L)
  * @param options - Dimensions, theme, time zone, and title
@@ -122,9 +123,15 @@ function fmt(n: number): number {
  * @throws {DomainError} If width or height is not a finite positive number, or if a present title is not a string
  *
  * @example
- * ```ts
+ * ```ts typecheck
+ * import { type GlucoseReading } from '@glucoseiq/core'
+ * import { agpChartToSVG } from '@glucoseiq/core/render'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ *   { value: 145, unit: 'mg/dL', timestamp: '2024-01-02T08:00:00Z' },
+ * ]
  * const svg = agpChartToSVG(readings, { theme: 'dark' })
- * // <svg ...>…</svg> — drop into HTML, a README, an email, or a PDF
  * ```
  *
  * @category Render

@@ -1,152 +1,109 @@
-# 🩸 GlucoseIQ
+# @glucoseiq/core
 
-**The headless engine behind glucose on every screen.**
+Headless TypeScript primitives for glucose analytics, mapped data ingestion,
+interoperability, and optional SVG rendering. The package has no runtime
+dependencies and requires Node `>=24`.
 
-A zero-dependency TypeScript toolkit for CGM and diabetes analytics — the AGP percentile-band series, Time-in-Range, a full suite of cited variability & risk metrics, meal-response analysis, a live trend model, and render-ready SVG charts. One pure engine that runs the same on a server, in a browser, in a React app, or behind an Apple Watch complication.
-
-> _**GlucoseIQ 1.0** expands `diabetic-utils` into a scoped package ecosystem with a zero-dependency headless core. Projects on `diabetic-utils` 1.5.x can adopt the 2.0 compatibility bridge without changing source imports (see [Migration](#-migration))._
-
-> **Disclaimer:** For informational and educational purposes only. Not medical advice, diagnosis, or treatment.
-
-![Node](https://img.shields.io/badge/node-%E2%89%A524-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-100%25-success)
-![Types](https://img.shields.io/badge/TypeScript-strict-blue?logo=typescript)
-![Dependencies](https://img.shields.io/badge/dependencies-0-success)
-![License](https://img.shields.io/github/license/marklearst/glucoseiq)
-
----
-
-## Why GlucoseIQ
-
-- **Zero runtime dependencies** in the core. Tree-shakable, tiny (~15 KB gzipped), runs anywhere.
-- **Cited, researcher-grade math.** Every metric traces to a published guideline, golden-tested against reference values (including the R `iglu` package and Nightscout).
-- **Headless by design.** Pure functions in, render-ready data out — draw it with any chart library, or use the built-in zero-dependency SVG renderers.
-- **100% test coverage**, strict TypeScript, ESM + CJS.
-
----
-
-## Packages
-
-| Package | What it is |
-|---|---|
-| **`@glucoseiq/core`** | The zero-dependency headless engine — all analytics, series, live model, interop, and SVG renderers. |
-| **`@glucoseiq/react`** | Memoized hooks + headless `<AgpChart/>`, `<TirBar/>`, `<TrendTile/>` components (React ≥18 peer). |
-| **`@glucoseiq/tokens`** | The canonical 5-zone palette, trend glyphs, and CSS variables. |
-| **`@glucoseiq/testing`** | Seedable mock-CGM generator + scenario fixtures (same seed → identical output). |
-| **`@glucoseiq/cli`** | `npx @glucoseiq/cli report data.csv` — zero-code analysis of any CGM export. |
-| **`diabetic-utils`** | 2.0 compatibility bridge for projects moving from `diabetic-utils` 1.5.x to `@glucoseiq/core`. |
+## Install
 
 ```bash
 npm install @glucoseiq/core
 ```
 
----
+## First use
 
-## 30-second demo
+```ts typecheck
+import { analyzeGlucose, type GlucoseReading } from '@glucoseiq/core'
 
-```ts
-import { analyzeGlucose } from '@glucoseiq/core'
+const readings: GlucoseReading[] = [
+  {
+    value: 112,
+    unit: 'mg/dL',
+    timestamp: '2026-07-13T12:00:00.000Z',
+  },
+]
 
-const report = analyzeGlucose(readings, { timeZone: 'America/New_York' })
-
-report.gmi                            // 6.8   (estimated A1C)
-report.timeInRange.inRange.percentage // 72.5  (%)
-report.tightRange.inRange             // 58.1  (% in 70–140)
-report.risk.gri.zone                  // 'B'   (Glycemia Risk Index zone)
-report.episodes.summary.hypoCount     // 3     (≥15-min hypo events)
-report.agpProfile.bins                // 288 time-of-day percentile bins
+const report = analyzeGlucose(readings, { includeProfile: false })
+if (report.valid) console.log(report.meanGlucose)
 ```
 
-One normalized pass → a clinician-grade report: summary scalars, enhanced 5-range TIR, tight range, the full risk-metric set, hypo/hyper episodes, data sufficiency, and the AGP band series.
+## Public entrypoints
 
----
+- `@glucoseiq/core` — reports, time-in-range, conversions, series, live state,
+  errors, and shared types.
+- `@glucoseiq/core/metrics` — focused variability, risk, curve, episode, and
+  profile calculations.
+- `@glucoseiq/core/connectors` — typed Dexcom, Libre, and Nightscout payload
+  normalization.
+- `@glucoseiq/core/interop` — FHIR CGM and Open mHealth transforms.
+- `@glucoseiq/core/render` — dependency-free AGP, TIR, and trend SVG strings.
 
-## AGP-in-a-tag
+## Data and units
 
-The Ambulatory Glucose Profile — the chart every CGM dashboard renders — as a self-contained, dependency-free **SVG string** you can drop into a README, an email, a PDF, or any framework:
+Mixed-unit-aware `GlucoseReading` APIs normalize each reading's declared unit.
+Legacy `calculateTIR` instead requires readings and target bounds expressed in
+one homogeneous unit. Numeric-array APIs require a homogeneous series and a
+matching unit option where the function exposes one. A bare number does not
+carry unit information.
 
-```ts
-import { agpChartToSVG, tirBarToSVG, trendTileToSVG } from '@glucoseiq/core'
+`glucoseIQScore` is a project-defined, non-diagnostic wellness heuristic
+derived from GRI. It returns the underlying GRI value alongside the derived
+score and rating.
 
-element.innerHTML = agpChartToSVG(readings, { theme: 'dark' })
-```
+## CSV contract
 
-Follow the [dashboard guide](https://glucoseiq.health/docs/dashboard) to compose
-a full dashboard from `@glucoseiq/core` without a chart library or framework.
+`parseGlucoseCSV` reads header-row delimited data using mapped timestamp and
+value columns. The delimiter defaults to comma. A custom delimiter must be a
+one-code-unit delimiter; validation rejects double quote, NUL, CR, and LF.
 
----
+- Blank or BOM-only input returns an empty array.
+- A valid header-only document returns an empty array after header validation.
+- A missing mapped header throws `ParseError` with `CSV_COLUMN_NOT_FOUND`.
+- An invalid delimiter throws `DomainError` with `INVALID_OPTION`.
+- Invalid rows are skipped.
+- Quoted fields cannot span physical lines.
 
-## What's inside
+This is a mapped delimited-data contract, not an implicit vendor-format
+detector. Name the columns and unit present in the input file.
 
-**Analytics & series**
-`analyzeGlucose` (one-call report) · `buildAGPProfile` (time-of-day percentile bands) · enhanced 5-range TIR + pregnancy TIR · `calculateTITR` (time in tight range) · `glucoseMValue` · `calculateIGC` · `calculateGVIPGS` (Nightscout parity) · `aggregateCohort` · `detectGaps` / `splitDayNight` / `alignToGrid`
+## Options and defaults
 
-**Variability & risk** _(all cited, golden-tested)_
-GMI/eAG · SD/CV/percentiles · MAGE · LBGI/HBGI · ADRR · GRADE · GRI · J-Index · MODD · CONGA · **M-value** · **IGC** (Rodbard) · **GVI/PGS** (Nightscout parity) · **MAG** · **GVP** · `calculateAGPMetrics` (all at once)
+`analyzeGlucose` defaults to the `UTC` time zone, includes the percentile-band
+profile, and uses 14 days plus 70 percent timestamp-slot coverage for its
+sufficiency flag. Coverage estimates do not prove sensor wear or clinical
+suitability.
+`parseGlucoseCSV` defaults to `mg/dL` and comma when those optional values are
+omitted. Individual metrics and renderers document their own defaults in the
+public API.
 
-**Events & meals**
-`detectEpisodes` (consensus ≥15-min hypo/hyper events) · `analyzeMealResponse` · `glucoseAUC` / `incrementalAUC` (Wolever iAUC)
+## Invalid input
 
-**Live model**
-`computeGlucoseTrend` (rate-of-change + trend) · `latestReading` · `minutesSinceLastReading`
+Intentional failures use the typed `GlucoseIQError` hierarchy:
+`DomainError`, `ParseError`, `EmptyDatasetError`, and `TimestampError`. Each
+has one of the stable error codes exported by the package, so callers can
+narrow by class or `error.code` without matching message text. Report-style
+APIs that accept empty or unusable data may instead return a typed
+`valid: false` result; check the function contract.
 
-**Score**
-`glucoseIQScore` — a 0–100 wellness score (100 − GRI) with an A–E zone
+## SVG renderers and host integration
 
-**Render (zero-dependency SVG strings)**
-`agpChartToSVG` · `tirBarToSVG` · `trendTileToSVG`
+The optional SVG renderers validate positive finite dimensions and return SVG
+strings. The AGP renderer produces an AGP-style percentile-band series; it is
+not a complete standardized AGP report. Email, PDF, README, and watch hosts
+require host-specific embedding, conversion, or integration. Treat returned
+markup as data and choose an integration appropriate for the target host.
 
-**Connectors & interop**
-Dexcom / Libre / Nightscout normalizers · FHIR CGM IG payloads (LOINC codes verified against v1.0.0) · Open mHealth
+## Safety limits
 
-**Ingestion**
-`parseGlucoseCSV` — point it at any Dexcom Clarity / LibreView / Nightscout / Tidepool export
+GlucoseIQ screens unusable readings according to each operation's documented
+policy and rejects malformed options where a function promises validation. It
+does not replace product-specific validation, security controls, or review of
+source data. The output is informational and not medical advice.
 
----
+## Documentation
 
-## Everything is unit-aware
-
-Mixed mg/dL and mmol/L input is normalized correctly everywhere. Where a metric's formula is calibrated for mg/dL, values are converted first — so international (mmol/L) data never silently produces wrong numbers.
-
----
-
-## 🔄 Migration
-
-`diabetic-utils@2` is the compatibility bridge from the 1.5.x package to
-`@glucoseiq/core@1`. Existing source imports stay the same:
-
-```ts
-import { calculateEnhancedTIR, estimateGMI } from 'diabetic-utils' // still works
-```
-
-New projects should depend on `@glucoseiq/core` directly. The compatibility
-major requires Node ≥24 and covers the package move, typed results on empty
-data, corrected FHIR LOINC codes, and the Libre unit fix. Clinical formulas
-keep their 1.5.x numeric behavior and cited results stay reproducible.
-
----
-
-## Development
-
-```bash
-pnpm install
-pnpm build          # turbo: builds all packages
-pnpm test           # turbo: runs all package tests
-pnpm test:coverage  # 100% enforced
-```
-
-Node ≥24. Turborepo + pnpm workspaces.
-
----
-
-## References
-
-TIR & episodes: Battelino 2019, Danne 2017 · A1C/eAG: Nathan 2008 · LBGI/HBGI/ADRR: Kovatchev 2006 · GRADE: Hill 2007 · GRI: Klonoff 2023 · MODD: Service 1980 · CONGA: McDonnell 2005 · MAGE: Service 1970 · M-value: Schlichtkrull 1965 · IGC: Rodbard 2009 · GVP: Peyser 2018 · MAG: Hermanides 2010 · iAUC: Wolever & Jenkins 1986 · FHIR: HL7 CGM IG v1.0.0
-
----
-
-## License
-
-MIT © [Mark Learst](https://marklearst.com)
-
-Built with ❤️ for the diabetes community.
+- [Core concepts](https://glucoseiq.health/docs/core-concepts)
+- [Public API](https://glucoseiq.health/docs/api/core)
+- [Migration guide](https://glucoseiq.health/docs/migration)
+- [Changelog](https://github.com/marklearst/glucoseiq/blob/main/CHANGELOG.md)
+- [MIT license](https://github.com/marklearst/glucoseiq/blob/main/LICENSE)

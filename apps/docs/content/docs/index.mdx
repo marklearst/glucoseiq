@@ -1,15 +1,16 @@
 ---
 title: Getting Started
-description: Install GlucoseIQ and get a clinician-grade glucose report in 30 seconds.
+description: Install GlucoseIQ and build a typed CGM analytics summary.
 ---
 
 import { Cards, Card } from 'fumadocs-ui/components/card'
 import { Callout } from 'fumadocs-ui/components/callout'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-**GlucoseIQ 1.0** is a zero-dependency TypeScript engine for CGM & diabetes
-analytics — the AGP series, Time-in-Range, 25+ cited metrics, meal response,
-and a live trend model. Pure functions in, render-ready data out.
+**GlucoseIQ 1.0** begins with a zero-runtime-dependency TypeScript core for CGM
+and diabetes analytics: AGP-style percentile bands, Time-in-Range, 25+
+analytics primitives, meal response, and a live trend model. Composable
+functions in, render-ready data out.
 
 ## Install
 
@@ -49,14 +50,15 @@ bun add @glucoseiq/core
 
 </Tabs>
 
-Zero runtime dependencies. Node ≥24, TypeScript-first, ESM + CJS, ~15 KB gzipped.
+Zero runtime dependencies in `@glucoseiq/core`. Node ≥24, TypeScript-first,
+ESM + CJS.
 
 ## Your first report
 
-```ts
-import { analyzeGlucose } from '@glucoseiq/core'
+```ts typecheck
+import { analyzeGlucose, type GlucoseReading } from '@glucoseiq/core'
 
-const readings = [
+const readings: GlucoseReading[] = [
   { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
   { value: 135, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
   // ... your CGM data
@@ -64,38 +66,53 @@ const readings = [
 
 const report = analyzeGlucose(readings, { timeZone: 'America/New_York' })
 
-report.gmi                            // 6.8  — Glucose Management Indicator
-report.timeInRange.inRange.percentage // 72.5 — % in 70–180 mg/dL
-report.tightRange.inRange             // 58.1 — % in 70–140 mg/dL
-report.risk.gri.zone                  // 'B'  — Glycemia Risk Index zone
-report.episodes.summary.hypoCount     // 3    — ≥15-min hypo events
+if (!report.valid || !report.timeInRange || !report.tightRange ||
+    !report.risk || !report.episodes || !report.agpProfile) {
+  throw new Error('The input did not contain enough valid CGM data')
+}
+
+report.gmi                            // 6.2 — Glucose Management Indicator
+report.timeInRange.inRange.percentage // 100 — % in 70–180 mg/dL
+report.tightRange.inRange             // 100 — % in 70–140 mg/dL
+report.risk.gri.zone                  // 'A' — Glycemia Risk Index zone
+report.episodes.summary.hypoCount     // 0 — ≥15-min hypo events
 report.agpProfile.bins                // 288 time-of-day percentile bins
 ```
 
-One normalized pass produces the whole report: summary scalars, enhanced
-5-range Time-in-Range, tight range, the full risk-metric set, hypo/hyper
-episodes, data sufficiency, and the AGP band series.
+One normalized pass produces an analytics summary: scalar statistics, enhanced
+5-range Time-in-Range, tight range, a selected risk-metric block, hypo/hyper
+episodes, data sufficiency, and an AGP-style percentile-band series.
 
 ## Draw it — with zero dependencies
 
-```ts
-import { agpChartToSVG, tirBarToSVG, trendTileToSVG } from '@glucoseiq/core'
+```ts typecheck
+import {
+  agpChartToSVG,
+  type GlucoseReading,
+} from '@glucoseiq/core'
+
+const readings: GlucoseReading[] = [
+  { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+  { value: 135, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+]
+const element = document.createElement('div')
 
 element.innerHTML = agpChartToSVG(readings, { theme: 'dark' })
 ```
 
-Every renderer returns a self-contained SVG **string** — drop it into HTML,
-email, a PDF, a README, React Server Components, or any framework.
+Every renderer returns a self-contained SVG **string**. Browser applications
+can embed trusted output as markup; email, PDF, README, native, and other hosts
+need host-specific embedding, conversion, or application integration.
 
 ## Choose your next step
 
 <Cards>
-  <Card title="Build a dashboard" href="/docs/dashboard" description="Go from readings to a complete AGP, Time-in-Range, and live-reading dashboard in about ten minutes." />
+  <Card title="Build a dashboard" href="/docs/dashboard" description="Go from readings to AGP-style percentile bands, Time-in-Range, and a live-reading dashboard in about ten minutes." />
   <Card title="Understand the engine" href="/docs/core-concepts" description="Learn the contracts and processing model that keep GlucoseIQ portable, deterministic, and headless." />
   <Card title="Connect CGM data" href="/docs/connectors" description="Normalize Dexcom, Libre, and Nightscout payloads into one vendor-neutral reading model." />
   <Card title="Use React" href="/docs/react" description="Add memoized analysis hooks and ready-made AGP, TIR, and trend components to React applications." />
   <Card title="Design your own UI" href="/docs/tokens" description="Use shared glucose zones, colors, glyphs, and CSS variables across web and native surfaces." />
-  <Card title="Browse the API" href="/docs/api" description="Explore every public function, contract, constant, and typed error generated from source." />
+  <Card title="Browse the API" href="/docs/api" description="Explore every public core function, contract, constant, and typed error generated from source." />
 </Cards>
 
 <Callout type="warn" title="Not medical advice">
@@ -103,8 +120,10 @@ email, a PDF, a README, React Server Components, or any framework.
   constitute medical advice, diagnosis, or treatment.
 </Callout>
 
-## Mixed units are safe
+## Know which unit contract you are using
 
-mg/dL and mmol/L input can be mixed freely — every function normalizes
-correctly, and metrics whose published formulas are calibrated for mg/dL
-convert first. International data never silently produces wrong numbers.
+Mixed-unit-aware APIs inspect the unit on every `GlucoseReading` and normalize
+a mixed `mg/dL` and `mmol/L` series. Legacy `calculateTIR` instead requires all
+readings and target bounds in one homogeneous unit. Numeric-array APIs require
+one homogeneous unit and the matching positional argument or option where the
+signature provides one.

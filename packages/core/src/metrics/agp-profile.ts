@@ -1,10 +1,10 @@
 /**
  * @file src/metrics/agp-profile.ts
  *
- * Ambulatory Glucose Profile (AGP) time-of-day percentile-band series.
+ * AGP-style time-of-day percentile-band series.
  *
  * Where {@link calculateAGPMetrics} returns scalar summary metrics, this builds
- * the *visual* AGP series that dashboards actually render: readings are pooled by
+ * a renderable percentile-band series: readings are pooled by
  * minute-of-day (in a configurable IANA time zone) across all days, then reduced
  * to per-bin percentile bands (default 5/25/50/75/95). The result is a plain,
  * render-ready structure you can draw with any charting library as two shaded
@@ -13,7 +13,9 @@
  * Pure and dependency-free. Descriptive summary of past data only — not a
  * predictive or diagnostic function.
  *
- * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (Battelino 2019)}
+ * This is not a complete standardized Ambulatory Glucose Profile report.
+ *
+ * @see {@link https://doi.org/10.2337/dci19-0028 | International Consensus on Time in Range (2019)}
  * @see {@link https://cran.r-project.org/web/packages/iglu/vignettes/agp.html | iglu: AGP}
  */
 
@@ -103,18 +105,27 @@ function round1(v: number): number {
 }
 
 /**
- * Builds the AGP time-of-day percentile-band series from glucose readings.
+ * Builds an AGP-style time-of-day percentile-band series from glucose readings.
  *
  * @param readings - Glucose readings with ISO 8601 timestamps
  * @param options - Bin width, percentiles, time zone, output unit, and method
- * @returns Render-ready AGP profile (full-day bin grid + per-bin percentiles)
+ * @returns Render-ready full-day bin grid with per-bin percentiles
  * @throws {Error} If `binMinutes` is not an integer in [1, 1440]
  * @throws {Error} If `timeZone` is not a valid IANA time zone
  *
  * @example
- * ```ts
+ * ```ts typecheck
+ * import { type GlucoseReading } from '@glucoseiq/core'
+ * import { buildAGPProfile } from '@glucoseiq/core/metrics'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ *   { value: 145, unit: 'mg/dL', timestamp: '2024-01-02T08:00:00Z' },
+ * ]
  * const profile = buildAGPProfile(readings, { timeZone: 'America/New_York' })
- * // profile.bins[i] = { minuteOfDay, percentiles: { 5, 25, 50, 75, 95 }, n }
+ * const populatedBin = profile.bins.find((bin) => bin.n > 0)
+ * const median = populatedBin?.percentiles[50] ?? null
+ * void median
  * ```
  *
  * @category AGP

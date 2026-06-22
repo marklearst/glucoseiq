@@ -7,7 +7,7 @@ description: "Glucose variability and risk indices."
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 calculateADRR(readings: GlucoseReading[]): number
 ```
 
@@ -28,13 +28,17 @@ Calculates the Average Daily Risk Range (ADRR).
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 calculateActivePercent(readings: GlucoseReading[], options?: ActivePercentOptions): ActivePercentResult
 ```
 
-Calculates the CGM active percent (wear time).
+Calculates a timestamp-slot coverage estimate for CGM readings.
 
-**Returns** — Active percent result, or result with NaN if insufficient data
+**Returns** — Slot-coverage result, or a result with NaN if the timestamp span is insufficient
+
+**Throws** — If `expectedIntervalMinutes` is invalid or creates an unsafe slot count
+
+**Remarks** — This estimates data coverage; it does not prove sensor wear or clinical suitability.
 
 **See** — [https://doi.org/10.2337/dc17-1600](https://doi.org/10.2337/dc17-1600)
 
@@ -50,7 +54,7 @@ Calculates the CGM active percent (wear time).
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 calculateCONGA(readings: GlucoseReading[], options?: CONGAOptions): number
 ```
 
@@ -72,7 +76,7 @@ Calculates CONGA (Continuous Overall Net Glycemic Action).
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 calculateGRADE(readings: number[], hypoThreshold: number = 70, hyperThreshold: number = 140, unit: GlucoseUnit = MG_DL): GRADEResult
 ```
 
@@ -96,7 +100,7 @@ Calculates the GRADE score and its partitioned components.
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 calculateGRI(input: GRIInput): GRIResult
 ```
 
@@ -117,7 +121,7 @@ Calculates the Glycemia Risk Index (GRI) from TIR zone percentages.
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 calculateGVIPGS(readings: GlucoseReading[], options?: GVIPGSOptions): GVIPGSResult
 ```
 
@@ -137,7 +141,7 @@ Calculates GVI and PGS from glucose readings (Nightscout algorithm).
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 calculateIGC(readings: number[], options?: IGCOptions): IGCResult
 ```
 
@@ -159,7 +163,7 @@ Calculates Rodbard's hypo/hyper indices and IGC.
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 calculateJIndex(readings: number[], unit: GlucoseUnit = MG_DL): number
 ```
 
@@ -184,7 +188,7 @@ single score. Higher values indicate worse glycemic control.
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 calculateMODD(readings: GlucoseReading[], options?: MODDOptions): number
 ```
 
@@ -206,7 +210,7 @@ Calculates Mean of Daily Differences (MODD).
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 clinicalMAGE(readings: number[], options: MAGEOptions = {}): number
 ```
 
@@ -221,11 +225,14 @@ Implements Service FJ et al. (1970) methodology.
 - [Fernandes NJ, et al. 2022](https://journals.sagepub.com/doi/10.1177/19322968211061165)
 - [ADA 2019](https://care.diabetesjournals.org/content/42/8/1593)
 
-```ts
-// Basic usage
-glucoseMAGE([100, 120, 80, 160, 90, 140, 70, 180])
-// Advanced usage
-glucoseMAGE(readings, { shortWindow: 5, longWindow: 32, direction: 'auto' })
+```ts typecheck
+import { clinicalMAGE } from '@glucoseiq/core'
+
+const readings: number[] = Array.from(
+  { length: 100 },
+  (_, index) => (index % 2 === 0 ? 90 : 160)
+)
+const mage = clinicalMAGE(readings)
 ```
 
 **Remarks** — - Minimum 24 data points recommended (1 day of hourly readings)
@@ -245,7 +252,7 @@ glucoseMAGE(readings, { shortWindow: 5, longWindow: 32, direction: 'auto' })
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 glucoseCoefficientOfVariation(readings: number[]): number
 ```
 
@@ -256,10 +263,11 @@ CV = (SD / mean) × 100. Used to assess glycemic variability.
 
 **See** — [ADA 2019: Glycemic Targets](https://care.diabetesjournals.org/content/42/8/1593)
 
-```ts
-glucoseCoefficientOfVariation([100, 120, 140]) // 18.26
-glucoseCoefficientOfVariation([100]) // NaN
-glucoseCoefficientOfVariation([]) // NaN
+```ts typecheck
+import { glucoseCoefficientOfVariation } from '@glucoseiq/core'
+
+const valuesMgDl: number[] = [100, 120, 140]
+const coefficientOfVariation = glucoseCoefficientOfVariation(valuesMgDl)
 ```
 
 **Remarks** — - If readings contains &lt;2 values or mean is 0, returns NaN.
@@ -276,7 +284,7 @@ glucoseCoefficientOfVariation([]) // NaN
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 glucoseGVP(readings: GlucoseReading[]): number
 ```
 
@@ -301,7 +309,7 @@ the glucose trace exceeds the length of a flat line over the same time.
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 glucoseHBGI(readings: number[], unit: GlucoseUnit = MG_DL): number
 ```
 
@@ -331,7 +339,7 @@ Risk categories (Kovatchev 2006):
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 glucoseLBGI(readings: number[], unit: GlucoseUnit = MG_DL): number
 ```
 
@@ -361,7 +369,7 @@ Risk categories (Kovatchev 2006):
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 glucoseMAG(readings: GlucoseReading[]): number
 ```
 
@@ -383,7 +391,7 @@ divided by total elapsed time, in mg/dL per hour.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 glucoseMAGE(readings: number[], options?: MAGEOptions): number
 ```
 
@@ -398,9 +406,14 @@ Implements Service FJ et al. (1970) methodology.
 - [Fernandes NJ, et al. 2022](https://journals.sagepub.com/doi/10.1177/19322968211061165)
 - [ADA 2019](https://care.diabetesjournals.org/content/42/8/1593)
 
-```ts
-glucoseMAGE([100, 120, 80, 160, 90, 140, 70, 180])
-glucoseMAGE(readings, { direction: 'ascending', shortWindow: 5, longWindow: 32 })
+```ts typecheck
+import { glucoseMAGE } from '@glucoseiq/core'
+
+const valuesMgDl: number[] = Array.from(
+  { length: 100 },
+  (_, index) => (index % 2 === 0 ? 90 : 160)
+)
+const mage = glucoseMAGE(valuesMgDl, { direction: 'ascending' })
 ```
 
 **Remarks** — - Minimum 24 data points recommended (1 day of hourly readings)
@@ -420,7 +433,7 @@ glucoseMAGE(readings, { direction: 'ascending', shortWindow: 5, longWindow: 32 }
 
 **Import:** `@glucoseiq/core/metrics`
 
-```ts
+```ts fragment="generated API declaration or signature"
 glucoseMValue(readings: number[], options?: MValueOptions): number
 ```
 
@@ -442,7 +455,7 @@ Calculates the Schlichtkrull M-value for a glucose series.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 glucosePercentiles(readings: number[], percentiles: number[]): Record<number, number>
 ```
 
@@ -458,9 +471,12 @@ Used for glucose variability assessment.
 - [https://en.wikipedia.org/wiki/Percentile](https://en.wikipedia.org/wiki/Percentile)
 - [ISPAD 2019](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7445493/)
 
-```ts
-glucosePercentiles([100, 120, 140, 160, 180], [10, 50, 90]) // { 10: 100, 50: 140, 90: 180 }
-glucosePercentiles([], [10, 50, 90]) // {}
+```ts typecheck
+import { glucosePercentiles } from '@glucoseiq/core'
+
+const valuesMgDl: number[] = [100, 120, 140, 160, 180]
+const requestedPercentiles: number[] = [10, 50, 90]
+const percentiles = glucosePercentiles(valuesMgDl, requestedPercentiles)
 ```
 
 **Remarks** — - Returns the value at the nearest-rank for each percentile.
@@ -479,7 +495,7 @@ glucosePercentiles([], [10, 50, 90]) // {}
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 glucoseStandardDeviation(readings: number[]): number
 ```
 
@@ -493,9 +509,11 @@ Uses n-1 in the denominator (sample SD), as recommended in research guidelines.
 - [ADA 2019: Glycemic Targets](https://care.diabetesjournals.org/content/42/8/1593)
 - [ISPAD 2019](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7445493/)
 
-```ts
-glucoseStandardDeviation([100, 120, 140]) // 20
-glucoseStandardDeviation([]) // NaN
+```ts typecheck
+import { glucoseStandardDeviation } from '@glucoseiq/core'
+
+const valuesMgDl: number[] = [100, 120, 140]
+const standardDeviation = glucoseStandardDeviation(valuesMgDl)
 ```
 
 **Remarks** — - If readings contains &lt;2 values, returns NaN (not enough data for SD).

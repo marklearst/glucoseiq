@@ -53,7 +53,7 @@ export function normalizeNightscoutDirection(
  * Converts a single Nightscout SGV entry into a NormalizedCGMReading.
  *
  * @param entry - Raw Nightscout SGV entry
- * @returns Normalized reading compatible with all `@glucoseiq/core` analytics functions
+ * @returns A normalized reading usable by APIs that accept `GlucoseReading`, subject to each API's contract
  * @throws {TimestampError} If neither vendor timestamp can be normalized
  * @throws {DomainError} If the glucose value is not usable
  */

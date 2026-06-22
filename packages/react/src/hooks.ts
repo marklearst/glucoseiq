@@ -27,7 +27,7 @@ import {
   type GlucoseTrendResult,
 } from '@glucoseiq/core'
 
-/** Memoized one-call clinical report. */
+/** Memoized one-call CGM analytics summary. */
 export function useGlucoseAnalysis(
   readings: GlucoseReading[],
   options?: AnalyzeGlucoseOptions

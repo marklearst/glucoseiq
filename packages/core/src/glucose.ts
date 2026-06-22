@@ -75,12 +75,17 @@ export function getGlucoseLabel(
 
 /**
  * Parses a glucose string (e.g., "100 mg/dL", "5.5 mmol/L") into value and unit.
- * Used for robust input validation and data ingestion.
+ * Accepts only a positive finite value and a supported glucose unit.
  * @param input - String in the format "value unit" (e.g., "100 mg/dL")
  * @returns Object with numeric value and validated unit
  * @throws {Error} If input string is invalid or not in expected format
  * @example
- * parseGlucoseString("100 mg/dL") // { value: 100, unit: "mg/dL" }
+ * ```ts typecheck
+ * import { parseGlucoseString } from '@glucoseiq/core'
+ *
+ * const input: string = '100 mg/dL'
+ * const reading = parseGlucoseString(input) // { value: 100, unit: 'mg/dL' }
+ * ```
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  */
 export function parseGlucoseString(input: string): {

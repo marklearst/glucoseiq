@@ -46,4 +46,6 @@ Constants and clinical thresholds.
 
 ---
 
-_These docs are auto-generated using TypeDoc with full clinical-grade validation. Please review and consult PR guidelines if you'd like to contribute._
+_These files preserve the generated `diabetic-utils` 1.5.x API reference. For
+the current package guides and API documentation, visit
+[glucoseiq.health](https://glucoseiq.health/docs)._

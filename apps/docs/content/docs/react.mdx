@@ -5,15 +5,16 @@ description: Memoized analytics hooks and ready-made SVG components from @glucos
 
 import { Callout } from 'fumadocs-ui/components/callout'
 
-`@glucoseiq/react` is a thin adapter over the pure engine. Use the hooks when
-you want typed data for your own interface, or the SVG components when you want
-the shortest path to a complete chart.
+`@glucoseiq/react` is a thin adapter over the headless engine. Use the hooks when
+you want typed data for your own interface, or the optional SVG components when
+you want the shortest path to a rendered chart.
 
 ```bash
 npm install @glucoseiq/react @glucoseiq/core
 ```
 
-React 18 or newer is the only peer dependency.
+React 18 or newer is the only peer dependency. The root is a Client Component
+package; use `@glucoseiq/core` directly for server-only work.
 
 ## Choose the smallest API that fits
 
@@ -24,13 +25,13 @@ React 18 or newer is the only peer dependency.
 | `useGlucoseIQScore` | Score, rating, and zone | A compact wellness summary |
 | `useMealResponse` | Baseline, peak, delta, timing, and iAUC | Post-meal detail views |
 | `useGlucoseLive` | Latest reading, derived trend, and staleness | Current-glucose surfaces |
-| `AgpChart`, `TirBar`, `TrendTile` | Inline SVG inside a wrapper element | Ready-made, dependency-free visuals |
+| `AgpChart`, `TirBar`, `TrendTile` | Inline SVG inside a wrapper element | Ready-made, chart-library-free SVG visuals |
 
 All hooks accept the same `GlucoseReading[]` contract as `@glucoseiq/core`.
 
 ## Build a report-driven component
 
-```tsx
+```tsx typecheck
 'use client'
 
 import type { AnalyzeGlucoseOptions, GlucoseReading } from '@glucoseiq/core'
@@ -75,15 +76,17 @@ either reference on every render causes the analysis to run again.
 `useGlucoseLive` combines `latestReading`, `computeGlucoseTrend`, and
 `minutesSinceLastReading`:
 
-```tsx
+```tsx typecheck
 import type { GlucoseReading } from '@glucoseiq/core'
 import { useGlucoseLive } from '@glucoseiq/react'
 
+const liveOptions = {
+  windowMin: 15,
+  refreshMs: 30_000,
+} as const
+
 function CurrentGlucose({ readings }: { readings: GlucoseReading[] }) {
-  const live = useGlucoseLive(readings, {
-    windowMin: 15,
-    refreshMs: 30_000,
-  })
+  const live = useGlucoseLive(readings, liveOptions)
 
   if (!live.latest || live.minutesSince === null) {
     return <p>No current reading.</p>
@@ -110,7 +113,7 @@ and failure-state model.
 
 ## Use the ready-made SVG components
 
-```tsx
+```tsx typecheck
 import type { GlucoseReading, TIRBarOptions } from '@glucoseiq/core'
 import { AgpChart, TirBar, TrendTile } from '@glucoseiq/react'
 

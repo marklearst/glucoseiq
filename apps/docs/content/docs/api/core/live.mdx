@@ -7,7 +7,7 @@ description: "Trend derivation and sensor staleness helpers."
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 classifyGlucoseTrend(rocPerMin: number): CGMTrend
 ```
 
@@ -27,7 +27,7 @@ Dexcom-style thresholds: &lt;1 flat, 1–2 slight, 2–3 single, ≥3 rapid.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 computeGlucoseTrend(readings: GlucoseReading[], options?: GlucoseTrendOptions): GlucoseTrendResult
 ```
 
@@ -41,9 +41,15 @@ back-filling a trend when a feed (e.g. Nightscout) does not provide one.
 
 **Throws** — If `windowMin` is not a finite positive number
 
-```ts
+```ts typecheck
+import { computeGlucoseTrend, type GlucoseReading } from '@glucoseiq/core'
+
+const readings: GlucoseReading[] = [
+  { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+  { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+]
 const { rocPerMin, trend } = computeGlucoseTrend(readings)
-// rocPerMin: 2.1, trend: 'rising'
+// rocPerMin: 2, trend: 'rising'
 ```
 
 | Parameter | Description |
@@ -58,7 +64,7 @@ const { rocPerMin, trend } = computeGlucoseTrend(readings)
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 latestReading(readings: GlucoseReading[]): null | GlucoseReading
 ```
 
@@ -79,7 +85,7 @@ or below 600 mg/dL after normalization, and a parseable timestamp.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 minutesSinceLastReading(readings: GlucoseReading[], now?: string | number | Date): null | number
 ```
 

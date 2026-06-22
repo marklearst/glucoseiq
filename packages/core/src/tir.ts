@@ -31,8 +31,8 @@ export interface TITRResult {
 
 /**
  * Calculates Time in Tight Range (TITR), the percentage of readings within a
- * tighter 70-140 mg/dL band than standard TIR (70-180). Emerging consensus
- * target is >50%.
+ * tighter 70-140 mg/dL band than standard TIR (70-180). The library's
+ * configurable default benchmark is 50%.
  *
  * Unlike {@link calculateTIR}, input readings are normalized to mg/dL first,
  * so mixed-unit series are handled correctly. Thresholds are always mg/dL.
@@ -42,8 +42,15 @@ export interface TITRResult {
  * @returns Tight-range breakdown with target assessment
  *
  * @example
- * ```ts
- * calculateTITR(readings).inRange // e.g. 58.3
+ * ```ts typecheck
+ * import { calculateTITR, type GlucoseReading } from '@glucoseiq/core'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ *   { value: 7.2, unit: 'mmol/L', timestamp: '2024-01-01T08:05:00Z' },
+ * ]
+ * const result = calculateTITR(readings, { target: 50 })
+ * result.inRange
  * ```
  *
  * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
@@ -94,10 +101,13 @@ export function calculateTITR(
 }
 
 /**
- * Calculates clinical Time in Range (TIR) metrics for glucose readings.
- * Returns the percentage of readings in, below, and above the specified clinical target range.
- * @param readings - Array of glucose readings to analyze
- * @param target - Object specifying the target range ({ min, max })
+ * Calculates Time in Range (TIR) metrics for glucose readings.
+ * Returns the percentage of readings in, below, and above the specified target range.
+ * This legacy API compares numeric values directly: every reading and both
+ * target bounds must use one homogeneous unit. Use `calculateEnhancedTIR` when
+ * readings carry mixed units that need normalization.
+ * @param readings - Glucose readings expressed in one homogeneous unit
+ * @param target - Target range in the same unit as every reading ({ min, max })
  * @returns Object with in-range, below-range, and above-range percentages
  * @see https://care.diabetesjournals.org/content/42/8/1593
  */
@@ -132,7 +142,7 @@ export function calculateTIR(
 }
 
 /**
- * Generates a clinical summary string from a TIRResult object.
+ * Generates a text summary from a TIRResult object.
  * Used for reporting and visualization of TIR analytics.
  * @param result - TIR result breakdown to summarize
  * @returns String summarizing in-range, below-range, and above-range percentages (e.g., 'In Range: 70%, Below: 10%, Above: 20%')
@@ -159,7 +169,7 @@ export function groupByDay(
 
 /**
  * Calculates the percentage of glucose readings within a specified numeric range.
- * Used for clinical TIR analytics and custom range assessments.
+ * Used for TIR analytics and custom range assessments.
  * @param readings - Array of glucose values (numbers) to analyze
  * @param lower - Lower bound of the target range (inclusive)
  * @param upper - Upper bound of the target range (inclusive)

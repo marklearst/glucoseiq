@@ -68,6 +68,28 @@ describe('analyzeGlucose', () => {
     expect(res.valid).toBe(false)
   })
 
+  it('screens unsupported units consistently', () => {
+    const unsupported: GlucoseReading = {
+      value: 5,
+      unit: 'grams' as never,
+      timestamp: '2024-01-01T08:00:00Z',
+    }
+    const valid: GlucoseReading = {
+      value: 120,
+      unit: 'mg/dL',
+      timestamp: '2024-01-01T08:05:00Z',
+    }
+
+    expect(analyzeGlucose([unsupported]).valid).toBe(false)
+
+    const mixed = analyzeGlucose([unsupported, valid], {
+      includeProfile: false,
+    })
+    expect(mixed.valid).toBe(true)
+    expect(mixed.dataSufficiency.totalReadings).toBe(1)
+    expect(mixed.meanGlucose).toBe(120)
+  })
+
   it('normalizes mmol/L input', () => {
     const mgdl = createGlucoseReadings([100, 120, 140, 160], 'mg/dL', 30)
     const mmol: GlucoseReading[] = mgdl.map((r) => ({
@@ -80,20 +102,85 @@ describe('analyzeGlucose', () => {
     expect(res.meanGlucose).toBeCloseTo(130, 1)
   })
 
-  describe('data sufficiency (consensus 14-day / 70%-wear)', () => {
+  describe('data sufficiency (14-day / 70%-coverage defaults)', () => {
     it('is not met for a short trace', () => {
       const res = analyzeGlucose(createGlucoseReadings([100, 120, 140]))
       expect(res.dataSufficiency.meetsCGMStandard).toBe(false)
     })
 
-    it('is not met when wear time is below the active-percent threshold', () => {
+    it('is not met when slot coverage is below the active-percent threshold', () => {
       const res = analyzeGlucose(makeDense(2), { minDays: 1, minActivePercent: 200 })
       expect(res.dataSufficiency.meetsCGMStandard).toBe(false)
     })
 
-    it('is met with enough days and wear time', () => {
+    it('is met with enough days and slot coverage', () => {
       const res = analyzeGlucose(makeDense(2), { minDays: 1 })
       expect(res.dataSufficiency.meetsCGMStandard).toBe(true)
+    })
+
+    it('uses unrounded occupied-slot coverage for the sufficiency threshold', () => {
+      const start = Date.parse('2024-01-01T00:00:00Z')
+      const occupiedSlots = [
+        ...Array.from({ length: 141 }, (_, index) => index),
+        202,
+      ]
+      const readings: GlucoseReading[] = occupiedSlots.map((slot) => ({
+        value: 120,
+        unit: 'mg/dL',
+        timestamp: new Date(start + slot * 5 * 60000).toISOString(),
+      }))
+
+      const res = analyzeGlucose(readings, {
+        minDays: 0.5,
+        minActivePercent: 70,
+      })
+
+      expect(res.dataSufficiency.activePercent).toBe(70)
+      expect(res.dataSufficiency.meetsCGMStandard).toBe(false)
+    })
+
+    it('uses the unrounded observed span for the minimum-days threshold', () => {
+      const start = Date.parse('2024-01-01T00:00:00Z')
+      const readingsAtSpan = (days: number): GlucoseReading[] => [
+        {
+          value: 120,
+          unit: 'mg/dL',
+          timestamp: new Date(start).toISOString(),
+        },
+        {
+          value: 120,
+          unit: 'mg/dL',
+          timestamp: new Date(start + days * 86_400_000).toISOString(),
+        },
+      ]
+      const justBelow = analyzeGlucose(readingsAtSpan(0.96), {
+        minDays: 1,
+        minActivePercent: 0,
+      })
+      const exact = analyzeGlucose(readingsAtSpan(1), {
+        minDays: 1,
+        minActivePercent: 0,
+      })
+
+      expect(justBelow.dataSufficiency.daysOfData).toBe(1)
+      expect(justBelow.dataSufficiency.meetsCGMStandard).toBe(false)
+      expect(exact.dataSufficiency.meetsCGMStandard).toBe(true)
+    })
+
+    it('fails closed when valid readings occupy only one timestamp', () => {
+      const duplicate: GlucoseReading = {
+        value: 120,
+        unit: 'mg/dL',
+        timestamp: '2024-01-01T00:00:00.000Z',
+      }
+
+      const res = analyzeGlucose([duplicate, { ...duplicate, value: 130 }], {
+        minDays: 0,
+        minActivePercent: 0,
+      })
+
+      expect(res.dataSufficiency.activePercent).toBeNaN()
+      expect(res.dataSufficiency.meetsCGMStandard).toBe(false)
     })
   })
 })

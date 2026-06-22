@@ -1,6 +1,6 @@
 ---
 title: Data Model
-description: Glucose readings, normalized vendor metadata, units, timestamps, and time zones.
+description: Glucose readings, source metadata, unit contracts, timestamps, and time zones.
 ---
 
 GlucoseIQ deliberately keeps its analytical input small. A reading represents
@@ -9,7 +9,7 @@ on top of that common shape.
 
 ## `GlucoseReading`
 
-```ts
+```ts typecheck
 import type { GlucoseReading, GlucoseUnit } from '@glucoseiq/core'
 
 const reading: GlucoseReading = {
@@ -32,8 +32,10 @@ forms, or a vendor service.
 For a single unknown value and unit, `isValidGlucoseValue` checks that the value
 is positive and finite and that the unit is supported:
 
-```ts
+```ts typecheck
 import { isValidGlucoseValue } from '@glucoseiq/core'
+
+const input = { value: 112, unit: 'mg/dL' } as const
 
 if (isValidGlucoseValue(input.value, input.unit)) {
   // value and unit satisfy the runtime value check
@@ -47,7 +49,7 @@ functions apply their own documented filtering and error behavior.
 
 Vendor normalizers return a structural superset of `GlucoseReading`:
 
-```ts
+```ts typecheck
 import type { NormalizedCGMReading } from '@glucoseiq/core/connectors'
 
 const reading: NormalizedCGMReading = {
@@ -71,13 +73,21 @@ The added fields are:
 | `nativeUnit` | Vendor display unit when the normalized value is emitted in another unit |
 | `dedupKey` | Deterministic source-qualified key when the adapter can construct one |
 
-All analytics that accept `GlucoseReading[]` also accept normalized readings:
+Reading-based analytics such as `analyzeGlucose` accept normalized readings:
 
-```ts
+```ts typecheck
 import { analyzeGlucose } from '@glucoseiq/core'
 import { normalizeLibreEntries } from '@glucoseiq/core/connectors'
 
-const readings = normalizeLibreEntries(payload)
+const readings = normalizeLibreEntries([
+  {
+    Value: 6.2,
+    ValueInMgPerDl: 112,
+    GlucoseUnits: 0,
+    TrendArrow: 3,
+    Timestamp: '2024-01-15T13:00:00Z',
+  },
+])
 const report = analyzeGlucose(readings)
 ```
 
@@ -89,14 +99,14 @@ trend is absent or unmapped.
 
 `GlucoseUnit` has two supported values:
 
-```ts
+```ts typecheck
 type GlucoseUnit = 'mg/dL' | 'mmol/L'
 ```
 
 Reading-based analytics inspect each reading's unit and normalize it for the
 calculation. A dataset may therefore contain both supported units:
 
-```ts
+```ts typecheck
 import { analyzeGlucose, type GlucoseReading } from '@glucoseiq/core'
 
 const readings: GlucoseReading[] = [
@@ -114,7 +124,7 @@ removing unit metadata.
 
 Use `convertGlucoseUnit` when you need to convert one value explicitly:
 
-```ts
+```ts typecheck
 import { convertGlucoseUnit } from '@glucoseiq/core'
 
 convertGlucoseUnit({ value: 180, unit: 'mg/dL' })
@@ -128,7 +138,7 @@ before returning percentile values and records the chosen unit on the result.
 
 Use ISO 8601 timestamps with a `Z` suffix or explicit UTC offset:
 
-```ts
+```ts typecheck
 const utc = '2024-01-15T13:05:00Z'
 const sameInstant = '2024-01-15T08:05:00-05:00'
 ```
@@ -145,8 +155,17 @@ The vendor normalizers convert accepted timestamps to UTC ISO strings.
 A timestamp identifies *when* a reading occurred. An IANA time zone controls
 how that instant is assigned to a local clock for time-of-day analysis.
 
-```ts
-import { buildAGPProfile, splitDayNight } from '@glucoseiq/core'
+```ts typecheck
+import {
+  buildAGPProfile,
+  splitDayNight,
+  type GlucoseReading,
+} from '@glucoseiq/core'
+
+const readings: GlucoseReading[] = [
+  { value: 112, unit: 'mg/dL', timestamp: '2024-01-15T13:00:00Z' },
+  { value: 6.2, unit: 'mmol/L', timestamp: '2024-01-15T13:05:00Z' },
+]
 
 const profile = buildAGPProfile(readings, {
   timeZone: 'America/Detroit',
@@ -172,13 +191,22 @@ The current reading contracts do not include a person, account, device, sensor
 session, or tenant identifier. Keep that context in your own containing record
 and pass one subject's readings to the analytics call:
 
-```ts
+```ts typecheck
 import { analyzeGlucose, type GlucoseReading } from '@glucoseiq/core'
 
 interface SubjectSeries {
   subjectId: string
   readings: GlucoseReading[]
 }
+
+const subjects: SubjectSeries[] = [
+  {
+    subjectId: 'subject-1',
+    readings: [
+      { value: 112, unit: 'mg/dL', timestamp: '2024-01-15T13:00:00Z' },
+    ],
+  },
+]
 
 const results = subjects.map(({ subjectId, readings }) => ({
   subjectId,
