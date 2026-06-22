@@ -1711,6 +1711,7 @@ remain unstaged and untouched even if it exists in the original worktree.
 - Create: `docs/LAUNCH_RUNBOOK.md`
 - Create: `apps/docs/app/robots.ts`
 - Create: `apps/docs/app/sitemap.ts`
+- Create: `apps/docs/lib/site-metadata.ts`
 - Create: `apps/docs/scripts/site-contracts.test.mjs`
 - Modify: `apps/docs/content/docs/meta.json`
 - Modify: `apps/docs/content/docs/api/meta.json`
@@ -1721,7 +1722,11 @@ remain unstaged and untouched even if it exists in the original worktree.
 - Modify: `apps/docs/app/docs/[[...slug]]/page.tsx`
 - Modify: `apps/docs/content/docs/live.mdx`
 - Modify: `apps/docs/content/docs/react.mdx`
+- Modify: `apps/docs/package.json`
+- Modify: `package.json`
 - Modify: `scripts/doc-snippet-contracts.test.mjs`
+- Modify: `scripts/doc-snippet-contracts.unit.test.mjs`
+- Modify: `scripts/lib/doc-contracts.mjs`
 
 **Interfaces:**
 
@@ -1740,6 +1745,11 @@ Create a Node test in `apps/docs/scripts/site-contracts.test.mjs` that imports o
 - production robots allow indexing and point to `/sitemap.xml`;
 - sitemap URLs are unique and use HTTPS on the apex origin;
 - every slug in both metadata JSON files resolves to a tracked MDX file.
+
+Centralize the production origin, environment test, canonical URL builder, HTML robots
+metadata, robots.txt contract, and sitemap-entry builder in
+`apps/docs/lib/site-metadata.ts`. Route files consume those pure builders so the test
+does not duplicate production logic.
 
 - [ ] **Step 2: Run the red site contract**
 
@@ -1761,11 +1771,24 @@ it to hide fixable examples.
 
 Write `docs/LAUNCH_RUNBOOK.md` with checked-command and unchecked-human sections covering Vercel, registrar activation, apex and `www`, npm bootstrap, trusted publishers, Pages shutdown, repository metadata, registry verification, local-folder rename, and partial-publication recovery. Recovery must inventory published versions, retry missing packages, never unpublish a successful package, and use a corrective patch for a bad artifact.
 
+Add the runbook to the existing tracked link-only inventory so its local and public
+links receive the same integrity checks as the changelog and archived reference. Add
+unit coverage for the inventory rule. Stage the new runbook before running the
+git-tracked inventory contract.
+
 - [ ] **Step 4: Add canonical and discovery metadata**
 
-Set `metadataBase` to the apex origin. Add home Open Graph and Twitter metadata in the home layout. Return page-specific `alternates.canonical`, Open Graph URL, title, and description from the docs page’s `generateMetadata`.
+Set `metadataBase` to the apex origin. Add environment-aware HTML robots metadata at
+the root so previews emit `noindex` even when a crawler does not consult robots.txt.
+Add home Open Graph and Twitter metadata in the home layout. Return page-specific
+`alternates.canonical`, Open Graph URL, title, and description from the docs page’s
+`generateMetadata`.
 
 Create `robots.ts` using `process.env.VERCEL_ENV === 'production'` to choose allow or disallow rules. Create `sitemap.ts` from `source.getPages()` plus `/`. Omit `lastModified` unless a stable source date exists so repeated builds remain deterministic.
+
+Expose the site contract as a docs-owned script and invoke it from the root
+`test:docs` command so route, canonical, robots, sitemap, and metadata navigation drift
+cannot bypass the durable documentation gate.
 
 - [ ] **Step 5: Improve semantics without changing appearance**
 
@@ -1783,7 +1806,8 @@ git add apps/docs/content/docs/{packages,safety,runtime-support,deployment,integ
 git add apps/docs/content/docs/api/{react,tokens,testing,cli,index}.mdx
 git add apps/docs/content/docs/{meta.json,live.mdx,react.mdx} apps/docs/content/docs/api/meta.json
 git add apps/docs/app/{robots.ts,sitemap.ts,layout.tsx} apps/docs/app/'(home)'/{layout.tsx,page.tsx} apps/docs/app/docs/'[[...slug]]'/page.tsx
-git add apps/docs/scripts/site-contracts.test.mjs docs/LAUNCH_RUNBOOK.md scripts/doc-snippet-contracts.test.mjs
+git add apps/docs/lib/site-metadata.ts apps/docs/scripts/site-contracts.test.mjs apps/docs/package.json package.json
+git add docs/LAUNCH_RUNBOOK.md scripts/doc-snippet-contracts.test.mjs scripts/doc-snippet-contracts.unit.test.mjs scripts/lib/doc-contracts.mjs
 git diff --cached --check
 git commit -m "docs: complete the launch information architecture"
 ```
