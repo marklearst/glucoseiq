@@ -94,7 +94,10 @@ export async function queryPublicLaunchVersions(
         })
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
-        throw new Error(`Unable to verify ${name}@${version} from the public npm registry: ${message}`)
+        throw new Error(
+          `Unable to verify ${name}@${version} from the public npm registry: ${message}`,
+          { cause: error },
+        )
       }
 
       if (response.status === 404) return `${name}@${version}`
@@ -110,7 +113,10 @@ export async function queryPublicLaunchVersions(
         metadata = await response.json()
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
-        throw new Error(`The public npm registry returned invalid JSON for ${name}@${version}: ${message}`)
+        throw new Error(
+          `The public npm registry returned invalid JSON for ${name}@${version}: ${message}`,
+          { cause: error },
+        )
       }
       if (metadata.name !== name || metadata.version !== version) {
         throw new Error(

@@ -16,6 +16,6 @@ export default defineConfig({
   sourcemap: true,
   minify: true,
   treeshake: true,
-  splitting: true,
+  splitting: false,
   outDir: 'dist',
 })

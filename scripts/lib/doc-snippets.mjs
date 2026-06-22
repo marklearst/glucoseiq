@@ -17,7 +17,6 @@ import {
   dirname,
   isAbsolute,
   join,
-  normalize,
   relative,
   resolve,
   sep,
@@ -29,7 +28,6 @@ const execFileAsync = promisify(execFile)
 const MODULE_REPOSITORY_ROOT = dirname(
   dirname(dirname(fileURLToPath(import.meta.url)))
 )
-const TYPED_LANGUAGES = new Set(['ts', 'tsx', 'typescript'])
 const REACT_SPECIFIERS = new Set([
   'react',
   'react/jsx-runtime',

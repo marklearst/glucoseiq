@@ -54,6 +54,7 @@ if (!hasLaunchChangeset) {
       const message = error instanceof Error ? error.message : String(error)
       throw new Error(
         `Independent package versions cannot be validated because public npm registry verification failed: ${message}`,
+        { cause: error },
       )
     }
   }
@@ -76,7 +77,7 @@ if (!hasLaunchChangeset) {
       ? ` Missing from the public npm registry: ${publicLaunchStatus.missing.join(', ')}.`
       : ''
     const message = error instanceof Error ? error.message : String(error)
-    throw new Error(`${message}.${missing}`)
+    throw new Error(`${message}.${missing}`, { cause: error })
   }
   process.exit(0)
 }

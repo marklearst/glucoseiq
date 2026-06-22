@@ -27,12 +27,12 @@ assert.match(
   /- name: Publish packages[\s\S]*if: steps\.release-mode\.outputs\.has_changesets == 'false'[\s\S]*uses: changesets\/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d/,
 )
 const legacyDistTagStep = workflow.match(
-  /      - name: Preserve legacy npm release\n[\s\S]*?(?=\n      - name: |\s*$)/,
+  / {6}- name: Preserve legacy npm release\n[\s\S]*?(?=\n {6}- name: |\s*$)/,
 )?.[0]
 assert.ok(legacyDistTagStep, 'release workflow must preserve the legacy npm release')
 assert.match(
   legacyDistTagStep,
-  /^        if: steps\.changesets\.outcome == 'success'$/m,
+  /^ {8}if: steps\.changesets\.outcome == 'success'$/m,
   'legacy dist-tag step must run only after a successful publish',
 )
 assert.match(legacyDistTagStep, /npm view diabetic-utils dist-tags\.legacy/)

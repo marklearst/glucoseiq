@@ -3,7 +3,6 @@ import { spawnSync } from 'node:child_process'
 import {
   mkdtempSync,
   mkdirSync,
-  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,

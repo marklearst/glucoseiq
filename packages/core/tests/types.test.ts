@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { MG_DL, MMOL_L } from '../src/constants'
 import {
   AllowedGlucoseUnits,
-  GlucoseUnit,
   GlucoseReading,
   TIROptions,
   GlucoseStatsOptions,

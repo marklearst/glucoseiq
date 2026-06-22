@@ -587,7 +587,7 @@ export function extractDocumentLinks({ path, text }) {
     })
   }
 
-  const shortcuts = /(!?)\[([^\]\n]+)\](?![\[(])/gu
+  const shortcuts = /(!?)\[([^\]\n]+)\](?![[(])/gu
   for (const match of masked.matchAll(shortcuts)) {
     if (
       masked[match.index + match[0].length] === ':' ||
@@ -1555,9 +1555,12 @@ function normalizeRoute(pathname) {
 }
 
 function explicitScheme(destination) {
-  const compact = destination
-    .slice(0, 64)
-    .replace(/[\u0000-\u0020\u007f]+/gu, '')
+  const compact = [...destination.slice(0, 64)]
+    .filter((character) => {
+      const codePoint = character.codePointAt(0)
+      return codePoint > 0x20 && codePoint !== 0x7f
+    })
+    .join('')
   const match = /^([a-z][a-z\d+.-]*):/iu.exec(compact)
   return match?.[1].toLowerCase() ?? null
 }
