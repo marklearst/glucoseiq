@@ -164,13 +164,13 @@ export function CurrentGlucose({ readings }: CurrentGlucoseProps) {
   const rate = Number.isFinite(live.trend.rocPerMin)
     ? `${live.trend.rocPerMin.toFixed(1)} mg/dL/min`
     : 'Rate unavailable'
-
+  const trendLabel = live.trend.trend.replace(/([a-z])([A-Z])/gu, '$1 $2').toLowerCase()
   return (
     <section aria-label="Current glucose" aria-live="polite">
       <p>{isStale ? 'Sensor data may be stale' : 'Current glucose'}</p>
-      <strong>
-        {live.latest.value} {live.latest.unit} {arrows[live.trend.trend]}
-      </strong>
+      <strong>{live.latest.value} {live.latest.unit}{' '}
+        <span aria-hidden="true">{arrows[live.trend.trend]}</span>
+        <span style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', clipPath: 'inset(50%)', whiteSpace: 'nowrap', border: 0 }}>, trend {trendLabel}</span></strong>
       <p>{rate}</p>
       <time dateTime={live.latest.timestamp}>{age} min ago</time>
     </section>

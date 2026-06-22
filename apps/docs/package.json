@@ -2,6 +2,7 @@
   "name": "docs",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,7 +10,8 @@
     "postinstall": "fumadocs-mdx",
     "docs:api": "node scripts/generate-api.mjs",
     "docs:api:check": "node scripts/check-api.mjs",
-    "test:api": "node --test scripts/generate-api.test.mjs"
+    "test:api": "node --test scripts/generate-api.test.mjs",
+    "test:site": "node --test scripts/site-contracts.test.mjs"
   },
   "dependencies": {
     "@glucoseiq/core": "workspace:^",

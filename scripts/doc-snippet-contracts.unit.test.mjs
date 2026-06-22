@@ -764,6 +764,7 @@ test('builds public inventory without reading protected paths and keeps archives
     'apps/docs/content/docs/api/core/index.mdx',
     'apps/docs/app/(home)/page.tsx',
     'docs/globals.md',
+    'docs/LAUNCH_RUNBOOK.md',
     'docs/functions/legacy.md',
     'docs/plans/launch.md',
     '.changeset/launch.md',
@@ -786,6 +787,7 @@ test('builds public inventory without reading protected paths and keeps archives
   assert.deepEqual(inventory.homepageFiles, ['apps/docs/app/(home)/page.tsx'])
   assert.deepEqual(inventory.linkOnlyFiles, [
     'CHANGELOG.md',
+    'docs/LAUNCH_RUNBOOK.md',
     'docs/functions/legacy.md',
     'docs/globals.md',
   ])
