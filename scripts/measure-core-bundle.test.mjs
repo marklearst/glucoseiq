@@ -90,6 +90,87 @@ test('walks each reachable static .mjs module once in deterministic order', () =
   assert.deepEqual(first.files, second.files)
 })
 
+test('follows an exact private package import through the ESM manifest target', () => {
+  const parent = createFixture({
+    'package.json': JSON.stringify({
+      imports: {
+        '#errors': {
+          import: './dist/errors.mjs',
+          require: './dist/errors.js',
+        },
+      },
+    }),
+    'dist/index.mjs': "import { DomainError } from '#errors'; export { DomainError }",
+    'dist/errors.mjs': "import './shared.mjs'; export class DomainError extends Error {}",
+    'dist/shared.mjs': 'export const shared = true',
+  })
+
+  const result = measureCoreBundle({
+    root: join(parent, 'dist'),
+    entry: 'index.mjs',
+    budget: Number.MAX_SAFE_INTEGER,
+  })
+
+  assert.deepEqual(result.files, ['errors.mjs', 'index.mjs', 'shared.mjs'])
+})
+
+test('fails closed for an unknown private package import', () => {
+  const parent = createFixture({
+    'package.json': JSON.stringify({ imports: {} }),
+    'dist/index.mjs': "import '#missing'",
+  })
+
+  assert.throws(
+    () =>
+      measureCoreBundle({
+        root: join(parent, 'dist'),
+        entry: 'index.mjs',
+        budget: Number.MAX_SAFE_INTEGER,
+      }),
+    /private package import "#missing" is not mapped/u,
+  )
+})
+
+test('rejects a private package import target outside the selected ESM root', () => {
+  const parent = createFixture({
+    'package.json': JSON.stringify({
+      imports: { '#escape': { import: './outside.mjs' } },
+    }),
+    'dist/index.mjs': "import '#escape'",
+    'outside.mjs': 'export const outside = true',
+  })
+
+  assert.throws(
+    () =>
+      measureCoreBundle({
+        root: join(parent, 'dist'),
+        entry: 'index.mjs',
+        budget: Number.MAX_SAFE_INTEGER,
+      }),
+    /escapes the selected ESM root/u,
+  )
+})
+
+test('rejects unsupported private package import conditions', () => {
+  const parent = createFixture({
+    'package.json': JSON.stringify({
+      imports: { '#errors': { default: './dist/errors.mjs' } },
+    }),
+    'dist/index.mjs': "import '#errors'",
+    'dist/errors.mjs': 'export class DomainError extends Error {}',
+  })
+
+  assert.throws(
+    () =>
+      measureCoreBundle({
+        root: join(parent, 'dist'),
+        entry: 'index.mjs',
+        budget: Number.MAX_SAFE_INTEGER,
+      }),
+    /must define one exact ESM import target/u,
+  )
+})
+
 test('rejects a relative static edge that is not an .mjs production module', () => {
   const root = createFixture({
     'index.mjs': "import './runtime.js'",

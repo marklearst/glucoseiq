@@ -51,14 +51,17 @@ creating either value during every render defeats that memoization.
 Invalid input follows the underlying core contract. Analysis hooks can return
 `valid: false` for empty or unusable readings. Renderer option failures, such
 as non-positive dimensions, surface the typed core error thrown by the
-renderer.
+renderer. Omit `refreshMs` to disable live staleness refresh. When provided, it
+must be a whole number of milliseconds from `1` through `2_147_483_647`;
+invalid values throw `DomainError` with code `INVALID_OPTION` before a timer is
+scheduled.
 
 ## Safety limits
 
-The adapter does not add data validation beyond the called core operation.
-Memoization is a performance boundary, not a cache for mutable input: replace
-changed arrays and objects instead of mutating values in place. Output is
-informational and not medical advice.
+Apart from the platform-safe `refreshMs` timer range, the adapter preserves the
+called core operation's validation. Memoization is a performance boundary, not
+a cache for mutable input: replace changed arrays and objects instead of
+mutating values in place. Output is informational and not medical advice.
 
 ## Documentation
 

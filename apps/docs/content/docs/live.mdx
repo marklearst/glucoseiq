@@ -196,7 +196,10 @@ export function LiveGlucose() {
 <Callout type="info" title="What refreshMs actually does">
   `refreshMs` updates the staleness clock so “minutes ago” continues to tick
   while the sensor is quiet. It does not fetch data. New readings must still
-  arrive through your polling, subscription, or server-data layer.
+  arrive through your polling, subscription, or server-data layer. Omit it to
+  disable interval refresh. A provided value must be a whole number of
+  milliseconds from `1` through `2_147_483_647`; invalid values throw the typed
+  core `INVALID_OPTION` error before a timer is scheduled.
 </Callout>
 
 ## Use the core without React

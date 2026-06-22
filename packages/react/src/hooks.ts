@@ -15,6 +15,7 @@ import {
   computeGlucoseTrend,
   latestReading,
   minutesSinceLastReading,
+  DomainError,
   type GlucoseReading,
   type AnalyzeGlucoseOptions,
   type AnalyzeGlucoseResult,
@@ -26,6 +27,24 @@ import {
   type GlucoseTrendOptions,
   type GlucoseTrendResult,
 } from '@glucoseiq/core'
+
+const MAX_REFRESH_INTERVAL_MS = 2_147_483_647
+
+function validateRefreshInterval(refreshMs: number | undefined): number | undefined {
+  if (refreshMs === undefined) return undefined
+  if (
+    !Number.isFinite(refreshMs) ||
+    !Number.isInteger(refreshMs) ||
+    refreshMs <= 0 ||
+    refreshMs > MAX_REFRESH_INTERVAL_MS
+  ) {
+    throw new DomainError(
+      `refreshMs must be a whole number from 1 through ${MAX_REFRESH_INTERVAL_MS}`,
+      'INVALID_OPTION',
+    )
+  }
+  return refreshMs
+}
 
 /** Memoized one-call CGM analytics summary. */
 export function useGlucoseAnalysis(
@@ -62,7 +81,7 @@ export function useMealResponse(
 
 /** Options for {@link useGlucoseLive}. */
 export interface GlucoseLiveOptions extends GlucoseTrendOptions {
-  /** Re-evaluate staleness every N ms (default: off). */
+  /** Re-evaluate staleness every whole N ms from 1 through 2,147,483,647 (default: off). */
   readonly refreshMs?: number
 }
 
@@ -80,16 +99,18 @@ export interface GlucoseLive {
  * Live current-glucose view-model: latest reading, derived trend, and
  * staleness. Pass `refreshMs` to re-evaluate staleness on an interval (the
  * trend arrow updates when `readings` changes).
+ *
+ * @throws {DomainError} If `refreshMs` is not a whole millisecond from 1 through the platform timer maximum (`INVALID_OPTION`).
  */
 export function useGlucoseLive(
   readings: GlucoseReading[],
   options?: GlucoseLiveOptions
 ): GlucoseLive {
-  const refreshMs = options?.refreshMs
+  const refreshMs = validateRefreshInterval(options?.refreshMs)
   const [, setTick] = useState(0)
 
   useEffect(() => {
-    if (!refreshMs) return
+    if (refreshMs === undefined) return
     const id = setInterval(() => setTick((t) => t + 1), refreshMs)
     return () => clearInterval(id)
   }, [refreshMs])

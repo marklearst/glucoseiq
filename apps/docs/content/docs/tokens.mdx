@@ -69,6 +69,11 @@ function glucoseLegend(theme: Theme) {
 Use `zoneColor(zone, theme)` when you only need one value. The theme defaults
 to `dark`.
 
+These palettes are application-interface primitives; they are not injected
+into the SVG renderers in `@glucoseiq/core/render`. The Time-in-Range renderer
+uses the dark zone palette for stable fills in both surface themes, while its
+`theme` option changes only the SVG background and text.
+
 ## Add the CSS variables
 
 `cssVariables` returns declarations rather than a complete rule, so you choose

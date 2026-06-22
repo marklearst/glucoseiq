@@ -37,8 +37,11 @@ their contents have not changed.
 | `minutesSince` | `number \| null` | Minutes since the latest reading |
 
 `GlucoseLiveOptions` extends core `GlucoseTrendOptions` and adds optional
-`refreshMs`. A positive `refreshMs` re-renders the hook so staleness advances;
-it does not fetch readings.
+`refreshMs`. Omit it to disable interval refresh. When provided, it must be a
+whole number of milliseconds from `1` through `2_147_483_647`. A valid value
+re-renders the hook so staleness advances; it does not fetch readings.
+Invalid values throw `DomainError` with code `INVALID_OPTION` before a timer is
+scheduled.
 
 ## Components
 

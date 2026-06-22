@@ -22,6 +22,8 @@ const DEFAULT_POLL_INTERVAL_MS = 20_000
 const DEFAULT_REQUEST_TIMEOUT_MS = 10_000
 const DEFAULT_COMMAND_TIMEOUT_MS = 15 * 60_000
 const DEFAULT_POLICY_COMMAND_TIMEOUT_MS = 120_000
+const PUBLISHED_VERIFIER_USAGE =
+  'Usage: node scripts/verify-published-packages.mjs [--registry-evidence-only]'
 const PROVENANCE_PREDICATE = 'https://slsa.dev/provenance/v1'
 const PROVENANCE_STATEMENT = 'https://in-toto.io/Statement/v1'
 const PROVENANCE_BUILD_TYPE = 'https://slsa-framework.github.io/github-actions-buildtypes/workflow/v1'
@@ -307,11 +309,20 @@ export function resolveDirectVerificationPlan({
   execFile = execFileSync,
   runPolicy = runChangesetPolicy,
   commandTimeoutMs = DEFAULT_POLICY_COMMAND_TIMEOUT_MS,
+  allowEnvironmentPlan = true,
 } = {}) {
   assertPackageSpecs(packageSpecs)
   if (!env || typeof env !== 'object') throw new TypeError('env must be an object')
   if (typeof derivePlan !== 'function') throw new TypeError('derivePlan must be a function')
+  if (typeof allowEnvironmentPlan !== 'boolean') {
+    throw new TypeError('allowEnvironmentPlan must be a boolean')
+  }
   const provided = env.CHANGESETS_VERIFICATION_PACKAGES
+  if (!allowEnvironmentPlan && provided !== undefined) {
+    throw new Error(
+      'Registry-evidence recovery must derive its package plan from the checked-out release commit; unset CHANGESETS_VERIFICATION_PACKAGES.',
+    )
+  }
   if (provided !== undefined) return parsePublishedPackages(provided, packageSpecs)
 
   const derived = derivePlan({
@@ -1590,6 +1601,7 @@ export async function verifyPublishedPackages({
   pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
   requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
   commandTimeoutMs = DEFAULT_COMMAND_TIMEOUT_MS,
+  registryEvidenceOnly = false,
   sleep,
   logger = (line) => console.log(line),
   cwd = repositoryRoot,
@@ -1607,6 +1619,9 @@ export async function verifyPublishedPackages({
   assertFunction(runCommand, 'runCommand')
   assertFunction(logger, 'logger')
   assertPositiveInteger(commandTimeoutMs, 'commandTimeoutMs')
+  if (typeof registryEvidenceOnly !== 'boolean') {
+    throw new TypeError('registryEvidenceOnly must be a boolean')
+  }
   const registryRoot = normalizedRegistry(registry)
 
   const pollingOptions = {
@@ -1648,17 +1663,19 @@ export async function verifyPublishedPackages({
   })
   logger(`Verified registry signatures and provenance for ${records.length} launch packages.`)
 
-  await verifyRepositoryArtifacts({
-    packageSpecs: selectedPackages,
-    runCommand,
-    repository,
-    remote,
-    cwd,
-    releaseSha,
-    packageCommits,
-    commandTimeoutMs,
-  })
-  logger(`Verified ${records.length} Git tags and ${records.length} GitHub releases.`)
+  if (!registryEvidenceOnly) {
+    await verifyRepositoryArtifacts({
+      packageSpecs: selectedPackages,
+      runCommand,
+      repository,
+      remote,
+      cwd,
+      releaseSha,
+      packageCommits,
+      commandTimeoutMs,
+    })
+    logger(`Verified ${records.length} Git tags and ${records.length} GitHub releases.`)
+  }
 
   await executeChecked(
     runCommand,
@@ -1670,8 +1687,24 @@ export async function verifyPublishedPackages({
   logger('Verified the exact-version registry consumer matrix.')
 
   const packages = versionIdentities(selectedPackages)
-  logger(`GlucoseIQ post-publication verification passed for ${packages.length} packages.`)
+  logger(
+    registryEvidenceOnly
+      ? `GlucoseIQ registry-evidence verification passed for ${packages.length} packages.`
+      : `GlucoseIQ post-publication verification passed for ${packages.length} packages.`,
+  )
   return { packages, releaseSha, packageCommits }
+}
+
+/** Parses the strict direct-execution surface for the published-package verifier. */
+export function parsePublishedVerifierArguments(args = process.argv.slice(2)) {
+  if (!Array.isArray(args) || args.some((argument) => typeof argument !== 'string')) {
+    throw new TypeError(PUBLISHED_VERIFIER_USAGE)
+  }
+  if (args.length === 0) return { registryEvidenceOnly: false }
+  if (args.length === 1 && args[0] === '--registry-evidence-only') {
+    return { registryEvidenceOnly: true }
+  }
+  throw new Error(PUBLISHED_VERIFIER_USAGE)
 }
 
 function isDirectExecution() {
@@ -1685,9 +1718,17 @@ function isDirectExecution() {
 
 if (isDirectExecution()) {
   try {
+    const options = parsePublishedVerifierArguments()
     const packageSpecs = loadPublishedPackageSpecs()
-    const verificationPackages = resolveDirectVerificationPlan({ packageSpecs })
-    await verifyPublishedPackages({ packageSpecs, verificationPackages })
+    const verificationPackages = resolveDirectVerificationPlan({
+      packageSpecs,
+      allowEnvironmentPlan: !options.registryEvidenceOnly,
+    })
+    await verifyPublishedPackages({
+      packageSpecs,
+      verificationPackages,
+      ...options,
+    })
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error))
     process.exitCode = 1

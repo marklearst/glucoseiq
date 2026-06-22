@@ -14,7 +14,7 @@ import {
   TirBar,
   TrendTile,
 } from '../src'
-import type { GlucoseReading } from '@glucoseiq/core'
+import { DomainError, type GlucoseReading } from '@glucoseiq/core'
 
 const RUNTIME_EXPORTS = [
   'AgpChart',
@@ -42,7 +42,11 @@ function firstDirective(source: string, fileName: string): string | undefined {
   return first.expression.text
 }
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+})
 
 const base = Date.UTC(2024, 0, 1, 8, 0, 0)
 const mk = (values: number[], stepMin = 5): GlucoseReading[] =>
@@ -113,7 +117,57 @@ describe('useGlucoseLive', () => {
       vi.advanceTimersByTime(60_000)
     })
     expect(result.current.minutesSince!).toBeGreaterThan(before)
-    vi.useRealTimers()
+  })
+
+  it.each([
+    ['zero', 0],
+    ['negative', -1],
+    ['NaN', Number.NaN],
+    ['positive infinity', Number.POSITIVE_INFINITY],
+    ['negative infinity', Number.NEGATIVE_INFINITY],
+    ['sub-millisecond fraction', 0.5],
+    ['fractional milliseconds', 1.5],
+    ['timer overflow', 2_147_483_648],
+  ])('rejects a %s refresh interval', (_label, refreshMs) => {
+    expect(() =>
+      renderHook(() => useGlucoseLive(readings, { refreshMs }))
+    ).toThrow(
+      /refreshMs must be a whole number from 1 through 2147483647/u
+    )
+  })
+
+  it('accepts the maximum platform timer delay', () => {
+    vi.useFakeTimers()
+    const interval = vi.spyOn(globalThis, 'setInterval')
+    const { unmount } = renderHook(() =>
+      useGlucoseLive(readings, { refreshMs: 2_147_483_647 })
+    )
+
+    expect(interval).toHaveBeenCalledWith(expect.any(Function), 2_147_483_647)
+    unmount()
+  })
+
+  it('accepts the minimum whole-millisecond timer delay', () => {
+    vi.useFakeTimers()
+    const interval = vi.spyOn(globalThis, 'setInterval')
+    const { unmount } = renderHook(() =>
+      useGlucoseLive(readings, { refreshMs: 1 })
+    )
+
+    expect(interval).toHaveBeenCalledWith(expect.any(Function), 1)
+    unmount()
+  })
+
+  it('reports invalid refresh intervals with the typed core option error', () => {
+    let thrown: unknown
+    try {
+      renderHook(() => useGlucoseLive(readings, { refreshMs: 0 }))
+    } catch (error) {
+      thrown = error
+    }
+
+    expect(thrown).toBeInstanceOf(DomainError)
+    expect(thrown).toMatchObject({ code: 'INVALID_OPTION' })
   })
 
   it('handles empty readings', () => {

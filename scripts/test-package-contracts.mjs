@@ -247,6 +247,17 @@ const sourceManifests = new Map(
 
 assertValidPackageVersions(sourceManifests)
 const coreVersion = sourceManifests.get('@glucoseiq/core').version
+const sharedCoreErrors = {
+  '#errors': {
+    import: './dist/errors.mjs',
+    require: './dist/errors.js',
+  },
+}
+assert.deepEqual(
+  sourceManifests.get('@glucoseiq/core').imports,
+  sharedCoreErrors,
+  'Core source manifest must route every runtime to one format-local error module',
+)
 
 const reactManifest = sourceManifests.get('@glucoseiq/react')
 assert.deepEqual(Object.keys(reactManifest.exports), ['.'], 'React source entrypoints')
@@ -373,6 +384,11 @@ try {
   })
 
   assertRenderDeclarationSurface(packedRoots.get('@glucoseiq/core'))
+  assert.deepEqual(
+    packedManifests.get('@glucoseiq/core').imports,
+    sharedCoreErrors,
+    'Core packed manifest must preserve the shared error module route',
+  )
 
   const packedReactRoot = packedRoots.get('@glucoseiq/react')
   const packedReactDirectives = [
@@ -475,6 +491,46 @@ try {
       TimestampError,
     } = require('@glucoseiq/core');
     ${errorContractBody}
+  `
+  const subpathErrorContractBody = `
+    const capture = (call, Type) => {
+      try {
+        call();
+        return { threw: false };
+      } catch (error) {
+        return {
+          threw: true,
+          name: error.name,
+          code: error.code,
+          isRootBase: error instanceof GlucoseIQError,
+          isRootType: error instanceof Type,
+        };
+      }
+    };
+    console.log(JSON.stringify({
+      metrics: capture(() => calculateGRI({
+        veryLowPercent: -1,
+        lowPercent: 0,
+        highPercent: 0,
+        veryHighPercent: 0,
+      }), DomainError),
+      connectors: capture(() => parseDexcomDate('not-a-date'), TimestampError),
+      render: capture(() => tirBarToSVG([], { width: 0 }), DomainError),
+    }));
+  `
+  const esmSubpathErrorContractCode = `
+    import { DomainError, GlucoseIQError, TimestampError } from '@glucoseiq/core';
+    import { calculateGRI } from '@glucoseiq/core/metrics';
+    import { parseDexcomDate } from '@glucoseiq/core/connectors';
+    import { tirBarToSVG } from '@glucoseiq/core/render';
+    ${subpathErrorContractBody}
+  `
+  const cjsSubpathErrorContractCode = `
+    const { DomainError, GlucoseIQError, TimestampError } = require('@glucoseiq/core');
+    const { calculateGRI } = require('@glucoseiq/core/metrics');
+    const { parseDexcomDate } = require('@glucoseiq/core/connectors');
+    const { tirBarToSVG } = require('@glucoseiq/core/render');
+    ${subpathErrorContractBody}
   `
   const csvContractBody = `
     const capture = (call) => {
@@ -784,6 +840,29 @@ try {
       hasExpectedBasePrototype: true,
     },
   ]
+  const expectedSubpathErrorContract = {
+    metrics: {
+      threw: true,
+      name: 'DomainError',
+      code: 'INVALID_OPTION',
+      isRootBase: true,
+      isRootType: true,
+    },
+    connectors: {
+      threw: true,
+      name: 'TimestampError',
+      code: 'TIMESTAMP_UNPARSEABLE',
+      isRootBase: true,
+      isRootType: true,
+    },
+    render: {
+      threw: true,
+      name: 'DomainError',
+      code: 'INVALID_OPTION',
+      isRootBase: true,
+      isRootType: true,
+    },
+  }
   const esmSource = `
     import * as core from '@glucoseiq/core'
     import * as metrics from '@glucoseiq/core/metrics'
@@ -927,6 +1006,22 @@ try {
         errorContract,
         expectedErrorContract,
         `${consumer.label} ${format} error contract`,
+      )
+    }
+
+    for (const [format, source, inputType] of [
+      ['ESM', esmSubpathErrorContractCode, 'module'],
+      ['CommonJS', cjsSubpathErrorContractCode, 'commonjs'],
+    ]) {
+      const subpathErrorContract = JSON.parse(
+        run('node', ['--input-type', inputType, '--eval', source], {
+          cwd: consumerRoot,
+        }),
+      )
+      assert.deepEqual(
+        subpathErrorContract,
+        expectedSubpathErrorContract,
+        `${consumer.label} ${format} subpath error identity contract`,
       )
     }
 

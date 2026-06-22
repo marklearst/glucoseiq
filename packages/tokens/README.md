@@ -27,6 +27,10 @@ console.log({ zone, color, rootStyles })
 `zoneColor(zone, theme)` and `cssVariables(theme)` accept `dark` or `light`;
 the theme defaults to `dark`. `classifyGlucoseZone` has no options.
 
+The palettes are interface primitives and are not automatically applied to
+`@glucoseiq/core/render`. Its Time-in-Range SVG keeps stable zone fills in both
+surface themes; the renderer's `theme` option changes its background and text.
+
 ## Invalid input
 
 `classifyGlucoseZone` accepts mg/dL only. A value must be positive and finite;

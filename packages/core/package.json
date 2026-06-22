@@ -5,6 +5,12 @@
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "imports": {
+    "#errors": {
+      "import": "./dist/errors.mjs",
+      "require": "./dist/errors.js"
+    }
+  },
   "exports": {
     ".": {
       "import": {

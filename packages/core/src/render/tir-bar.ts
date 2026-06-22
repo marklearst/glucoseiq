@@ -26,7 +26,10 @@ export interface TIRBarOptions {
   readonly width?: number
   /** SVG height in px (default 320). */
   readonly height?: number
-  /** Color theme (default 'dark'). */
+  /**
+   * Surface color theme (default 'dark'). This changes the SVG background and
+   * text only; the five zone fills remain fixed so existing charts stay stable.
+   */
   readonly theme?: 'light' | 'dark'
 }
 
@@ -53,7 +56,8 @@ function noDataFrame(
 }
 
 /**
- * Renders a Time-in-Range stacked bar as an SVG string.
+ * Renders a Time-in-Range stacked bar as an SVG string. Zone fills remain
+ * fixed; the surface theme changes only the background and text.
  *
  * @param readings - Glucose readings (mg/dL or mmol/L)
  * @param options - Dimensions and theme

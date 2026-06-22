@@ -138,6 +138,16 @@ assert.match(
   publish,
   /verification_packages=\$\{JSON\.stringify\(verificationPackages\)\}/u,
 )
+assert.match(
+  publish,
+  /includes_compatibility=\$\{verificationPackages\.some\(\(\{ name \}\) => name === 'diabetic-utils'\)\}/u,
+  'legacy tagging must follow the full verification plan when Changesets reports only a partial publication inventory',
+)
+assert.doesNotMatch(
+  publish,
+  /includes_compatibility=\$\{reportedPackages\.some/u,
+  'a partial Changesets report must not suppress compatibility-package legacy tagging',
+)
 assert.match(publish, /inventory\.reportedPackages/u)
 assert.match(publish, /inventory\.verificationPackages/u)
 assert.doesNotMatch(publish, /continue-on-error:/u)
@@ -279,5 +289,30 @@ assert.match(launchRunbook, /resolves.*HEAD\^1.*replays Changesets/isu)
 assert.match(launchRunbook, /fails closed.*exact\s+generated-version commit/isu)
 assert.match(launchRunbook, /action output.*diagnostic/isu)
 assert.match(launchRunbook, /exact version plan.*checked-out\s+release commit/isu)
+assert.match(
+  launchRunbook,
+  /verify-published-packages\.mjs --registry-evidence-only/u,
+  'recovery must expose the strict registry-evidence verifier mode',
+)
+assert.match(
+  launchRunbook,
+  /Never overwrite, move, delete, or force-update an existing release tag/u,
+  'recovery must preserve every existing release tag',
+)
+assert.match(
+  launchRunbook,
+  /Only a confirmed GitHub API HTTP 404 means a GitHub release is missing/u,
+  'recovery must distinguish a missing release from transport and authorization failures',
+)
+assert.match(
+  launchRunbook,
+  /gh release create "\$tag"[\s\S]{0,240}--verify-tag[\s\S]{0,240}--notes-file "\$notes"/u,
+  'recovery releases must reuse the verified tag and reviewed package changelog notes',
+)
+assert.ok(
+  launchRunbook.indexOf('--registry-evidence-only') <
+    launchRunbook.indexOf('gh api --method POST'),
+  'registry evidence must pass before a missing Git tag is created',
+)
 
 console.log('Release metadata contract passed.')

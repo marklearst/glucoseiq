@@ -17,6 +17,7 @@ const COMMAND_TIMEOUT_MS = 120_000
 const utf8Decoder = new TextDecoder('utf-8', { fatal: true })
 const require = createRequire(import.meta.url)
 const CHANGESETS_CLI = require.resolve('@changesets/cli/bin.js')
+const parseChangeset = require('@changesets/parse').default
 
 export const PUBLIC_PACKAGE_DIRECTORIES = Object.freeze([
   'packages/cli',
@@ -26,6 +27,15 @@ export const PUBLIC_PACKAGE_DIRECTORIES = Object.freeze([
   'packages/testing',
   'packages/tokens',
 ])
+const PUBLIC_PACKAGE_NAMES = Object.freeze([
+  ['@glucoseiq/cli', 'packages/cli'],
+  ['@glucoseiq/core', 'packages/core'],
+  ['diabetic-utils', 'packages/diabetic-utils'],
+  ['@glucoseiq/react', 'packages/react'],
+  ['@glucoseiq/testing', 'packages/testing'],
+  ['@glucoseiq/tokens', 'packages/tokens'],
+])
+const PUBLIC_PACKAGE_BY_NAME = new Map(PUBLIC_PACKAGE_NAMES)
 
 function comparePaths(left, right) {
   return left < right ? -1 : left > right ? 1 : 0
@@ -111,6 +121,12 @@ function packageRelativePath(path) {
   return undefined
 }
 
+function publicPackageDirectory(path) {
+  return PUBLIC_PACKAGE_DIRECTORIES.find(
+    (directory) => path.startsWith(`${directory}/`),
+  )
+}
+
 function publicPackageArtifact(path, artifact) {
   for (const directory of PUBLIC_PACKAGE_DIRECTORIES) {
     if (path === `${directory}/${artifact}`) return directory
@@ -138,6 +154,77 @@ export function isChangesetReaderPath(path) {
     basename.endsWith('.md') &&
     basename.toLowerCase() !== 'readme.md'
   )
+}
+
+function normalizeChangesetReleaseDirectories(directories) {
+  if (!Array.isArray(directories)) {
+    throw new TypeError('changesetReleaseDirectories must be an array')
+  }
+  const normalized = new Set()
+  for (const directory of directories) {
+    if (!PUBLIC_PACKAGE_DIRECTORIES.includes(directory)) {
+      throw new Error(
+        `unknown public package directory in Changeset coverage: ${String(directory)}`,
+      )
+    }
+    normalized.add(directory)
+  }
+  return [...normalized].sort(comparePaths)
+}
+
+function parseChangesetReleaseDirectories(source, path) {
+  let parsed
+  try {
+    parsed = parseChangeset(decodeUtf8(source, `Changeset ${path}`))
+  } catch (error) {
+    throw new Error(`Changeset policy failed: ${path} is not a valid Changeset`, {
+      cause: error,
+    })
+  }
+  if (!parsed || !Array.isArray(parsed.releases)) {
+    throw new Error(`Changeset policy failed: ${path} has no release list`)
+  }
+
+  const directories = []
+  for (const release of parsed.releases) {
+    const directory = PUBLIC_PACKAGE_BY_NAME.get(release?.name)
+    if (!directory) {
+      throw new Error(
+        `Changeset policy failed: ${path} names an unknown public package`,
+      )
+    }
+    if (release.type === 'none') continue
+    if (!['major', 'minor', 'patch'].includes(release.type)) {
+      throw new Error(
+        `Changeset policy failed: ${path} has an unsupported release type`,
+      )
+    }
+    directories.push(directory)
+  }
+  return directories
+}
+
+function readChangesetReleaseDirectories({ changes, execFile, cwd }) {
+  const directories = new Set()
+  const paths = [...new Set(
+    changes
+      .filter(({ status, path }) =>
+        (status === 'A' || status === 'M') && isChangesetReaderPath(path)
+      )
+      .map(({ path }) => path),
+  )].sort(comparePaths)
+
+  for (const path of paths) {
+    const source = runGit(
+      execFile,
+      ['cat-file', 'blob', `HEAD:${path}`],
+      { cwd, label: `reading ${path} from HEAD` },
+    )
+    for (const directory of parseChangesetReleaseDirectories(source, path)) {
+      directories.add(directory)
+    }
+  }
+  return [...directories].sort(comparePaths)
 }
 
 function generatedVersionCommitPackages(changes) {
@@ -245,6 +332,7 @@ export function evaluateChangesetPolicy({
   exemptReleaseBranch = false,
   allowGeneratedVersionCommit = false,
   generatedVersionValidated = false,
+  changesetReleaseDirectories = [],
 }) {
   assertBranchName(branch)
   if (typeof exemptReleaseBranch !== 'boolean') {
@@ -257,6 +345,9 @@ export function evaluateChangesetPolicy({
     throw new TypeError('generatedVersionValidated must be a boolean')
   }
   const normalizedChanges = normalizeChanges({ changedPaths, changes })
+  const normalizedChangesetReleases = normalizeChangesetReleaseDirectories(
+    changesetReleaseDirectories,
+  )
 
   if (branch === RELEASE_BRANCH && exemptReleaseBranch) {
     return {
@@ -298,20 +389,60 @@ export function evaluateChangesetPolicy({
       .map(({ path }) => path),
   )]
     .sort(comparePaths)
+  const deletedChangesets = [...new Set(
+    normalizedChanges
+      .filter(({ status, path }) => status === 'D' && isChangesetReaderPath(path))
+      .map(({ path }) => path),
+  )].sort(comparePaths)
+  const releaseAffectingPackages = [...new Set(
+    releaseAffectingPaths.map(publicPackageDirectory).filter(Boolean),
+  )].sort(comparePaths)
+  const uncoveredPackages = releaseAffectingPackages.filter(
+    (directory) => !normalizedChangesetReleases.includes(directory),
+  )
+
+  if (deletedChangesets.length > 0) {
+    return {
+      ok: false,
+      reason: 'changeset-deletion-forbidden',
+      releaseAffectingPaths,
+      releaseAffectingPackages,
+      changesets,
+      deletedChangesets,
+      uncoveredPackages,
+    }
+  }
 
   if (releaseAffectingPaths.length === 0) {
     return {
       ok: true,
       reason: 'no-release-affecting-paths',
       releaseAffectingPaths,
+      releaseAffectingPackages,
       changesets,
+      deletedChangesets,
+      uncoveredPackages,
+    }
+  }
+  if (changesets.length > 0 && uncoveredPackages.length > 0) {
+    return {
+      ok: false,
+      reason: 'changeset-package-coverage-required',
+      releaseAffectingPaths,
+      releaseAffectingPackages,
+      changesets,
+      deletedChangesets,
+      uncoveredPackages,
     }
   }
   return {
     ok: changesets.length > 0,
     reason: changesets.length > 0 ? 'changeset-present' : 'changeset-required',
     releaseAffectingPaths,
+    releaseAffectingPackages,
     changesets,
+    deletedChangesets,
+    uncoveredPackages,
   }
 }
 
@@ -636,12 +767,30 @@ function formatComparisonBase(comparisonBase) {
   return `Comparison base: ${label} ${comparisonBase.oid}.`
 }
 
-function formatPolicyFailure(releaseAffectingPaths, comparisonBase) {
+function formatPolicyFailure(result, comparisonBase) {
+  if (result.reason === 'changeset-deletion-forbidden') {
+    return [
+      'Changeset policy failed: pending Changesets may be deleted only by an exact generated version commit.',
+      formatComparisonBase(comparisonBase),
+      'Deleted Changesets:',
+      ...result.deletedChangesets.map((path) => `- ${JSON.stringify(path)}`),
+    ].join('\n')
+  }
+  if (result.reason === 'changeset-package-coverage-required') {
+    return [
+      'Changeset policy failed: every release-affecting public package must be named in a valid Changeset with a release type.',
+      formatComparisonBase(comparisonBase),
+      'Uncovered package directories:',
+      ...result.uncoveredPackages.map((path) => `- ${JSON.stringify(path)}`),
+      'Changed Changesets:',
+      ...result.changesets.map((path) => `- ${JSON.stringify(path)}`),
+    ].join('\n')
+  }
   return [
     'Changeset policy failed: release-affecting package changes require a non-README .changeset Markdown file.',
     formatComparisonBase(comparisonBase),
     'Release-affecting paths:',
-    ...releaseAffectingPaths.map((path) => `- ${JSON.stringify(path)}`),
+    ...result.releaseAffectingPaths.map((path) => `- ${JSON.stringify(path)}`),
   ].join('\n')
 }
 
@@ -757,16 +906,20 @@ export function runChangesetPolicy({
       )
     }
   }
+  const changesetReleaseDirectories = generatedVersionValidated
+    ? []
+    : readChangesetReleaseDirectories({ changes, execFile, cwd })
   const result = evaluateChangesetPolicy({
     branch,
     changes,
     exemptReleaseBranch: false,
     allowGeneratedVersionCommit: Boolean(pushBaseOid),
     generatedVersionValidated,
+    changesetReleaseDirectories,
   })
   if (!result.ok) {
     throw new Error(
-      formatPolicyFailure(result.releaseAffectingPaths, comparisonBase),
+      formatPolicyFailure(result, comparisonBase),
     )
   }
   write(formatComparisonBase(comparisonBase))

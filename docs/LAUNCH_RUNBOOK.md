@@ -431,21 +431,25 @@ generated-version commit. It derives the versioned package set from that
 replay, so later independent releases do not bind unchanged packages to the
 wrong commit.
 
-In the hosted workflow, the Changesets action output remains diagnostic and
-controls whether the compatibility-tag check applies. The exact version plan
-from the validated commit binds every versioned package to the checked-out
-release commit. Unchanged packages remain bound to their own attested commit
-and matching tag.
+In the hosted workflow, the Changesets action output remains diagnostic. The
+exact version plan from the validated commit is the complete inventory that
+controls whether the compatibility-tag check applies and binds every
+versioned package to the checked-out release commit. Unchanged packages remain
+bound to their own attested commit and matching tag.
 
 If the Changesets action fails after npm accepts a package but before the
 action records outputs, tags, or GitHub releases, the hosted workflow uses the
 package set from the exact validated generated-version commit as a fallback
-inventory. That recovery path does not republish packages or synthesize Git
+inventory. The hosted fallback does not republish packages or create Git
 artifacts. It preserves the legacy tag when the compatibility package is in
 the inventory, removes npm authentication from the runner's user
 configuration before starting the verifier, and blocks the verifier if that
 cleanup fails. The original publication failure remains failed even when the
-inventory produces useful recovery evidence.
+inventory produces useful recovery evidence. If npm accepted every expected
+version but the action stopped before creating a tag or GitHub release, use
+the strict evidence-first procedure in Partial-publication recovery. That
+manual procedure may create only a confirmed-missing tag or release after the
+registry evidence is bound to the exact release commit.
 
 ### C1. Inventory exact registry versions
 
@@ -666,7 +670,197 @@ dist-tag. If the bootstrap token expired, create another equally narrow
 one-day token or finish the trusted-publisher setup for packages that already
 exist; do not broaden credentials.
 
-### 4. Correct tags without republishing artifacts
+### 4. Recover missing repository artifacts only from verified npm evidence
+
+Use this procedure only when every expected npm version exists and its
+registry artifact is correct, but the failed workflow did not create one or
+more Git tags or GitHub releases. If any registry version is missing or bad,
+return to step 3 or step 6 instead.
+
+Never overwrite, move, delete, or force-update an existing release tag. Never
+edit, replace, or recreate an existing GitHub release during recovery.
+Only a confirmed GitHub API HTTP 404 means a GitHub release is missing; an
+authentication, authorization, transport, rate-limit, timeout, or server
+failure stops recovery.
+
+Check out the exact source SHA recorded from the failed release run in a clean
+worktree. Fetch the remote without rewriting local state and confirm `HEAD`
+before gathering evidence:
+
+```bash
+set -euo pipefail
+
+repository='marklearst/glucoseiq'
+release_sha='RELEASE_SHA_FROM_FAILED_RUN'
+
+git diff --quiet
+git diff --cached --quiet
+test -z "$(git status --porcelain --untracked-files=normal)"
+git fetch --prune origin
+test "$(git rev-parse --verify HEAD^{commit})" = "$release_sha"
+```
+
+Run the strict registry-only verifier from that checkout before creating
+anything. It derives the complete package plan from the replay-validated
+release commit; verifies registry metadata, tarballs, signatures, provenance,
+and exact-version consumers; and binds all six artifacts to `release_sha`. It
+deliberately skips Git tag and GitHub release checks. Do not set
+`CHANGESETS_VERIFICATION_PACKAGES`: the command rejects that variable so a
+stale or partial workflow inventory cannot narrow recovery evidence.
+
+```bash
+set -euo pipefail
+
+node scripts/verify-published-packages.mjs --registry-evidence-only
+```
+
+Stop if the verifier fails. After it passes, inspect each expected remote tag.
+An existing lightweight or annotated tag must resolve to the verified release
+SHA and is left unchanged. A missing tag is created through the GitHub API,
+whose create-only endpoint fails instead of overwriting a tag if another
+operator wins a race:
+
+```bash
+set -euo pipefail
+
+repository='marklearst/glucoseiq'
+release_sha='RELEASE_SHA_FROM_FAILED_RUN'
+tags=(
+  '@glucoseiq/core@1.0.0'
+  '@glucoseiq/react@1.0.0'
+  '@glucoseiq/tokens@1.0.0'
+  '@glucoseiq/testing@1.0.0'
+  '@glucoseiq/cli@1.0.0'
+  'diabetic-utils@2.0.0'
+)
+temporary_directory=$(mktemp -d)
+trap 'rm -rf "$temporary_directory"' EXIT
+
+for tag in "${tags[@]}"; do
+  direct_ref="refs/tags/$tag"
+  peeled_ref="$direct_ref^{}"
+  error_file="$temporary_directory/tag-error"
+
+  set +e
+  remote_refs=$(git ls-remote --exit-code origin "$direct_ref" "$peeled_ref" \
+    2>"$error_file")
+  status=$?
+  set -e
+
+  if [ "$status" -eq 0 ]; then
+    tag_commit=$(printf '%s\n' "$remote_refs" | awk '$2 ~ /\^\{\}$/ { print $1 }')
+    if [ -z "$tag_commit" ]; then
+      tag_commit=$(printf '%s\n' "$remote_refs" | awk -v ref="$direct_ref" \
+        '$2 == ref { print $1 }')
+    fi
+    test "$tag_commit" = "$release_sha" || {
+      printf 'Existing tag %s resolves to %s, expected %s\n' \
+        "$tag" "$tag_commit" "$release_sha" >&2
+      exit 1
+    }
+    printf 'PRESERVE %s\n' "$tag"
+  elif [ "$status" -eq 2 ]; then
+    gh api --method POST "repos/$repository/git/refs" \
+      --raw-field ref="$direct_ref" \
+      --raw-field sha="$release_sha" >/dev/null
+    printf 'CREATED  %s\n' "$tag"
+  else
+    cat "$error_file" >&2
+    exit "$status"
+  fi
+
+  verified_refs=$(git ls-remote --exit-code origin "$direct_ref" "$peeled_ref")
+  verified_commit=$(printf '%s\n' "$verified_refs" | awk \
+    '$2 ~ /\^\{\}$/ { print $1 }')
+  if [ -z "$verified_commit" ]; then
+    verified_commit=$(printf '%s\n' "$verified_refs" | awk -v ref="$direct_ref" \
+      '$2 == ref { print $1 }')
+  fi
+  test "$verified_commit" = "$release_sha"
+done
+```
+
+Finally, inspect each GitHub release. Existing releases must be non-draft,
+non-prerelease releases for the exact tag and are never modified. For a
+confirmed missing release, extract exactly one matching version section from
+the package changelog, review it, type the exact tag as confirmation, and
+create the release only against the already-verified tag:
+
+```bash
+set -euo pipefail
+
+repository='marklearst/glucoseiq'
+records=(
+  '@glucoseiq/core@1.0.0|packages/core/CHANGELOG.md|1.0.0'
+  '@glucoseiq/react@1.0.0|packages/react/CHANGELOG.md|1.0.0'
+  '@glucoseiq/tokens@1.0.0|packages/tokens/CHANGELOG.md|1.0.0'
+  '@glucoseiq/testing@1.0.0|packages/testing/CHANGELOG.md|1.0.0'
+  '@glucoseiq/cli@1.0.0|packages/cli/CHANGELOG.md|1.0.0'
+  'diabetic-utils@2.0.0|packages/diabetic-utils/CHANGELOG.md|2.0.0'
+)
+temporary_directory=$(mktemp -d)
+trap 'rm -rf "$temporary_directory"' EXIT
+
+for record in "${records[@]}"; do
+  IFS='|' read -r tag changelog version <<<"$record"
+  encoded_tag=$(jq -rn --arg value "$tag" '$value | @uri')
+  error_file="$temporary_directory/release-error"
+
+  if release_json=$(gh api "repos/$repository/releases/tags/$encoded_tag" \
+    2>"$error_file"); then
+    jq -e --arg tag "$tag" \
+      '.tag_name == $tag and .draft == false and .prerelease == false' \
+      <<<"$release_json" >/dev/null
+    printf 'PRESERVE %s GitHub release\n' "$tag"
+    continue
+  fi
+
+  if ! rg -q 'HTTP 404' "$error_file"; then
+    cat "$error_file" >&2
+    exit 1
+  fi
+
+  notes="$temporary_directory/${version}.md"
+  node --input-type=module - "$changelog" "$version" "$notes" <<'NODE'
+import { readFileSync, writeFileSync } from 'node:fs'
+
+const [, , changelogPath, version, notesPath] = process.argv
+const lines = readFileSync(changelogPath, 'utf8').split(/\r?\n/u)
+const heading = `## ${version}`
+const matches = lines.flatMap((line, index) => line === heading ? [index] : [])
+
+if (matches.length !== 1) {
+  throw new Error(`${changelogPath} must contain exactly one ${heading} heading`)
+}
+
+const start = matches[0]
+const nextVersion = lines.findIndex((line, index) => index > start && /^## /u.test(line))
+const end = nextVersion === -1 ? lines.length : nextVersion
+const section = lines.slice(start, end).join('\n').trim()
+
+if (section === heading) {
+  throw new Error(`${changelogPath} has no release notes under ${heading}`)
+}
+
+writeFileSync(notesPath, `${section}\n`)
+NODE
+
+  printf '\nRelease notes for %s:\n' "$tag"
+  cat -- "$notes"
+  printf '\nType the exact tag to create this missing release: '
+  read -r confirmation
+  test "$confirmation" = "$tag"
+
+  gh release create "$tag" --repo "$repository" --verify-tag \
+    --title "$tag" --notes-file "$notes"
+done
+```
+
+Rerun the normal published-package verifier and complete Parts C and D. If any
+create call reports that a tag or release already exists, stop and re-run the
+read-only checks; do not delete or replace the existing object.
+
+### 5. Correct npm dist-tags without republishing artifacts
 
 If all artifacts are correct and only a dist-tag is wrong, update that tag with
 maintainer 2FA or the still-authorized release path, then verify it:
@@ -681,7 +875,7 @@ npm view diabetic-utils dist-tags --json
 
 Do not use a dist-tag change to hide a bad tarball.
 
-### 5. Patch a bad immutable artifact
+### 6. Patch a bad immutable artifact
 
 If a published tarball, manifest, declaration, executable, or runtime is bad:
 
@@ -713,10 +907,14 @@ From the existing checkout:
 ```bash
 set -euo pipefail
 
-cd /Users/mark/Developer/oss/diabetic-utils
+legacy_checkout=${GLUCOSEIQ_LEGACY_CHECKOUT:?Set this to the existing diabetic-utils checkout}
+oss_root=$(dirname "$legacy_checkout")
+test "$(basename "$legacy_checkout")" = diabetic-utils
+
+cd "$legacy_checkout"
 test -z "$(git status --porcelain)"
 test "$(git worktree list --porcelain | rg -c '^worktree ')" -eq 1
-cd /Users/mark/Developer/oss
+cd "$oss_root"
 test -d diabetic-utils
 test ! -e glucoseiq
 mv -- diabetic-utils glucoseiq

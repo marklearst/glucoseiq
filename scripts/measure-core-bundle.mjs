@@ -74,6 +74,53 @@ function resolveModulePath({ root, candidate, label }) {
   return realPath
 }
 
+function readPackageImports(root) {
+  const manifestPath = resolve(dirname(root), 'package.json')
+  const realManifestPath = resolveRealPath(manifestPath, 'core package manifest')
+  if (!statSync(realManifestPath).isFile()) {
+    throw new Error(`core package manifest is not a regular file: ${manifestPath}`)
+  }
+
+  let manifest
+  try {
+    manifest = JSON.parse(readFileSync(realManifestPath, 'utf8'))
+  } catch (error) {
+    throw new Error(`core package manifest is not valid JSON: ${manifestPath}`, {
+      cause: error,
+    })
+  }
+
+  const imports = manifest?.imports
+  if (imports === null || typeof imports !== 'object' || Array.isArray(imports)) {
+    return { imports: {}, packageRoot: dirname(realManifestPath) }
+  }
+  return { imports, packageRoot: dirname(realManifestPath) }
+}
+
+function resolvePrivatePackageImport({ root, specifier, importer }) {
+  const { imports, packageRoot } = readPackageImports(root)
+  if (!Object.hasOwn(imports, specifier)) {
+    throw new Error(`Static edge from ${importer}: private package import ${JSON.stringify(specifier)} is not mapped`)
+  }
+
+  const conditions = imports[specifier]
+  if (
+    conditions === null ||
+    typeof conditions !== 'object' ||
+    Array.isArray(conditions) ||
+    typeof conditions.import !== 'string' ||
+    !conditions.import.startsWith('./')
+  ) {
+    throw new Error(
+      `Static edge from ${importer}: private package import ${JSON.stringify(specifier)} must define one exact ESM import target`,
+    )
+  }
+
+  const label = `Static edge ${JSON.stringify(specifier)} from ${importer}`
+  assertProductionMjs(conditions.import, label)
+  return { candidate: resolve(packageRoot, conditions.import), label }
+}
+
 function collectReachableModules({ root, entry }) {
   const realRoot = resolveRoot(root)
   if (typeof entry !== 'string' || entry.length === 0) {
@@ -94,6 +141,12 @@ function collectReachableModules({ root, entry }) {
     modules.set(canonical, buffer)
     const importer = asRelativePath(realRoot, canonical)
     for (const specifier of extractStaticModuleSpecifiers(buffer.toString('utf8'))) {
+      if (specifier.startsWith('#')) {
+        pending.push(
+          resolvePrivatePackageImport({ root: realRoot, specifier, importer }),
+        )
+        continue
+      }
       if (!specifier.startsWith('./') && !specifier.startsWith('../')) continue
       const label = `Static edge ${JSON.stringify(specifier)} from ${importer}`
       assertProductionMjs(specifier, label)
