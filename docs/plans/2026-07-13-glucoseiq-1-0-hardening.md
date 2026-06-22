@@ -1315,6 +1315,7 @@ git commit -m "fix: correct a1c category boundaries"
 - Modify: `packages/react/src/hooks.ts`
 - Modify: `packages/cli/package.json`
 - Modify: `packages/cli/src/index.ts`
+- Modify: `packages/diabetic-utils/package.json`
 - Modify: `packages/core/src/a1c.ts`
 - Modify: `packages/core/src/align.ts`
 - Modify: `packages/core/src/analyze.ts`
@@ -1331,6 +1332,7 @@ git commit -m "fix: correct a1c category boundaries"
 - Modify: `packages/core/src/csv.ts`
 - Modify: `packages/core/src/tir.ts`
 - Modify: `packages/core/src/tir-enhanced.ts`
+- Modify: `packages/core/src/types.ts`
 - Modify: `packages/core/src/variability.ts`
 - Modify: `packages/core/src/metrics/agp-profile.ts`
 - Modify: `packages/core/src/metrics/auc.ts`
@@ -1612,9 +1614,9 @@ classification count. Run `git diff --check` after API regeneration.
 test -z "$(git diff --name-only -- packages/core/docs-md/)"
 git add README.md CHANGELOG.md package.json pnpm-lock.yaml
 git add packages/{core,react,tokens,testing,cli,diabetic-utils}/README.md
-git add packages/{react,tokens,testing,cli}/package.json
+git add packages/{react,tokens,testing,cli,diabetic-utils}/package.json
 git add packages/react/src/hooks.ts packages/tokens/src/index.ts packages/testing/src/index.ts packages/cli/src/index.ts
-git add packages/core/src/{a1c,align,analyze,cohort,constants,conversions,csv,formatters,glucose,index,live,mage,score,tir,tir-enhanced,variability}.ts
+git add packages/core/src/{a1c,align,analyze,cohort,constants,conversions,csv,formatters,glucose,index,live,mage,score,tir,tir-enhanced,types,variability}.ts
 git add packages/core/src/connectors/index.ts packages/core/src/metrics/{agp-profile,auc,episodes,meal}.ts packages/core/src/render/{agp-svg,index,tir-bar,trend-tile}.ts
 git add apps/docs/package.json apps/docs/app/layout.tsx apps/docs/app/'(home)'/page.tsx
 git add apps/docs/content/docs/{agp,cli,connectors,core-concepts,dashboard,data-model,data-quality,index,interoperability,live,metrics,migration,react,testing,tokens}.mdx
