@@ -1,6 +1,89 @@
 const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
 const STABLE_SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
 
+const LAUNCH_PACKAGE_VERSION_ENTRIES = Object.freeze([
+  Object.freeze(['@glucoseiq/core', '1.0.0']),
+  Object.freeze(['@glucoseiq/react', '1.0.0']),
+  Object.freeze(['@glucoseiq/tokens', '1.0.0']),
+  Object.freeze(['@glucoseiq/testing', '1.0.0']),
+  Object.freeze(['@glucoseiq/cli', '1.0.0']),
+  Object.freeze(['diabetic-utils', '2.0.0']),
+])
+const PACKAGE_CONTRACT_SOURCES = new Set(['local', 'candidate', 'registry'])
+
+export function createLaunchPackageVersions() {
+  return new Map(LAUNCH_PACKAGE_VERSION_ENTRIES)
+}
+
+export function parsePackageContractSource(args) {
+  if (!Array.isArray(args)) throw new TypeError('package-contract arguments must be an array')
+  if (args.length === 0) return 'local'
+
+  let source
+  if (args[0] === '--source') {
+    if (args.length === 1) throw new Error('--source requires a value')
+    source = args[1]
+    if (args.length > 2) throw new Error(`Unexpected package-contract argument: ${args[2]}`)
+  } else if (args[0]?.startsWith('--source=')) {
+    source = args[0].slice('--source='.length)
+    if (args.length > 1) throw new Error(`Unexpected package-contract argument: ${args[1]}`)
+  } else {
+    throw new Error(`Unexpected package-contract argument: ${args[0]}`)
+  }
+
+  if (!PACKAGE_CONTRACT_SOURCES.has(source)) {
+    throw new Error(`Package-contract source must be local, candidate, or registry; received ${source}`)
+  }
+  return source
+}
+
+export function requiresSourceReadmeParity(source) {
+  if (!PACKAGE_CONTRACT_SOURCES.has(source)) {
+    throw new Error(`Package-contract source must be local, candidate, or registry; received ${source}`)
+  }
+  return source !== 'registry'
+}
+
+export function assertPackedCoreDependency({
+  source,
+  range,
+  coreVersion,
+  packageName = 'packed package',
+}) {
+  if (!PACKAGE_CONTRACT_SOURCES.has(source)) {
+    throw new Error(`Package-contract source must be local, candidate, or registry; received ${source}`)
+  }
+  if (!STABLE_SEMVER.test(coreVersion)) {
+    throw new Error(`${packageName} core version must be a stable semantic version`)
+  }
+
+  const expected = `^${coreVersion}`
+  if (source !== 'registry') {
+    if (range !== expected) {
+      throw new Error(`${packageName} core dependency must equal ${expected}; received ${range}`)
+    }
+    return
+  }
+
+  const lowerBound = typeof range === 'string' && range.startsWith('^')
+    ? range.slice(1)
+    : undefined
+  const lowerMatch = lowerBound ? STABLE_SEMVER.exec(lowerBound) : undefined
+  const coreMatch = STABLE_SEMVER.exec(coreVersion)
+  if (!lowerMatch || !coreMatch) {
+    throw new Error(`${packageName} registry core dependency must be a stable caret range; received ${range}`)
+  }
+  if (compareStableSemver(lowerBound, '1.0.0') < 0) {
+    throw new Error(`${packageName} registry core dependency must start at 1.0.0 or newer; received ${range}`)
+  }
+  if (
+    compareStableSemver(coreVersion, lowerBound) < 0 ||
+    BigInt(coreMatch[1]) !== BigInt(lowerMatch[1])
+  ) {
+    throw new Error(`${packageName} registry core dependency ${range} does not include ${coreVersion}`)
+  }
+}
+
 export function assertValidPackageVersions(manifests) {
   for (const [name, manifest] of manifests) {
     if (!SEMVER.test(manifest.version)) {

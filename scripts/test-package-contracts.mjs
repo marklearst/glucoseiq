@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import {
+  existsSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
@@ -21,7 +21,15 @@ import {
   validateDocumentLinks,
   validateReadmeContract,
 } from './lib/doc-contracts.mjs'
-import { assertValidPackageVersions } from './lib/package-contracts.mjs'
+import {
+  assertPackedCoreDependency,
+  assertValidPackageVersions,
+  compareStableSemver,
+  createLaunchPackageVersions,
+  parsePackageContractSource,
+  requiresSourceReadmeParity,
+} from './lib/package-contracts.mjs'
+import { spawnPackageContractCommandSync } from './lib/package-command.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const reactRequire = createRequire(join(root, 'packages/react/package.json'))
@@ -32,6 +40,10 @@ const readmeContracts = new Map(
   PACKAGE_README_CONTRACTS.map((contract) => [contract.packageName, contract]),
 )
 const trackedDocsRoutes = createTrackedDocsRoutes(createPublicInventory({ repoRoot: root }))
+const packageContractSource = parsePackageContractSource(process.argv.slice(2))
+const launchPackageVersions = createLaunchPackageVersions()
+const requiresLaunchArtifacts = packageContractSource !== 'local'
+const requiresReadmeParity = requiresSourceReadmeParity(packageContractSource)
 
 const packageSpecs = [
   { directory: 'packages/core', name: '@glucoseiq/core', scoped: true },
@@ -84,7 +96,7 @@ const renderTypeExports = [
 ]
 
 function run(command, args, options = {}) {
-  const result = spawnSync(command, args, {
+  const result = spawnPackageContractCommandSync(command, args, {
     cwd: options.cwd ?? root,
     encoding: 'utf8',
     env: { ...process.env, ...options.env },
@@ -99,7 +111,7 @@ function run(command, args, options = {}) {
 }
 
 function assertCommandFailure(command, args, expectedMessage, options) {
-  const result = spawnSync(command, args, {
+  const result = spawnPackageContractCommandSync(command, args, {
     cwd: options.cwd,
     encoding: 'utf8',
     env: process.env,
@@ -204,6 +216,21 @@ const sourceManifests = new Map(
       manifest.files?.includes('README.md'),
       `${spec.name} source manifest must explicitly pack README.md`,
     )
+    assert.ok(
+      manifest.files?.includes('CHANGELOG.md'),
+      `${spec.name} source manifest must explicitly allow CHANGELOG.md`,
+    )
+    if (requiresLaunchArtifacts) {
+      assert.ok(
+        compareStableSemver(manifest.version, launchPackageVersions.get(spec.name)) >= 0,
+        `${spec.name} ${packageContractSource} version must be at least ${launchPackageVersions.get(spec.name)}`,
+      )
+      assert.equal(
+        existsSync(join(root, spec.directory, 'CHANGELOG.md')),
+        true,
+        `${spec.name} ${packageContractSource} source changelog`,
+      )
+    }
     assertTypeRoute(manifest.exports['.'], spec.name)
 
     if (spec.scoped) {
@@ -239,7 +266,18 @@ try {
   for (const spec of packageSpecs) {
     const packRoot = join(temporaryRoot, spec.name.replaceAll('/', '-').replace('@', ''))
     mkdirSync(packRoot, { recursive: true })
-    run('pnpm', ['--dir', join(root, spec.directory), 'pack', '--pack-destination', packRoot])
+    if (packageContractSource === 'registry') {
+      run('npm', [
+        'pack',
+        `${spec.name}@${sourceManifests.get(spec.name).version}`,
+        '--ignore-scripts',
+        '--pack-destination',
+        packRoot,
+        '--registry=https://registry.npmjs.org',
+      ])
+    } else {
+      run('pnpm', ['--dir', join(root, spec.directory), 'pack', '--pack-destination', packRoot])
+    }
 
     const archives = readdirSync(packRoot).filter((entry) => entry.endsWith('.tgz'))
     assert.equal(archives.length, 1, `${spec.name} must produce one tarball`)
@@ -252,21 +290,40 @@ try {
     const manifestText = readFileSync(join(packedRoot, 'package.json'), 'utf8')
     const readmeText = readFileSync(packedReadmePath, 'utf8')
     const sourceReadmeText = readFileSync(sourceReadmePath, 'utf8')
-    assert.equal(
-      readmeText,
-      sourceReadmeText,
-      `${spec.name} packed README must byte-match its compiler-checked source README`,
-    )
+    if (requiresReadmeParity) {
+      assert.equal(
+        readmeText,
+        sourceReadmeText,
+        `${spec.name} packed README must byte-match its compiler-checked source README`,
+      )
+    }
     const packedManifest = JSON.parse(manifestText)
     assert.equal(manifestText.includes('workspace:'), false, `${spec.name} tarball must not contain workspace dependencies`)
     assertTypeRoute(packedManifest.exports['.'], `${spec.name} tarball`)
+    assert.ok(
+      packedManifest.files?.includes('CHANGELOG.md'),
+      `${spec.name} packed manifest must allow CHANGELOG.md`,
+    )
+    if (requiresLaunchArtifacts) {
+      assert.equal(
+        packedManifest.version,
+        sourceManifests.get(spec.name).version,
+        `${spec.name} packed ${packageContractSource} version`,
+      )
+      assert.equal(
+        existsSync(join(packedRoot, 'CHANGELOG.md')),
+        true,
+        `${spec.name} packed ${packageContractSource} changelog`,
+      )
+    }
 
     if (spec.coreDependency) {
-      assert.equal(
-        packedManifest.dependencies?.['@glucoseiq/core'],
-        `^${coreVersion}`,
-        `${spec.name} tarball core dependency`,
-      )
+      assertPackedCoreDependency({
+        source: packageContractSource,
+        range: packedManifest.dependencies?.['@glucoseiq/core'],
+        coreVersion,
+        packageName: spec.name,
+      })
     }
 
     const readmeContract = readmeContracts.get(spec.name)
@@ -308,11 +365,12 @@ try {
     undefined,
     'React packed optional dependencies',
   )
-  assert.equal(
-    packedReactManifest.dependencies?.['@glucoseiq/core'],
-    `^${coreVersion}`,
-    'React packed core dependency',
-  )
+  assertPackedCoreDependency({
+    source: packageContractSource,
+    range: packedReactManifest.dependencies?.['@glucoseiq/core'],
+    coreVersion,
+    packageName: '@glucoseiq/react',
+  })
 
   assertRenderDeclarationSurface(packedRoots.get('@glucoseiq/core'))
 
@@ -984,7 +1042,7 @@ try {
   }
 
   console.log(
-    `Package contract smoke test passed for ${packageSpecs.length} tarballs, ${publicEntrypoints.length} entrypoints, and ${legacyExports.length} legacy exports.`,
+    `Package contract ${packageContractSource} smoke test passed for ${packageSpecs.length} tarballs, ${publicEntrypoints.length} entrypoints, and ${legacyExports.length} legacy exports.`,
   )
 } finally {
   rmSync(temporaryRoot, { recursive: true, force: true })

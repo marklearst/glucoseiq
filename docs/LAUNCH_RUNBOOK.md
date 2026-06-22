@@ -169,6 +169,7 @@ done
 
 test "$(jq -r .version packages/diabetic-utils/package.json)" = "2.0.0"
 rg -n '^## 2\.0\.0$' packages/diabetic-utils/CHANGELOG.md
+pnpm test:packages:candidate
 ```
 
 ### A4. Run the durable quality gates
@@ -179,17 +180,26 @@ set -euo pipefail
 pnpm build
 pnpm lint
 pnpm typecheck
+pnpm test:release-safety
+pnpm test:changesets
 pnpm test:size
 pnpm test:coverage
 pnpm test:errors
 pnpm test:packages
 pnpm test:docs
+pnpm --filter docs test:api
+pnpm --filter docs docs:api:check
 pnpm --filter docs build
 ```
 
 Required evidence:
 
 - build, lint, and strict type checks pass on Node 24;
+- release policy, live-domain parser, and registry-verifier unit suites pass
+  without contacting production services;
+- every release-affecting package change is covered by a valid Changeset, while
+  the generated release branch and its exact version-artifact merge use their
+  narrow policy exemptions;
 - every reachable production core ESM chunk is counted once and remains within
   the 20,000-byte gzip budget;
 - package coverage remains 100 percent;
@@ -197,8 +207,8 @@ Required evidence:
 - six tarballs and ten public entrypoints pass clean-consumer tests;
 - ESM, CommonJS, NodeNext, Bundler, React 18, React 19, CLI, and the 107-export
   compatibility checks pass; and
-- documentation contracts, compiled examples, generated API drift, and the
-  production documentation build pass.
+- documentation contracts, compiled examples, API generator tests, generated
+  API drift, and the production documentation build pass.
 
 The build creates ignored source maps that enter package tarballs. In the same
 shell where `FORBIDDEN_TERM` was set in A1, require at least one map and scan all
@@ -258,8 +268,14 @@ tests cannot mark them complete.
 - [ ] GitHub Actions is allowed to create and update pull requests.
 - [ ] An active `main` ruleset requires the uniquely named
       `Build & test (Node 24)` check, blocks force pushes, and restricts branch
-      deletion. GitHub documents these controls in
+      deletion. Require pull-request branches to be up to date before merging
+      so a reviewed release candidate cannot be merged behind newer package
+      source or Changesets. GitHub documents these controls in
       [available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets).
+- [ ] On the same-repository `release/glucoseiq-packages` pull request, the
+      release workflow is the only producer of the required check. The ordinary
+      CI job is skipped under its distinct release-branch name; a fork reusing
+      that branch name is not exempt.
 - [ ] The required check passes on the exact transition head SHA.
 
 Do not merge the transition pull request until its Vercel preview also passes.
@@ -345,6 +361,8 @@ describes the public discovery metadata.
 - [ ] The release pull request title is
       `chore(release): version packages`.
 - [ ] The release branch is `release/glucoseiq-packages`.
+- [ ] The release branch is current with `main`, its required check belongs to
+      that current head, and no newer Changesets remain outside the candidate.
 - [ ] The pull request contains five `1.0.0` manifests and one `2.0.0`
       compatibility manifest, correct changelogs, and the updated lockfile.
 - [ ] The release body and commits remain project-focused and contain no tool
@@ -394,6 +412,40 @@ still use the public contract described in
 Registry propagation can lag. Poll until the launch verifier succeeds or the
 documented timeout expires; do not interpret one transient 404 as permission
 to publish a second way.
+
+The GitHub-hosted release workflow runs the complete verifier automatically
+after any full or partial publication. To rerun it from the exact release
+commit with authenticated `gh` access:
+
+```bash
+set -euo pipefail
+
+pnpm test:published
+```
+
+This command checks registry metadata and tarballs, signatures and signed
+provenance, Git tags and releases, then runs the clean registry-consumer
+matrix. For a manual run, the verifier resolves `HEAD^1`, replays Changesets
+from that first parent, and fails closed unless `HEAD` is an exact
+generated-version commit. It derives the versioned package set from that
+replay, so later independent releases do not bind unchanged packages to the
+wrong commit.
+
+In the hosted workflow, the Changesets action output remains diagnostic and
+controls whether the compatibility-tag check applies. The exact version plan
+from the validated commit binds every versioned package to the checked-out
+release commit. Unchanged packages remain bound to their own attested commit
+and matching tag.
+
+If the Changesets action fails after npm accepts a package but before the
+action records outputs, tags, or GitHub releases, the hosted workflow uses the
+package set from the exact validated generated-version commit as a fallback
+inventory. That recovery path does not republish packages or synthesize Git
+artifacts. It preserves the legacy tag when the compatibility package is in
+the inventory, removes npm authentication from the runner's user
+configuration before starting the verifier, and blocks the verifier if that
+cleanup fails. The original publication failure remains failed even when the
+inventory produces useful recovery evidence.
 
 ### C1. Inventory exact registry versions
 
