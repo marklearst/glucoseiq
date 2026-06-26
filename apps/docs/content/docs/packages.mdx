@@ -3,9 +3,8 @@ title: Choose a Package
 description: Pick the smallest GlucoseIQ package that owns the contract your application needs.
 ---
 
-GlucoseIQ is a family of focused packages rather than one framework runtime.
-Start with `@glucoseiq/core`, then add an adapter only when your application
-needs its boundary.
+GlucoseIQ splits analytics from framework adapters. Start with
+`@glucoseiq/core`, then add a package when your application needs its API.
 
 <table>
   <caption>GlucoseIQ 1.0 package selection</caption>
@@ -38,7 +37,7 @@ needs its boundary.
     </tr>
     <tr>
       <th scope="row"><code>@glucoseiq/testing</code></th>
-      <td>Deterministic synthetic CGM-shaped fixtures</td>
+      <td>Seeded synthetic CGM-shaped fixtures</td>
       <td>You need repeatable tests, demos, stories, or screenshots</td>
       <td>Depends on core types and contracts</td>
     </tr>
@@ -70,14 +69,14 @@ npm install @glucoseiq/core
 ```
 
 The root export covers the main data model and analytics. Four public subpaths
-make architectural intent explicit:
+group APIs by responsibility:
 
-- `@glucoseiq/core/metrics` for focused analytics primitives
+- `@glucoseiq/core/metrics` for individual metrics
 - `@glucoseiq/core/connectors` for supported payload normalizers
 - `@glucoseiq/core/interop` for interoperability helpers
 - `@glucoseiq/core/render` for optional SVG-string renderers
 
-See the [core API reference](/docs/api/core) for the complete contract.
+See the [core API reference](/docs/api/core) for the public contract.
 
 ## Add packages by boundary
 
@@ -86,9 +85,8 @@ when your design system owns rendering, [testing](/docs/testing) for synthetic
 fixtures, and the [CLI](/docs/cli) for file-oriented terminal workflows. The
 [API reference](/docs/api) lists each package's public exports.
 
-Install only the packages that own an application boundary. Explicit package
-boundaries clarify browser bundles, server responsibilities, and upgrade
-impact.
+Install only the packages your application uses. The package boundaries show
+which code belongs in browser bundles and which dependencies affect upgrades.
 
 ## Migrate existing applications
 

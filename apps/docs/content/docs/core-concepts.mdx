@@ -5,25 +5,21 @@ description: The mental model for composing GlucoseIQ from ingestion to analysis
 
 import { Callout } from 'fumadocs-ui/components/callout'
 
-GlucoseIQ is a collection of small, composable building blocks. The core does
-not own a database, fetch a vendor account, or choose a UI framework. It accepts
-plain glucose readings and returns plain analytics, series, or SVG strings.
+`@glucoseiq/core` accepts glucose readings and returns typed analytics, series,
+or SVG strings. Your application supplies storage, vendor transport, and
+presentation.
 
-That boundary is what makes the same engine useful in a script, server route,
-web application, or report generator.
+## Processing flow
 
-## The five-stage mental model
+| Stage | Application responsibility | GlucoseIQ API |
+| --- | --- | --- |
+| Ingest | Read a file or receive a vendor payload | `parseGlucoseCSV` or a connector adapter |
+| Normalize | Produce unit-bearing readings with timestamps | `GlucoseReading` and `NormalizedCGMReading` |
+| Check | Review rejected rows, gaps, coverage, and freshness | Safe normalizers, `detectGaps`, and `dataSufficiency` |
+| Analyze | Calculate a report or one metric | `analyzeGlucose` and individual functions |
+| Present | Render the returned data in the host application | Data results, SVG renderers, or React adapters |
 
-Most applications move data through the same stages:
-
-1. **Ingest** a CSV or receive a vendor payload.
-2. **Normalize** it into `GlucoseReading` or `NormalizedCGMReading` objects.
-3. **Inspect** coverage, gaps, ordering, and freshness.
-4. **Analyze** with one comprehensive report or focused metric functions.
-5. **Present** the returned scalars and series with your own UI or the optional
-   SVG and React adapters.
-
-The stages are regular function calls, not hidden framework lifecycle hooks:
+Each stage is a function call with a defined input and result:
 
 ```ts typecheck
 import {
@@ -52,8 +48,8 @@ const profile = buildAGPProfile(readings, {
 })
 ```
 
-Each result can be stored, serialized, tested, or handed to another layer of
-your application. No global configuration is required.
+You can store, serialize, or test each result. The functions do not require
+global configuration.
 
 ## Start with the smallest stable contract
 
@@ -68,16 +64,16 @@ interface GlucoseReading {
 ```
 
 Vendor adapters return `NormalizedCGMReading`, which extends that shape with a
-canonical trend, source, and optional vendor metadata. Because it is a
+normalized trend, source, and optional vendor metadata. Because it is a
 structural superset, normalized vendor readings can be passed directly to
 functions that accept `GlucoseReading[]`.
 
 See [Data Model](/docs/data-model) for units, timestamps, and the normalized
 connector contract.
 
-## One-call report or focused primitives
+## Choose a report or individual metrics
 
-Use `analyzeGlucose` when a surface needs a coherent overview from one cleaned
+Use `analyzeGlucose` when a surface needs summary metrics from one cleaned
 reading set:
 
 ```ts typecheck
@@ -101,11 +97,10 @@ if (!report.valid) {
 }
 ```
 
-The result includes mean glucose, GMI, SD, CV, five-zone Time in Range, Time in
-Tight Range, risk metrics, episode detection, data sufficiency, and—unless
-disabled—the AGP percentile series.
+A valid result includes summary metrics and data sufficiency. Set
+`includeProfile: false` to omit the AGP percentile series.
 
-Use focused functions when you need a smaller computation or different
+Use individual functions when you need a smaller computation or different
 options. Examples include `calculateEnhancedTIR`, `detectEpisodes`,
 `analyzeMealResponse`, `computeGlucoseTrend`, `splitDayNight`, and
 `alignToGrid`.
@@ -126,18 +121,17 @@ const trend = computeGlucoseTrend(readings.slice(-12))
 const episodes = detectEpisodes(readings)
 ```
 
-Focused calls are also useful when two surfaces need different policies. A
-live tile can derive a short-window trend while a retrospective report analyzes
-fourteen days of observed data.
+Individual functions also let two surfaces use different policies. A live tile
+can derive a short-window trend while a retrospective report analyzes fourteen
+days of observed data.
 
-## Headless output comes in two forms
+## Choose data or SVG output
 
-Most core APIs return **presentation-ready data**, not markup. For example,
-`buildAGPProfile` returns a full-day grid of AGP-style percentile bins, and
-`calculateEnhancedTIR` returns five labeled range blocks. These structures can
-drive any charting or component system.
+Most core APIs return typed data. `buildAGPProfile` returns a full-day grid of
+AGP-style percentile bins, while `calculateEnhancedTIR` returns five labeled
+range blocks. Use those results with your own charting or component system.
 
-The render subpath adds optional **presentation conveniences**:
+The render subpath returns SVG strings:
 
 ```ts typecheck
 import { type GlucoseReading } from '@glucoseiq/core'
@@ -152,14 +146,13 @@ const agpSvg = agpChartToSVG(readings, { theme: 'dark' })
 const tirSvg = tirBarToSVG(readings, { theme: 'dark' })
 ```
 
-These functions return self-contained SVG strings. They do not replace the
-underlying data APIs; use the data primitives when your design needs complete
-control.
+Use the SVG functions for a fixed renderer. Use the data APIs when the host
+needs custom drawing or interaction.
 
-## Purity makes policy visible
+## Pass policy in options
 
-GlucoseIQ does not keep a current patient, current unit, or current time zone.
-Pass the policy that matters to the function that needs it:
+Pass the unit, time zone, and other policy values to the function that needs
+them:
 
 ```ts typecheck
 import { buildAGPProfile, type GlucoseReading } from '@glucoseiq/core'
@@ -180,9 +173,9 @@ const profile = buildAGPProfile(readings, {
 })
 ```
 
-The same input and options produce the same analytical result. One notable live
-helper, `minutesSinceLastReading`, uses the current clock when its `now`
-argument is omitted; pass `now` explicitly in tests or reproducible jobs.
+The same input and options produce the same analytical result.
+`minutesSinceLastReading` uses the current clock when you omit `now`, so pass
+`now` in tests or reproducible jobs.
 
 ```ts typecheck
 import { minutesSinceLastReading, type GlucoseReading } from '@glucoseiq/core'
@@ -197,14 +190,14 @@ const age = minutesSinceLastReading(
 )
 ```
 
-## Keep transport and analytics separate
+## Fetch vendor data outside the analytics layer
 
 The Dexcom, Libre, and Nightscout APIs in `@glucoseiq/core/connectors` normalize
 payloads that your application already obtained. They do not authenticate,
 poll, retry, or persist vendor data.
 
-That separation keeps credentials and network policy in your application while
-the analytical path remains deterministic:
+Keep credentials and network policy in your application, then pass the vendor
+payload to a normalizer:
 
 ```ts typecheck
 import {

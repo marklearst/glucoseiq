@@ -5,7 +5,7 @@ This directory preserves the generated API reference for the published
 the API reference for the scoped GlucoseIQ packages or the 2.0 compatibility
 bridge.
 
-Use the [archive index](./index.md) to browse the complete reference:
+Use the [archive index](./index.md) to browse the historical reference:
 
 - [Functions](./functions)
 - [Interfaces](./interfaces)

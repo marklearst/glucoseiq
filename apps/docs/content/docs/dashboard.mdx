@@ -181,14 +181,14 @@ export function GlucoseDashboard({ readings }: GlucoseDashboardProps) {
 }
 ```
 
-The component deliberately contains almost no design opinion. Replace the
-semantic HTML, typography, spacing, and surrounding layout with your design
-system. The analytics result remains unchanged.
+The example uses semantic HTML but leaves styling to the host application. You
+can change its markup and layout without changing the analytics result.
 
 ## 4. Load it from your application
 
 In `app/dashboard/page.tsx`, fetch readings in a server component or route,
 then hand the normalized array to the dashboard:
+
 
 ```tsx fragment="imports the GlucoseDashboard component defined earlier in this guide"
 import type { GlucoseReading } from '@glucoseiq/core'
@@ -216,10 +216,10 @@ Validate untrusted JSON before returning it from your API. If the upstream is
 Dexcom Share, Libre LinkUp, or Nightscout, use the matching connector adapter
 to normalize its vendor-specific payload first.
 
-## 5. Choose how headless you want to be
+## 5. Use data hooks or built-in SVGs
 
-The example uses GlucoseIQ's ready-made SVG renderers for the shortest path.
-You can stop one level earlier whenever you need complete drawing control:
+Use the SVG components for a quick chart. Use the hooks when you need custom
+rendering:
 
 - `useGlucoseAnalysis` returns the full typed report for cards and summaries.
 - `useAGPProfile` returns percentile bins for D3, Visx, Canvas, or a native
@@ -227,14 +227,12 @@ You can stop one level earlier whenever you need complete drawing control:
 - `useGlucoseLive` returns the latest reading, derived trend, and staleness for
   a custom current-glucose surface.
 
-The engine is the contract. The interface is yours.
-
 ## Production checklist
 
 - Keep credentials and vendor sessions out of the browser.
 - Validate and normalize source payloads at ingestion.
 - Pass stable `readings` and option references to memoized hooks.
-- Show an explicit empty state when `report.valid` is `false`.
+- Show an empty state when `report.valid` is `false`.
 - Surface `dataSufficiency` instead of implying that sparse data is complete.
 - Treat every result as informational, not medical advice or an alerting
   system.

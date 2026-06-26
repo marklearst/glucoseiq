@@ -36,7 +36,7 @@ TypeScript types do not validate JSON at runtime. Validate authentication,
 payload shape, unit literals, numeric bounds, timestamps, and source identity
 before data reaches an analytics function.
 
-Different APIs intentionally have different unit contracts:
+Each API documents its unit contract:
 
 - Mixed-unit-aware `GlucoseReading` APIs normalize each supported reading.
 - Legacy `calculateTIR` expects one homogeneous unit for readings and bounds.
@@ -69,7 +69,7 @@ application and jurisdiction.
 GlucoseIQ does not replace a backend authorization boundary. Passing a payload
 to a pure function does not establish that the caller was entitled to read it.
 
-## Integrate renderers deliberately
+## Integrate renderers safely
 
 Core renderers return SVG strings. The React wrappers inline only SVG produced
 by those renderers. Do not pass arbitrary third-party markup through the same
@@ -87,7 +87,7 @@ assuming browser behavior transfers unchanged.
 
 ## Keep synthetic fixtures out of decisions
 
-`@glucoseiq/testing` creates deterministic synthetic CGM-shaped data for
+`@glucoseiq/testing` creates repeatable synthetic CGM-shaped data for
 software tests and demos. It does not model a person, device, therapy, or
 outcome and is not a substitute for validated reference datasets.
 
@@ -99,7 +99,7 @@ Before shipping a surface that presents glucose analytics:
 2. Validate source identity, timestamps, values, and units at runtime.
 3. Show freshness, gaps, coverage, configured targets, and failure states.
 4. Test representative malformed, sparse, duplicate, mixed-unit, and stale data.
-5. Pair visual encodings with text and test the complete host application.
+5. Pair visual encodings with text and test the host application.
 6. Review privacy, security, accessibility, and applicable regulatory duties.
 
 Use [Integration Testing](/docs/integration-testing) for the software test

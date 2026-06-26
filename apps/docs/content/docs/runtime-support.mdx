@@ -17,12 +17,11 @@ into a browser application.
 | CommonJS declarations | `.d.ts` through each `require.types` condition |
 | TypeScript resolution | Verified with strict NodeNext and Bundler consumers |
 | React | React 18 and 19; package peer range is `>=18` |
-| Package manager in this repository | pnpm 11.12.0 |
+| Package manager in this repository | pnpm 11.17.0 |
 | Release npm client | npm 11.17.0 |
 
-The repository compiles documentation examples with TypeScript 5.8.3. That is
-the launch verification toolchain, not a promise that unrelated older compiler
-versions can parse the declarations.
+The repository compiles documentation examples with TypeScript 5.8.3. Older
+compiler versions are unsupported.
 
 ## Public entrypoints
 
@@ -31,7 +30,7 @@ versions can parse the declarations.
 | Specifier | Contract |
 | --- | --- |
 | `@glucoseiq/core` | Main data model, analysis, ingestion, live helpers, and public errors |
-| `@glucoseiq/core/metrics` | Focused metrics |
+| `@glucoseiq/core/metrics` | Individual metrics |
 | `@glucoseiq/core/connectors` | Dexcom, Libre, and Nightscout payload normalizers |
 | `@glucoseiq/core/interop` | Interoperability helpers |
 | `@glucoseiq/core/render` | SVG-string renderers |

@@ -66,9 +66,9 @@ default trend fit uses only the trailing 15 minutes.
 
 ## 2. Feed it from your data layer
 
-The transport is intentionally yours. In `use-reading-feed.ts`, this polling
-hook shows the boundary: the endpoint returns normalized readings, and the
-client maintains a rolling window.
+Fetch readings in your data layer. This polling hook expects normalized
+readings from the endpoint and keeps a rolling window in the client:
+
 
 ```tsx fragment="imports the mergeReadings helper defined earlier in this guide"
 'use client'
@@ -226,9 +226,9 @@ const current = {
 }
 ```
 
-Pass a fixed `now` value in tests to make staleness deterministic.
+Pass a fixed `now` value in tests to reproduce staleness calculations.
 
-## Failure states to design deliberately
+## Handle failure states
 
 | State | Suggested behavior |
 | --- | --- |

@@ -1,6 +1,6 @@
 ---
 title: Testing
-description: Generate deterministic CGM series and scenario fixtures with @glucoseiq/testing.
+description: Generate repeatable CGM series and scenario fixtures with @glucoseiq/testing.
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout'
@@ -42,7 +42,7 @@ seeded noise, and optional nocturnal hypoglycemia. Values are clamped to
 | --- | --- | --- |
 | `days` | `1` | Number of days to generate |
 | `intervalMin` | `5` | Minutes between readings |
-| `seed` | `42` | Deterministic random seed |
+| `seed` | `42` | Pseudorandom seed |
 | `start` | `2024-01-01T00:00:00Z` | ISO timestamp for the first reading |
 | `basal` | `110` | Baseline in mg/dL |
 | `mealTimes` | `07:00`, `13:00`, `19:00` | Meal times as minutes from midnight |
@@ -79,7 +79,7 @@ default starts at midnight UTC.
 
 ## Start from a scenario
 
-The `scenarios` collection provides four named, deterministic fixtures:
+The `scenarios` collection provides four named fixtures:
 
 ```ts typecheck
 import { scenarios } from '@glucoseiq/testing'
@@ -126,7 +126,7 @@ The underlying curve is generated in mg/dL and converted to one decimal place
 for mmol/L output.
 
 <Callout type="warn" title="Synthetic data is not clinical validation">
-  These fixtures are designed for deterministic software testing and visual
+  These fixtures are designed for repeatable software testing and visual
   demos. They do not model a specific person, sensor, therapy, or clinical
   outcome, and they are not a substitute for validated reference datasets.
 </Callout>

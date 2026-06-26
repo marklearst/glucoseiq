@@ -1,16 +1,15 @@
 ---
 title: Integration Testing
-description: Verify GlucoseIQ at data, package, type-resolution, rendering, and deployed-application boundaries.
+description: Test GlucoseIQ at the data, package, rendering, and deployment boundaries.
 ---
 
-Unit coverage inside an analytics package is only one layer. A production
-application should also test the source adapter, packed package, compiler,
-renderer, and deployed host that carry the result to a person.
+Test the same inputs, package artifacts, and host behavior that your application
+uses in production.
 
-## 1. Pin deterministic data
+## Repeatable fixtures
 
-Use `@glucoseiq/testing` for repeatable software tests. Keep the seed, start
-timestamp, interval, and unit explicit when a result depends on them.
+Use `@glucoseiq/testing` for repeatable software tests. Specify the seed, start
+timestamp, interval, and unit when a result depends on them.
 
 ```ts typecheck
 import { analyzeGlucose } from '@glucoseiq/core'
@@ -26,7 +25,7 @@ const readings = generateCGMSeries({
 const report = analyzeGlucose(readings, { timeZone: 'UTC' })
 
 if (!report.valid || !report.timeInRange || !report.agpProfile) {
-  throw new Error('Expected a valid deterministic analysis')
+  throw new Error('Expected a valid repeatable analysis')
 }
 if (report.dataSufficiency.totalReadings !== 14 * 288) {
   throw new Error('Unexpected fixture size')
@@ -37,7 +36,7 @@ Synthetic fixtures verify software behavior, not clinical validity. Add
 appropriately governed reference datasets when the product's intended use
 requires them.
 
-## 2. Test the ingestion boundary
+## Ingestion boundary
 
 Each source adapter needs coverage for:
 
@@ -51,7 +50,7 @@ Each source adapter needs coverage for:
 Connector tests should assert the normalized `GlucoseReading` contract and the
 typed error code, not only a rendered string.
 
-## 3. Test the user-visible failure model
+## User-visible failures
 
 Exercise empty, sparse, stale, duplicate, mixed-unit, and conflicting data.
 Assert that the application presents freshness, coverage, gaps, and unavailable
@@ -65,31 +64,26 @@ For live views, test both flows independently:
 Passing `refreshMs` to `useGlucoseLive` only drives the second flow. It does not
 poll a source.
 
-## 4. Test packed packages and declarations
+## Installed package
 
-Source-workspace imports can hide packaging mistakes. Before release, install
-the packed tarballs into clean temporary consumers and verify:
+Source-workspace imports can hide packaging mistakes. Install the packed
+tarball in a clean temporary application that matches your module system,
+TypeScript configuration, and React version.
 
-- all ten public entrypoints in ESM and CommonJS
-- strict TypeScript resolution in NodeNext and Bundler modes
-- `.d.mts` for ESM and `.d.ts` for CommonJS
-- React 18 and React 19 peer installations
-- the packed React client directive
-- CLI installation, success, and failure exits
-- all 107 compatibility exports
-- no surviving `workspace:` dependency ranges
+Check the public entrypoints you import at runtime and in TypeScript. For the
+supported module and declaration contracts, see
+[Runtime Support](/docs/runtime-support).
 
-This repository owns that matrix:
+Repository maintainers can run the full package-consumer matrix with:
 
 ```bash
 pnpm test:packages
 ```
 
-## 5. Test renderers in the host
+## Renderer behavior
 
-Core renderer fixtures protect deterministic SVG output, but the host still
-owns layout, typography, accessibility, sanitization boundaries, and export
-conversion. Verify:
+Core renderer fixtures protect stable SVG output. Test layout, accessibility,
+the trusted-markup boundary, and export conversion in the host:
 
 - the adjacent textual summary contains the chart's important values
 - zone and trend meaning does not depend on color alone
@@ -99,7 +93,7 @@ conversion. Verify:
 
 Do not replace host-level tests with an SVG snapshot alone.
 
-## 6. Test the deployed route
+## Deployed route
 
 Run a small production smoke suite against the real deployment:
 
