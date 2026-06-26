@@ -3,7 +3,7 @@
  *
  * Mapped header-row delimited data parser. Name the timestamp and value
  * columns explicitly; it handles quoted fields, custom one-character
- * delimiters, and skips rows that do not parse. Pure and dependency-free.
+ * delimiters, and skips rows that do not parse.
  */
 
 import type { GlucoseReading, GlucoseUnit } from './types'

@@ -14,8 +14,8 @@ import { isValidGlucoseString } from './guards'
 import { ParseError } from './errors'
 
 /**
- * Checks if a glucose value is below the hypoglycemia threshold for the given unit.
- * Used for detecting low glucose events.
+ * Returns whether a glucose value is below the configured hypoglycemia
+ * threshold for its unit.
  * @param val - Glucose value (number)
  * @param unit - Glucose unit ('mg/dL' or 'mmol/L'), default: 'mg/dL'
  * @param thresholds - Optional custom thresholds ({ mgdl?: number; mmoll?: number })
@@ -33,8 +33,8 @@ export function isHypo(
 }
 
 /**
- * Checks if a glucose value is above the hyperglycemia threshold for the given unit.
- * Used for detecting high glucose events.
+ * Returns whether a glucose value is above the configured hyperglycemia
+ * threshold for its unit.
  * @param val - Glucose value (number)
  * @param unit - Glucose unit ('mg/dL' or 'mmol/L'), default: 'mg/dL'
  * @param thresholds - Optional custom thresholds ({ mgdl?: number; mmoll?: number })
@@ -52,8 +52,8 @@ export function isHyper(
 }
 
 /**
- * Returns a glucose status label ('low', 'normal', or 'high') based on thresholds for the given unit.
- * Used for charting, alerts, and reporting.
+ * Returns 'low', 'normal', or 'high' from the configured thresholds for the
+ * value's unit.
  * @param val - Glucose value (number)
  * @param unit - Glucose unit ('mg/dL' or 'mmol/L'), default: 'mg/dL'
  * @param thresholds - Optional custom thresholds for hypo/hyper ({ hypo?: { mgdl?: number; mmoll?: number }, hyper?: { mgdl?: number; mmoll?: number } })

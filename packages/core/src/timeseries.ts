@@ -1,8 +1,8 @@
 /**
  * @file src/timeseries.ts
  *
- * Time-series plumbing for CGM dashboards: sensor-gap detection and day/night
- * splitting. Pure and dependency-free.
+ * Time-series helpers for CGM dashboards: sensor-gap detection and day/night
+ * splitting.
  */
 
 import type { GlucoseReading } from './types'

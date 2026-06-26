@@ -1,7 +1,7 @@
 {
   "name": "@glucoseiq/testing",
   "version": "0.0.0",
-  "description": "Deterministic, seedable synthetic CGM data and scenario fixtures for testing GlucoseIQ-powered apps, including circadian curves, meal spikes, nocturnal hypos, and sensor gaps.",
+  "description": "Fixed-seed synthetic CGM data and scenario fixtures for tests, examples, and local product states.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",

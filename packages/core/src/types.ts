@@ -3,15 +3,13 @@
 import { MG_DL, MMOL_L } from './constants'
 
 /**
- * Supported glucose units.
- * Used for analytics and conversions.
+ * Supported glucose units for analytics and conversions.
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  */
 export type GlucoseUnit = typeof MG_DL | typeof MMOL_L
 
 /**
- * List of allowed glucose units.
- * Used for input validation and unit conversion.
+ * List of glucose units accepted by validation and conversion APIs.
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  */
 export const AllowedGlucoseUnits: GlucoseUnit[] = [MG_DL, MMOL_L]
@@ -190,8 +188,8 @@ export interface EnhancedTIRResult {
 }
 
 /**
- * Options for Enhanced TIR calculation.
- * Allows customization for different population target sets and use cases.
+ * Options that select a population goal set or override Enhanced TIR
+ * thresholds.
  */
 export interface EnhancedTIROptions {
   /** Population type for target assessment (default: 'standard') */

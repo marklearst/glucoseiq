@@ -13,9 +13,9 @@ agpChartToSVG(readings: GlucoseReading[], options?: AGPChartOptions): string
 
 Renders an AGP-style percentile-band chart as an SVG string.
 
-**Returns** — A complete, self-contained SVG document string
+**Returns:** A complete, self-contained SVG document string
 
-**Throws** — If width or height is not a finite positive number, or if a present title is not a string
+**Throws:** If width or height is not a finite positive number, or if a present title is not a string
 
 ```ts typecheck
 import { type GlucoseReading } from '@glucoseiq/core'
@@ -47,9 +47,9 @@ tirBarToSVG(readings: GlucoseReading[], options?: TIRBarOptions): string
 Renders a Time-in-Range stacked bar as an SVG string. Zone fills remain
 fixed; the surface theme changes only the background and text.
 
-**Returns** — A self-contained SVG document string
+**Returns:** A self-contained SVG document string
 
-**Throws** — If width or height is not a finite positive number
+**Throws:** If width or height is not a finite positive number
 
 ```ts typecheck
 import { type GlucoseReading } from '@glucoseiq/core'
@@ -79,9 +79,9 @@ trendTileToSVG(readings: GlucoseReading[], options?: TrendTileOptions): string
 
 Renders a current-glucose trend tile as an SVG string.
 
-**Returns** — A self-contained SVG document string
+**Returns:** A self-contained SVG document string
 
-**Throws** — If width or height is not a finite positive number
+**Throws:** If width or height is not a finite positive number
 
 ```ts typecheck
 import { type GlucoseReading } from '@glucoseiq/core'

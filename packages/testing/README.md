@@ -1,6 +1,6 @@
 # @glucoseiq/testing
 
-Deterministic CGM-shaped fixtures for tests, examples, and local demos.
+Fixed-seed CGM-shaped fixtures for tests, examples, and local demos.
 Requires Node `>=24`.
 
 ## Install
@@ -28,7 +28,7 @@ console.log(readings.length, traceWithGap.length)
 | --- | --- | --- |
 | `days` | `1` | Number of days. |
 | `intervalMin` | `5` | Minutes between readings. |
-| `seed` | `42` | Safe-integer deterministic seed. |
+| `seed` | `42` | Safe integer used to repeat the same generated series. |
 | `start` | `2024-01-01T00:00:00Z` | ISO timestamp for the first day. |
 | `basal` | `110` | Baseline in mg/dL. |
 | `mealTimes` | `420, 780, 1140` | Meal times as minutes of day. |

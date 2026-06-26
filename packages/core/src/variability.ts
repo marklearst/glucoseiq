@@ -57,7 +57,6 @@ export function glucoseCoefficientOfVariation(readings: number[]): number {
 
 /**
  * Calculates specified percentiles from an array of glucose values using the nearest-rank method.
- * Used for glucose variability assessment.
  * @param readings - Array of glucose values (numbers)
  * @param percentiles - Array of percentiles to calculate (e.g., [10, 25, 50, 75, 90])
  * @returns Object mapping percentile to value, or {} if input is empty

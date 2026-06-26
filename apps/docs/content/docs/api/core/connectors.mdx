@@ -13,7 +13,7 @@ normalizeDexcomEntries(entries: DexcomShareEntry[]): NormalizedCGMReading[]
 
 Converts an array of Dexcom Share entries into NormalizedCGMReadings.
 
-**Returns** — Array of normalized readings, sorted chronologically
+**Returns:** Array of normalized readings, sorted chronologically
 
 | Parameter | Description |
 | --- | --- |
@@ -32,11 +32,11 @@ normalizeDexcomEntry(entry: DexcomShareEntry): NormalizedCGMReading
 
 Converts a single Dexcom Share entry into a NormalizedCGMReading.
 
-**Returns** — A normalized reading usable by APIs that accept `GlucoseReading`, subject to each API's contract
+**Returns:** A normalized reading usable by APIs that accept `GlucoseReading`, subject to each API's contract
 
-**Throws** — If the date string cannot be parsed
+**Throws:** If the date string cannot be parsed
 
-**Throws** — If the glucose value is not usable
+**Throws:** If the glucose value is not usable
 
 | Parameter | Description |
 | --- | --- |
@@ -53,7 +53,7 @@ Converts a single Dexcom Share entry into a NormalizedCGMReading.
 normalizeDexcomTrend(trend: undefined | null | DexcomTrendString | string & {}): CGMTrend
 ```
 
-Normalizes a Dexcom Share trend string into a canonical CGMTrend.
+Maps a Dexcom Share trend string to the shared `CGMTrend` values.
 
 
 ---
@@ -68,7 +68,7 @@ normalizeLibreEntries(entries: LibreLinkUpEntry[]): NormalizedCGMReading[]
 
 Converts an array of Libre LinkUp entries into NormalizedCGMReadings.
 
-**Returns** — Array of normalized readings, sorted chronologically
+**Returns:** Array of normalized readings, sorted chronologically
 
 | Parameter | Description |
 | --- | --- |
@@ -87,11 +87,11 @@ normalizeLibreEntry(entry: LibreLinkUpEntry): NormalizedCGMReading
 
 Converts a single Libre LinkUp entry into a NormalizedCGMReading.
 
-**Returns** — A normalized reading usable by APIs that accept `GlucoseReading`, subject to each API's contract
+**Returns:** A normalized reading usable by APIs that accept `GlucoseReading`, subject to each API's contract
 
-**Throws** — If the timestamp cannot be parsed
+**Throws:** If the timestamp cannot be parsed
 
-**Throws** — If the unit or glucose value is not usable
+**Throws:** If the unit or glucose value is not usable
 
 | Parameter | Description |
 | --- | --- |
@@ -108,7 +108,7 @@ Converts a single Libre LinkUp entry into a NormalizedCGMReading.
 normalizeLibreTrend(trend: undefined | null | number): CGMTrend
 ```
 
-Normalizes a Libre LinkUp numeric trend value into a canonical CGMTrend.
+Maps a Libre LinkUp numeric trend value to the shared `CGMTrend` values.
 
 Accepts the raw API value (which may be null/undefined or out of range)
 and returns 'unknown' for any invalid or unmapped values.
@@ -124,7 +124,7 @@ and returns 'unknown' for any invalid or unmapped values.
 normalizeNightscoutDirection(direction: undefined | NightscoutDirection): CGMTrend
 ```
 
-Normalizes a Nightscout direction string into a canonical CGMTrend.
+Maps a Nightscout direction string to the shared `CGMTrend` values.
 
 
 ---
@@ -139,7 +139,7 @@ normalizeNightscoutEntries(entries: NightscoutEntry[]): NormalizedCGMReading[]
 
 Converts an array of Nightscout SGV entries into NormalizedCGMReadings.
 
-**Returns** — Array of normalized readings, sorted chronologically
+**Returns:** Array of normalized readings, sorted chronologically
 
 | Parameter | Description |
 | --- | --- |
@@ -158,11 +158,11 @@ normalizeNightscoutEntry(entry: NightscoutEntry): NormalizedCGMReading
 
 Converts a single Nightscout SGV entry into a NormalizedCGMReading.
 
-**Returns** — A normalized reading usable by APIs that accept `GlucoseReading`, subject to each API's contract
+**Returns:** A normalized reading usable by APIs that accept `GlucoseReading`, subject to each API's contract
 
-**Throws** — If neither vendor timestamp can be normalized
+**Throws:** If neither vendor timestamp can be normalized
 
-**Throws** — If the glucose value is not usable
+**Throws:** If the glucose value is not usable
 
 | Parameter | Description |
 | --- | --- |
@@ -184,7 +184,7 @@ Parses a Dexcom date string into an ISO 8601 string.
 Dexcom Share returns dates in the format `"Date(epochMs)"` or
 `"/Date(epochMs)/"`. This helper handles both, plus plain ISO strings.
 
-**Throws** — If the date string cannot be parsed
+**Throws:** If the date string cannot be parsed
 
 
 ---

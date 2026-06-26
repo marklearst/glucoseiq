@@ -1,14 +1,10 @@
 /**
  * @file src/render/agp-svg.ts
  *
- * Renders an AGP-style percentile-band chart as a self-contained, themeable
- * SVG **string** — no DOM, no canvas, no framework. It runs
- * {@link buildAGPProfile} internally and draws the 5–95 and 25–75 percentile
- * bands, the median line, and the target range. Server and browser hosts can
- * embed the result. Email, PDF, README, native, and watch hosts require
- * host-specific embedding, conversion, or application integration.
- *
- * Scoped to mg/dL (the standard AGP unit). Pure and dependency-free.
+ * Returns a self-contained SVG string for the 5–95 and 25–75 percentile bands,
+ * median, and target range from {@link buildAGPProfile}. The renderer does not
+ * access the DOM or canvas. Server and browser hosts can embed the string;
+ * other hosts must convert or integrate it. This renderer uses mg/dL only.
  *
  * @see {@link https://doi.org/10.2337/dci19-0028 | International Consensus on Time in Range (2019)}
  */
@@ -109,7 +105,7 @@ function escapeXml(s: string): string {
     )
 }
 
-/** Rounds to one decimal for compact, deterministic coordinates. @internal */
+/** Rounds to one decimal so repeated renders use the same compact coordinates. @internal */
 function fmt(n: number): number {
   return roundToTenth(n)
 }
@@ -211,7 +207,9 @@ export function agpChartToSVG(
   parts.push(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Ambulatory Glucose Profile">`
   )
-  parts.push(`<rect width="${width}" height="${height}" fill="${c.bg}"/>`)
+  parts.push(
+    `<rect width="${width}" height="${height}" fill="${c.bg}"/>`
+  )
 
   // Target range shading + boundary lines (redundant encoding for CVD safety).
   const yHigh = fmt(yScale(TARGET_HIGH))

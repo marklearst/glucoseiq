@@ -1,9 +1,8 @@
 /**
  * @file src/connectors/nightscout.ts
  *
- * Pure transformation adapter for Nightscout API payloads.
- * Maps raw Nightscout SGV entries into NormalizedCGMReading objects.
- * Does NOT handle authentication — use with the Nightscout REST API directly.
+ * Converts Nightscout API payloads to NormalizedCGMReading values.
+ * The caller must authenticate and fetch entries from the Nightscout REST API.
  *
  * @see https://nightscout.github.io/nightscout/setup_variables/#api
  * @see https://www.npmjs.com/package/nightscout
@@ -40,7 +39,7 @@ function parseNightscoutEpoch(value: unknown): string | null {
 }
 
 /**
- * Normalizes a Nightscout direction string into a canonical CGMTrend.
+ * Maps a Nightscout direction string to the shared `CGMTrend` values.
  */
 export function normalizeNightscoutDirection(
   direction: NightscoutDirection | undefined

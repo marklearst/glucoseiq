@@ -4,7 +4,6 @@ import { DomainError } from './errors'
 
 /**
  * Formats an A1C value as a percent string (e.g., "7.2%").
- * Used for analytics output and display.
  * @param val - A1C value (percentage)
  * @returns A1C as string with percent sign
  */
@@ -13,8 +12,7 @@ export function formatA1C(val: number): string {
 }
 
 /**
- * Validates an A1C value (percentage).
- * Ensures value is within the library's plausible analytics range.
+ * Returns whether a value is finite and greater than 0 but less than 20.
  * @param value - Candidate A1C value
  * @returns True if value is a valid A1C percentage
  */

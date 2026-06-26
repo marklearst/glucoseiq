@@ -142,8 +142,8 @@ export function calculateTIR(
 }
 
 /**
- * Generates a text summary from a TIRResult object.
- * Used for reporting and visualization of TIR analytics.
+ * Formats the in-range, below-range, and above-range percentages in a
+ * TIRResult.
  * @param result - TIR result breakdown to summarize
  * @returns String summarizing in-range, below-range, and above-range percentages (e.g., 'In Range: 70%, Below: 10%, Above: 20%')
  */
@@ -168,8 +168,8 @@ export function groupByDay(
 }
 
 /**
- * Calculates the percentage of glucose readings within a specified numeric range.
- * Used for TIR analytics and custom range assessments.
+ * Calculates the percentage of glucose readings within a specified numeric
+ * range.
  * @param readings - Array of glucose values (numbers) to analyze
  * @param lower - Lower bound of the target range (inclusive)
  * @param upper - Upper bound of the target range (inclusive)

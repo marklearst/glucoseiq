@@ -18,11 +18,11 @@ also returns an empty array after validating both mapped columns. Quoted
 fields and doubled quotes are supported, but physical newlines inside a
 quoted field are not.
 
-**Returns** — Parsed readings (rows with an unparseable value or timestamp are skipped)
+**Returns:** Parsed readings (rows with an unparseable value or timestamp are skipped)
 
-**Throws** — If the delimiter is invalid
+**Throws:** If the delimiter is invalid
 
-**Throws** — If a named column is not present in the header
+**Throws:** If a named column is not present in the header
 
 ```ts typecheck
 import { parseGlucoseCSV } from '@glucoseiq/core'

@@ -386,7 +386,7 @@ function _calculateMAGEFromExcursions(
 
 /**
  * Calculate simple MAGE value for small datasets or as fallback.
- * Uses a more robust approach to find peaks and nadirs.
+ * Finds local peaks and nadirs before applying the excursion filter.
  */
 function _calculateSimpleMAGE(readings: number[], sd: number): number {
   /* c8 ignore start */
@@ -395,7 +395,7 @@ function _calculateSimpleMAGE(readings: number[], sd: number): number {
   }
   /* c8 ignore stop */
 
-  // Find all local peaks and nadirs using a more robust method
+  // Find local peaks and nadirs before applying the excursion filter.
   const turningPoints: TurningPoint[] = []
 
   // Use a sliding window approach to identify turning points

@@ -20,49 +20,42 @@ export const HOMA_IR_CUTOFFS = {
 
 /**
  * Hypoglycemia threshold (mg/dL).
- * Used for detecting low glucose events.
  * @see https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html
  */
 export const HYPO_THRESHOLD_MGDL = 70
 
 /**
  * Hyperglycemia threshold (mg/dL).
- * Used for detecting high glucose events.
  * @see https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html
  */
 export const HYPER_THRESHOLD_MGDL = 180
 
 /**
  * Hypoglycemia threshold (mmol/L).
- * Used for low glucose detection in international/metric contexts.
  * @see https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html
  */
 export const HYPO_THRESHOLD_MMOLL = 3.9
 
 /**
  * Hyperglycemia threshold (mmol/L).
- * Used for high glucose detection in international/metric contexts.
  * @see https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html
  */
 export const HYPER_THRESHOLD_MMOLL = 10
 
 /**
  * Multiplier for converting A1C to estimated average glucose (eAG).
- * Used in eAG calculation per CDC/ADA guidelines.
  * @see https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html
  */
 export const A1C_TO_EAG_MULTIPLIER = 28.7
 
 /**
  * Constant for converting A1C to estimated average glucose (eAG).
- * Used in eAG calculation per CDC/ADA guidelines.
  * @see https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html
  */
 export const A1C_TO_EAG_CONSTANT = 46.7
 
 /**
  * GMI (Glucose Management Indicator) calculation coefficients.
- * Used for estimating GMI from average glucose values.
  * @see https://diatribe.org/glucose-management-indicator-gmi
  */
 export const GMI_COEFFICIENTS = {
@@ -82,14 +75,12 @@ export const GMI_COEFFICIENTS = {
 
 /**
  * Conversion factor between mg/dL and mmol/L.
- * Used for unit conversion.
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  */
 export const MGDL_MMOLL_CONVERSION = 18.0182
 
 /**
  * String literal for mg/dL glucose unit.
- * Used for data interoperability and formatting.
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  */
 export const MG_DL = 'mg/dL' as const

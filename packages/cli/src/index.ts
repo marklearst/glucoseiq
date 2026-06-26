@@ -1,10 +1,11 @@
 /**
- * @glucoseiq/cli — zero-code CGM analysis from the terminal.
+ * @glucoseiq/cli reads mapped CGM CSV files and prints a report or writes an
+ * AGP-style SVG.
  *
  *   npx @glucoseiq/cli report data.csv --timestamp-col Timestamp --value-col "Glucose Value (mg/dL)"
  *
- * The `run` function is the whole CLI (the bin is a two-line shim), so it is
- * fully unit-testable with injected IO.
+ * The `run` function accepts injected IO so tests can capture output. The bin
+ * delegates to that function.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs'

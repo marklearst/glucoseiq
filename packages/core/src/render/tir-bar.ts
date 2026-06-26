@@ -3,10 +3,8 @@
  *
  * Renders the Time-in-Range stacked bar (the vertical 5-zone bar from an AGP
  * report) as a self-contained SVG string. Zones are ordered high→low with
- * always-on percent labels, so severity is encoded by position and text — not
- * color alone.
- *
- * Pure and dependency-free.
+ * always-on percent labels. Position and text communicate severity without
+ * relying on color.
  *
  * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
  */

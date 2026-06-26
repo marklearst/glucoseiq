@@ -1475,8 +1475,7 @@ test('normalizes plain and multi-item see URLs into labeled Markdown links', () 
     ],
   })
   const page = renderApiModel(project([linked])).get('conversions.mdx')
-  assert.match(page, /\*\*See\*\*\n\n- \[Primary reference\]\(https:\/\/example\.com\/one\)\n- \[https:\/\/example\.com\/two\]\(https:\/\/example\.com\/two\)/)
-  assert.doesNotMatch(page, /\*\*See\*\* —\s*-/)
+  assert.match(page, /\*\*See:\*\*\n\n- \[Primary reference\]\(https:\/\/example\.com\/one\)\n- \[https:\/\/example\.com\/two\]\(https:\/\/example\.com\/two\)/)
 })
 
 test('escapes hostile see labels and encodes URL metacharacters without double escaping', () => {
@@ -1513,7 +1512,7 @@ test('escapes hostile see labels and encodes URL metacharacters without double e
   )
   assert.match(
     page,
-    /\*\*See\*\* — \[&lt;Widget&gt;&#123;danger&#125;&lt;\/Widget&gt;\]\(https:\/\/example\.com\/%7Bvalue%7D%3Cdraft%3E\)/,
+    /\*\*See:\*\* \[&lt;Widget&gt;&#123;danger&#125;&lt;\/Widget&gt;\]\(https:\/\/example\.com\/%7Bvalue%7D%3Cdraft%3E\)/,
   )
   assert.doesNotMatch(page, /&amp;(?:lt|gt|#123|#125);/u)
 })
@@ -1656,10 +1655,10 @@ test('renders deterministic complete pages with generic interfaces, overloads, r
   assert.match(functionPage, /normalizeReading\(value: number\): OMHDataPoint/)
   assert.match(functionPage, /normalizeReading\(value: string\): OMHDataPoint/)
   assert.match(functionPage, /Normalizes &lt;unsafe&gt; &#123;input&#125;\./)
-  assert.match(functionPage, /\*\*Remarks\*\* — Validate values before clinical use\./)
-  assert.match(functionPage, /\*\*Deprecated\*\* — Use the typed overload\./)
-  assert.match(functionPage, /\*\*Returns\*\* — A normalized reading\./)
-  assert.match(functionPage, /\*\*Throws\*\* — When the value is invalid\./)
+  assert.match(functionPage, /\*\*Remarks:\*\* Validate values before clinical use\./)
+  assert.match(functionPage, /\*\*Deprecated:\*\* Use the typed overload\./)
+  assert.match(functionPage, /\*\*Returns:\*\* A normalized reading\./)
+  assert.match(functionPage, /\*\*Throws:\*\* When the value is invalid\./)
   assert.match(functionPage, /```ts typecheck\nnormalizeReading\(100\)\n```/)
   assert.match(functionPage, /\[Clinical guide\]\(https:\/\/example\.com\/guide\)/)
   assert.doesNotMatch(functionPage, /deadbeef|github\.com\/example\/blob/)
@@ -3039,7 +3038,7 @@ test('the real TypeDoc model is warning-free, schema 2.0, and renderable', () =>
       /\]\(\/docs\/api\/core\/[^)#\s]+#[^)\s]+\)/gu,
     ) ?? []
     assert.equal(renderedInternalLinks.length, countNumericInlineTagTargets(model))
-    assert.doesNotMatch(renderedMdx, /\*\*See\*\*\s*—\s*https?:\/\//u)
+    assert.doesNotMatch(renderedMdx, /\*\*See:\*\*\s*https?:\/\//u)
     assert.doesNotMatch(renderedMdx, /^\s*-\s+https?:\/\//mu)
     const renderedHeadings = [...files]
       .filter(([path]) => path.endsWith('.mdx') && path !== 'index.mdx')

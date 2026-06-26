@@ -22,10 +22,11 @@ export function isEstimateGMIOptions(
 }
 
 /**
- * Validates a glucose string (e.g., "100 mg/dL", "5.5 mmol/L").
- * Requires a positive finite value and a supported unit.
- * @param input - Value to check as a clinical glucose string.
- * @returns True if input is a valid glucose string for clinical use.
+ * Returns whether a string contains a positive finite number followed by one
+ * of the two supported glucose units. It checks only the declared string
+ * format and the positive, finite numeric bound.
+ * @param input - Value to check
+ * @returns True when input matches the supported glucose string format
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  */
 export function isValidGlucoseString(input: unknown): input is string {

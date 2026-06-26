@@ -1,7 +1,7 @@
 /**
  * @file src/connectors/types.ts
  *
- * Canonical types for CGM vendor data normalization.
+ * Shared types for CGM vendor data normalization.
  * All connector adapters map vendor-specific payloads into these types,
  * which are compatible with the existing GlucoseReading interface.
  */
@@ -42,7 +42,7 @@ export interface NormalizedCGMReading extends GlucoseReading {
   readonly vendorId?: string
   /** Unit the vendor natively reported, when it differs from `unit`. */
   readonly nativeUnit?: GlucoseUnit
-  /** Deterministic key for cross-poll de-duplication. */
+  /** Source-qualified key used to de-duplicate records across polls. */
   readonly dedupKey?: string
 }
 

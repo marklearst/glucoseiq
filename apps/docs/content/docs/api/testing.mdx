@@ -1,16 +1,16 @@
 ---
 title: Testing API
-description: Public generator options and deterministic scenarios exported by @glucoseiq/testing.
+description: Public generator options and repeatable scenarios exported by @glucoseiq/testing.
 ---
 
-`@glucoseiq/testing` exports a deterministic generator and four named scenario
+`@glucoseiq/testing` exports a seeded generator and four named scenario
 factories. Its output satisfies the core `GlucoseReading` shape. Use it in
 software tests, demos, stories, screenshots, and documentation.
 
 ## `generateCGMSeries`
 
-The generator returns chronological readings. Identical complete options,
-including the seed, produce identical output.
+The generator returns chronological readings. The same options and seed produce
+the same output.
 
 | Option | Type | Default | Validation |
 | --- | --- | --- | --- |
@@ -43,7 +43,7 @@ const first = generateCGMSeries(options)
 const second = generateCGMSeries(options)
 
 if (JSON.stringify(first) !== JSON.stringify(second)) {
-  throw new Error('Expected deterministic fixture output')
+  throw new Error('Expected repeatable fixture output')
 }
 ```
 

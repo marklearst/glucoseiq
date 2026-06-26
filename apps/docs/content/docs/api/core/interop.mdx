@@ -17,7 +17,7 @@ Includes TIR percentages for each range, mean glucose, and CV if provided.
 The output is a plain JSON object that can be serialized and POSTed to any
 FHIR-capable server.
 
-**Returns** — FHIR-aligned CGM summary observation
+**Returns:** FHIR-aligned CGM summary observation
 
 | Parameter | Description |
 | --- | --- |
@@ -38,7 +38,7 @@ buildFHIRSensorReading(reading: GlucoseReading): FHIRCGMSensorReading
 
 Converts a single GlucoseReading into a FHIR-aligned CGM sensor reading.
 
-**Returns** — FHIR-aligned sensor reading observation
+**Returns:** FHIR-aligned sensor reading observation
 
 | Parameter | Description |
 | --- | --- |
@@ -57,7 +57,7 @@ buildFHIRSensorReadings(readings: GlucoseReading[]): FHIRCGMSensorReading[]
 
 Converts an array of GlucoseReadings into FHIR-aligned sensor reading observations.
 
-**Returns** — Array of FHIR-aligned sensor reading observations
+**Returns:** Array of FHIR-aligned sensor reading observations
 
 | Parameter | Description |
 | --- | --- |
@@ -76,7 +76,7 @@ buildOMHBloodGlucose(reading: GlucoseReading): OMHBloodGlucose
 
 Converts a GlucoseReading into an Open mHealth blood-glucose body.
 
-**Returns** — OMH blood-glucose body
+**Returns:** OMH blood-glucose body
 
 | Parameter | Description |
 | --- | --- |
@@ -95,7 +95,7 @@ buildOMHBloodGlucoseList(readings: GlucoseReading[]): OMHBloodGlucose[]
 
 Converts an array of GlucoseReadings into Open mHealth blood-glucose bodies.
 
-**Returns** — Array of OMH blood-glucose bodies
+**Returns:** Array of OMH blood-glucose bodies
 
 | Parameter | Description |
 | --- | --- |
@@ -114,7 +114,7 @@ buildOMHDataPoint(reading: GlucoseReading, id: string): OMHDataPoint<OMHBloodGlu
 
 Wraps a GlucoseReading into a full Open mHealth DataPoint with header.
 
-**Returns** — Full OMH DataPoint with header and body
+**Returns:** Full OMH DataPoint with header and body
 
 | Parameter | Description |
 | --- | --- |

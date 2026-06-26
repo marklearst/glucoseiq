@@ -6,8 +6,6 @@
  * readings on a fixed grid. `alignToGrid` snaps readings to the nearest slot,
  * linearly interpolates slots inside small gaps (flagged `interpolated`), and
  * leaves genuine sensor gaps as holes rather than inventing data.
- *
- * Pure and dependency-free.
  */
 
 import type { GlucoseReading, GlucoseUnit } from './types'
@@ -148,7 +146,7 @@ export function alignToGrid(
         interpolated: true,
       })
     }
-    // Otherwise: a genuine gap — leave a hole.
+    // Leave a hole for a sensor gap beyond the interpolation window.
   }
   return grid
 }

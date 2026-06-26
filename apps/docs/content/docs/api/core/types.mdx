@@ -15,8 +15,8 @@ Single A1C reading (value and ISO date).
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `date` | `string` | — |
-| `value` | `number` | — |
+| `date` | `string` |  |
+| `value` | `number` |  |
 
 
 ---
@@ -146,7 +146,7 @@ Result of [buildAGPProfile](/docs/api/core/agp#buildagpprofile).
 | `readonly binMinutes` | `number` | Bin width used (minutes). |
 | `readonly bins` | `AGPProfileBin[]` | All time-of-day bins across the full day (always present, empty bins included). |
 | `readonly percentiles` | `number[]` | Percentiles computed (sanitized to \[0, 100]). |
-| `readonly timeZone` | `string` | IANA time zone used for bucketing. |
+| `readonly timeZone` | `string` | IANA time zone applied when bucketing readings. |
 | `readonly totalReadings` | `number` | Count of valid readings pooled into the profile. |
 | `readonly unit` | `GlucoseUnit` | Output unit of percentile values. |
 | `readonly valid` | `boolean` | `false` when no valid readings were available. |
@@ -260,17 +260,17 @@ Result of [analyzeGlucose](/docs/api/core/reports#analyzeglucose).
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly agpProfile` | `null \| AGPProfileResult` | — |
-| `readonly cv` | `number` | — |
-| `readonly dataSufficiency` | `DataSufficiency` | — |
-| `readonly episodes` | `null \| EpisodeResult` | — |
-| `readonly gmi` | `number` | — |
-| `readonly meanGlucose` | `number` | — |
-| `readonly risk` | `null \| RiskMetrics` | — |
-| `readonly sd` | `number` | — |
-| `readonly tightRange` | `null \| TITRResult` | — |
-| `readonly timeInRange` | `null \| EnhancedTIRResult` | — |
-| `readonly valid` | `boolean` | — |
+| `readonly agpProfile` | `null \| AGPProfileResult` |  |
+| `readonly cv` | `number` |  |
+| `readonly dataSufficiency` | `DataSufficiency` |  |
+| `readonly episodes` | `null \| EpisodeResult` |  |
+| `readonly gmi` | `number` |  |
+| `readonly meanGlucose` | `number` |  |
+| `readonly risk` | `null \| RiskMetrics` |  |
+| `readonly sd` | `number` |  |
+| `readonly tightRange` | `null \| TITRResult` |  |
+| `readonly timeInRange` | `null \| EnhancedTIRResult` |  |
+| `readonly valid` | `boolean` |  |
 
 
 ---
@@ -368,7 +368,7 @@ interface ConversionResult
 Result of glucose unit conversion.
 Provides converted value and new unit for interoperability.
 
-**See** — [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
+**See:** [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
 
 | Property | Type | Description |
 | --- | --- | --- |
@@ -429,8 +429,8 @@ Result of [splitDayNight](/docs/api/core/series#splitdaynight).
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly day` | `GlucoseReading[]` | — |
-| `readonly night` | `GlucoseReading[]` | — |
+| `readonly day` | `GlucoseReading[]` |  |
+| `readonly night` | `GlucoseReading[]` |  |
 
 
 ---
@@ -469,12 +469,12 @@ Distribution of a metric across a cohort.
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly max` | `number` | — |
-| `readonly mean` | `number` | — |
-| `readonly median` | `number` | — |
-| `readonly min` | `number` | — |
-| `readonly p25` | `number` | — |
-| `readonly p75` | `number` | — |
+| `readonly max` | `number` |  |
+| `readonly mean` | `number` |  |
+| `readonly median` | `number` |  |
+| `readonly min` | `number` |  |
+| `readonly p25` | `number` |  |
+| `readonly p75` | `number` |  |
 
 
 ---
@@ -487,8 +487,8 @@ interface EnhancedTIROptions
 
 **Import:** `@glucoseiq/core`
 
-Options for Enhanced TIR calculation.
-Allows customization for different population target sets and use cases.
+Options that select a population goal set or override Enhanced TIR
+thresholds.
 
 | Property | Type | Description |
 | --- | --- | --- |
@@ -512,7 +512,7 @@ interface EnhancedTIRResult
 Complete Enhanced Time-in-Range result.
 Provides a five-range glucose breakdown using the 2019 consensus thresholds.
 
-**See** — [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
 
 | Property | Type | Description |
 | --- | --- | --- |
@@ -561,9 +561,9 @@ Result of [detectEpisodes](/docs/api/core/episodes#detectepisodes).
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly hyperEvents` | `GlucoseEpisode[]` | — |
-| `readonly hypoEvents` | `GlucoseEpisode[]` | — |
-| `readonly summary` | `EpisodeSummary` | — |
+| `readonly hyperEvents` | `GlucoseEpisode[]` |  |
+| `readonly hypoEvents` | `GlucoseEpisode[]` |  |
+| `readonly summary` | `EpisodeSummary` |  |
 
 
 ---
@@ -580,12 +580,12 @@ Summary counts across timestamp-grouped episode candidates.
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly hyperCount` | `number` | — |
-| `readonly hyperLevel2Count` | `number` | — |
-| `readonly hypoCount` | `number` | — |
-| `readonly hypoLevel2Count` | `number` | — |
-| `readonly totalHyperMinutes` | `number` | — |
-| `readonly totalHypoMinutes` | `number` | — |
+| `readonly hyperCount` | `number` |  |
+| `readonly hyperLevel2Count` | `number` |  |
+| `readonly hypoCount` | `number` |  |
+| `readonly hypoLevel2Count` | `number` |  |
+| `readonly totalHyperMinutes` | `number` |  |
+| `readonly totalHypoMinutes` | `number` |  |
 
 
 ---
@@ -601,12 +601,12 @@ interface EstimateGMIOptions
 Options for GMI (Glucose Management Indicator) estimation.
 Used to standardize GMI calculation input.
 
-**See** — [https://diatribe.org/glucose-management-indicator-gmi](https://diatribe.org/glucose-management-indicator-gmi)
+**See:** [https://diatribe.org/glucose-management-indicator-gmi](https://diatribe.org/glucose-management-indicator-gmi)
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `unit` | `GlucoseUnit` | — |
-| `value` | `number` | — |
+| `unit` | `GlucoseUnit` |  |
+| `value` | `number` |  |
 
 
 ---
@@ -640,15 +640,15 @@ interface FHIRCGMSensorReading
 Lightweight FHIR-aligned CGM sensor reading.
 Follows the structure of the HL7 CGM IG sensor reading profile.
 
-**See** — [https://build.fhir.org/ig/HL7/cgm/StructureDefinition-cgm-sensor-reading-mass-per-volume.html](https://build.fhir.org/ig/HL7/cgm/StructureDefinition-cgm-sensor-reading-mass-per-volume.html)
+**See:** [https://build.fhir.org/ig/HL7/cgm/StructureDefinition-cgm-sensor-reading-mass-per-volume.html](https://build.fhir.org/ig/HL7/cgm/StructureDefinition-cgm-sensor-reading-mass-per-volume.html)
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly code` | `FHIRCodeableConcept` | — |
-| `readonly effectiveDateTime` | `string` | — |
-| `readonly resourceType` | `'Observation'` | — |
-| `readonly status` | `'final'` | — |
-| `readonly valueQuantity` | `FHIRQuantity` | — |
+| `readonly code` | `FHIRCodeableConcept` |  |
+| `readonly effectiveDateTime` | `string` |  |
+| `readonly resourceType` | `'Observation'` |  |
+| `readonly status` | `'final'` |  |
+| `readonly valueQuantity` | `FHIRQuantity` |  |
 
 
 ---
@@ -665,15 +665,15 @@ Lightweight FHIR-aligned CGM summary observation.
 Follows the structure of the HL7 CGM IG `CGMSummaryObservation` profile
 without requiring a full FHIR library.
 
-**See** — [https://build.fhir.org/ig/HL7/cgm/StructureDefinition-cgm-summary.html](https://build.fhir.org/ig/HL7/cgm/StructureDefinition-cgm-summary.html)
+**See:** [https://build.fhir.org/ig/HL7/cgm/StructureDefinition-cgm-summary.html](https://build.fhir.org/ig/HL7/cgm/StructureDefinition-cgm-summary.html)
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly code` | `FHIRCodeableConcept` | — |
-| `readonly component` | `readonly FHIRCGMComponent[]` | — |
-| `readonly effectivePeriod` | `{ readonly end: string; readonly start: string }` | — |
-| `readonly resourceType` | `'Observation'` | — |
-| `readonly status` | `'final'` | — |
+| `readonly code` | `FHIRCodeableConcept` |  |
+| `readonly component` | `readonly FHIRCGMComponent[]` |  |
+| `readonly effectivePeriod` | `{ readonly end: string; readonly start: string }` |  |
+| `readonly resourceType` | `'Observation'` |  |
+| `readonly status` | `'final'` |  |
 
 
 ---
@@ -688,7 +688,7 @@ interface FHIRCodeableConcept
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly coding` | `readonly FHIRCoding[]` | — |
+| `readonly coding` | `readonly FHIRCoding[]` |  |
 
 
 ---
@@ -703,9 +703,9 @@ interface FHIRCoding
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly code` | `string` | — |
-| `readonly display` | `string` | — |
-| `readonly system` | `string` | — |
+| `readonly code` | `string` |  |
+| `readonly display` | `string` |  |
+| `readonly system` | `string` |  |
 
 
 ---
@@ -720,10 +720,10 @@ interface FHIRQuantity
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly code` | `string` | — |
-| `readonly system` | `string` | — |
-| `readonly unit` | `string` | — |
-| `readonly value` | `number` | — |
+| `readonly code` | `string` |  |
+| `readonly system` | `string` |  |
+| `readonly unit` | `string` |  |
+| `readonly value` | `number` |  |
 
 
 ---
@@ -780,10 +780,10 @@ GRI result with numeric score and risk zone.
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly hyperComponent` | `number` | — |
-| `readonly hypoComponent` | `number` | — |
-| `readonly score` | `number` | — |
-| `readonly zone` | `'A' \| 'B' \| 'C' \| 'D' \| 'E'` | — |
+| `readonly hyperComponent` | `number` |  |
+| `readonly hypoComponent` | `number` |  |
+| `readonly score` | `number` |  |
+| `readonly zone` | `'A' \| 'B' \| 'C' \| 'D' \| 'E'` |  |
 
 
 ---
@@ -919,13 +919,13 @@ interface GlucoseReading
 Single glucose reading.
 Includes value, unit, and ISO 8601 timestamp for analytics.
 
-**See** — [https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7445493/](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7445493/)
+**See:** [https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7445493/](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7445493/)
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly timestamp` | `string` | — |
-| `readonly unit` | `GlucoseUnit` | — |
-| `readonly value` | `number` | — |
+| `readonly timestamp` | `string` |  |
+| `readonly unit` | `GlucoseUnit` |  |
+| `readonly value` | `number` |  |
 
 
 ---
@@ -943,20 +943,20 @@ Controls which metrics are calculated and reported.
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `a1c?` | `boolean` | — |
-| `gmi?` | `boolean` | — |
-| `range` | `[number, number]` | — |
-| `readings` | `GlucoseReading[]` | — |
-| `tir?` | `boolean` | — |
-| `tirPercent?` | `boolean` | — |
-| `tirPercentAbove?` | `boolean` | — |
-| `tirPercentAboveRounded?` | `boolean` | — |
-| `tirPercentBelow?` | `boolean` | — |
-| `tirPercentBelowRounded?` | `boolean` | — |
-| `tirPercentInRange?` | `boolean` | — |
-| `tirPercentInRangeRounded?` | `boolean` | — |
-| `tirRange?` | `[number, number]` | — |
-| `unit` | `GlucoseUnit` | — |
+| `a1c?` | `boolean` |  |
+| `gmi?` | `boolean` |  |
+| `range` | `[number, number]` |  |
+| `readings` | `GlucoseReading[]` |  |
+| `tir?` | `boolean` |  |
+| `tirPercent?` | `boolean` |  |
+| `tirPercentAbove?` | `boolean` |  |
+| `tirPercentAboveRounded?` | `boolean` |  |
+| `tirPercentBelow?` | `boolean` |  |
+| `tirPercentBelowRounded?` | `boolean` |  |
+| `tirPercentInRange?` | `boolean` |  |
+| `tirPercentInRangeRounded?` | `boolean` |  |
+| `tirRange?` | `[number, number]` |  |
+| `unit` | `GlucoseUnit` |  |
 
 
 ---
@@ -1052,9 +1052,9 @@ Result of [calculateIGC](/docs/api/core/variability#calculateigc).
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly hyperIndex` | `number` | — |
-| `readonly hypoIndex` | `number` | — |
-| `readonly igc` | `number` | — |
+| `readonly hyperIndex` | `number` |  |
+| `readonly hypoIndex` | `number` |  |
+| `readonly igc` | `number` |  |
 
 
 ---
@@ -1192,7 +1192,7 @@ interface NightscoutEntry
 Nightscout SGV (Sensor Glucose Value) entry.
 Matches the `/api/v1/entries` response shape.
 
-**See** — [https://nightscout.github.io/nightscout/setup_variables/#api](https://nightscout.github.io/nightscout/setup_variables/#api)
+**See:** [https://nightscout.github.io/nightscout/setup_variables/#api](https://nightscout.github.io/nightscout/setup_variables/#api)
 
 | Property | Type | Description |
 | --- | --- | --- |
@@ -1239,13 +1239,13 @@ subject to each API's unit, ordering, and sufficiency contract.
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly dedupKey?` | `string` | Deterministic key for cross-poll de-duplication. |
+| `readonly dedupKey?` | `string` | Source-qualified key used to de-duplicate records across polls. |
 | `readonly nativeUnit?` | `GlucoseUnit` | Unit the vendor natively reported, when it differs from `unit`. |
 | `readonly source` | `CGMSource` | Data source vendor |
-| `readonly timestamp` | `string` | — |
+| `readonly timestamp` | `string` |  |
 | `readonly trend` | `CGMTrend` | Trend direction from the CGM device |
-| `readonly unit` | `GlucoseUnit` | — |
-| `readonly value` | `number` | — |
+| `readonly unit` | `GlucoseUnit` |  |
+| `readonly value` | `number` |  |
 | `readonly vendorId?` | `string` | Original vendor-specific identifier, if available |
 
 
@@ -1261,13 +1261,13 @@ interface OMHBloodGlucose
 
 Open mHealth blood-glucose datapoint body.
 
-**See** — [https://www.openmhealth.org/documentation/schema-docs/schema-library/](https://www.openmhealth.org/documentation/schema-docs/schema-library/)
+**See:** [https://www.openmhealth.org/documentation/schema-docs/schema-library/](https://www.openmhealth.org/documentation/schema-docs/schema-library/)
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly blood_glucose` | `{ readonly unit: GlucoseUnit; readonly value: number }` | — |
-| `readonly effective_time_frame` | `{ readonly date_time: string }` | — |
-| `readonly specimen_source` | `'interstitial fluid' \| 'capillary blood' \| 'plasma'` | — |
+| `readonly blood_glucose` | `{ readonly unit: GlucoseUnit; readonly value: number }` |  |
+| `readonly effective_time_frame` | `{ readonly date_time: string }` |  |
+| `readonly specimen_source` | `'interstitial fluid' \| 'capillary blood' \| 'plasma'` |  |
 
 
 ---
@@ -1284,8 +1284,8 @@ Wrapped OMH datapoint with header metadata.
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly body` | `T` | — |
-| `readonly header` | `{ readonly creation_date_time: string; readonly id: string; readonly schema_id: { readonly name: string; readonly namespace: string; readonly version: string } }` | — |
+| `readonly body` | `T` |  |
+| `readonly header` | `{ readonly creation_date_time: string; readonly id: string; readonly schema_id: { readonly name: string; readonly namespace: string; readonly version: string } }` |  |
 
 
 ---
@@ -1318,7 +1318,7 @@ interface PregnancyTIRResult
 Pregnancy-specific Time-in-Range result.
 Uses tighter target range per ADA 2024 guidelines for pregnancy.
 
-**See** — [ADA Standards of Care (2024)](https://diabetesjournals.org/care/article/47/Supplement_1/S282)
+**See:** [ADA Standards of Care (2024)](https://diabetesjournals.org/care/article/47/Supplement_1/S282)
 
 | Property | Type | Description |
 | --- | --- | --- |
@@ -1366,14 +1366,14 @@ Risk-metric block of an [AnalyzeGlucoseResult](/docs/api/core/types#analyzegluco
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly adrr` | `number` | — |
-| `readonly conga` | `number` | — |
-| `readonly grade` | `GRADEResult` | — |
-| `readonly gri` | `GRIResult` | — |
-| `readonly hbgi` | `number` | — |
-| `readonly jIndex` | `number` | — |
-| `readonly lbgi` | `number` | — |
-| `readonly modd` | `number` | — |
+| `readonly adrr` | `number` |  |
+| `readonly conga` | `number` |  |
+| `readonly grade` | `GRADEResult` |  |
+| `readonly gri` | `GRIResult` |  |
+| `readonly hbgi` | `number` |  |
+| `readonly jIndex` | `number` |  |
+| `readonly lbgi` | `number` |  |
+| `readonly modd` | `number` |  |
 
 
 ---
@@ -1427,9 +1427,9 @@ Options for Time-in-Range (TIR) analytics.
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `range` | `[number, number]` | — |
-| `readings` | `GlucoseReading[]` | — |
-| `unit` | `GlucoseUnit` | — |
+| `range` | `[number, number]` |  |
+| `readings` | `GlucoseReading[]` |  |
+| `unit` | `GlucoseUnit` |  |
 
 
 ---
@@ -1445,13 +1445,13 @@ interface TIRResult
 Result object for Time-in-Range (TIR) analytics.
 Percentages for in-range, below-range, and above-range readings.
 
-**See** — [https://care.diabetesjournals.org/content/42/8/1593](https://care.diabetesjournals.org/content/42/8/1593)
+**See:** [https://care.diabetesjournals.org/content/42/8/1593](https://care.diabetesjournals.org/content/42/8/1593)
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `aboveRange` | `number` | — |
-| `belowRange` | `number` | — |
-| `inRange` | `number` | — |
+| `aboveRange` | `number` |  |
+| `belowRange` | `number` |  |
+| `inRange` | `number` |  |
 
 
 ---
@@ -1528,7 +1528,7 @@ Assessment of raw TIR percentages against population goals.
 Custom range thresholds retain the percentage goals but are explicitly
 marked as configured rather than consensus ranges.
 
-**See** — [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
 
 | Property | Type | Description |
 | --- | --- | --- |
@@ -1587,7 +1587,7 @@ type CGMTrend = 'rapidRising' | 'rising' | 'slightlyRising' | 'flat' | 'slightly
 Trend direction reported by CGM devices.
 Normalized across vendors into a common set.
 
-**See**
+**See:**
 
 - Dexcom: DoubleUp, SingleUp, FortyFiveUp, Flat, FortyFiveDown, SingleDown, DoubleDown
 - Libre: 1-5 numeric scale
@@ -1655,10 +1655,9 @@ type GlucoseUnit = typeof MG_DL | typeof MMOL_L
 
 **Import:** `@glucoseiq/core`
 
-Supported glucose units.
-Used for analytics and conversions.
+Supported glucose units for analytics and conversions.
 
-**See** — [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
+**See:** [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
 
 
 ---
@@ -1728,7 +1727,7 @@ type TIRPopulation = 'standard' | 'older-adults' | 'high-risk'
 Population type for TIR target assessment.
 Different populations use different published target sets.
 
-**See** — [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
 
 
 ---

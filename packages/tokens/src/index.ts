@@ -1,13 +1,11 @@
 /**
- * @glucoseiq/tokens — the canonical GlucoseIQ design tokens.
+ * @glucoseiq/tokens exports shared design tokens for GlucoseIQ surfaces.
  *
- * One glucose-zone model (per the 2019 international consensus), one palette
- * (dark-first; always pair color with a label or position), one trend-glyph
- * set. These shared values support consistent web, watch, native, and
- * zero-dependency SVG-renderer surfaces; each host still translates and
- * integrates them for its own runtime.
+ * The package includes consensus glucose-zone definitions, color palettes,
+ * trend glyphs, and CSS custom properties. Each host chooses how to translate
+ * and apply the values in its runtime. Pair color with a label or position.
  *
- * Zero runtime dependencies.
+ * The package has no runtime dependencies.
  */
 
 /** The five consensus glucose zones. */

@@ -1,9 +1,8 @@
 /**
  * @file src/connectors/libre.ts
  *
- * Pure transformation adapter for Libre LinkUp API payloads.
- * Maps raw Libre entries into NormalizedCGMReading objects.
- * Does NOT handle authentication — use with any Libre LinkUp client library.
+ * Converts Libre LinkUp API payloads to NormalizedCGMReading values.
+ * A Libre LinkUp client must authenticate and fetch the payloads.
  *
  * @see https://www.npmjs.com/package/librelinkup-api-client
  * @see https://www.npmjs.com/package/libre-client
@@ -38,7 +37,7 @@ function resolveLibreUnit(flag: unknown): typeof MG_DL | typeof MMOL_L {
 }
 
 /**
- * Normalizes a Libre LinkUp numeric trend value into a canonical CGMTrend.
+ * Maps a Libre LinkUp numeric trend value to the shared `CGMTrend` values.
  *
  * Accepts the raw API value (which may be null/undefined or out of range)
  * and returns 'unknown' for any invalid or unmapped values.

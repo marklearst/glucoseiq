@@ -12,7 +12,7 @@
  *   HyperIdx = (1 / (n·c)) · Σ_{G > ULTR} (G − ULTR)^a     (ULTR 140, a 1.1, c 30)
  *   IGC      = HypoIdx + HyperIdx
  *
- * Pure and dependency-free. Values are computed in mg/dL.
+ * The calculation uses mg/dL.
  *
  * @see https://doi.org/10.1089/dia.2008.0132  Rodbard (2009) + erratum (PMC5910039)
  */

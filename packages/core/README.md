@@ -29,14 +29,14 @@ if (report.valid) console.log(report.meanGlucose)
 
 ## Public entrypoints
 
-- `@glucoseiq/core` — reports, time-in-range, conversions, series, live state,
+- `@glucoseiq/core`: reports, time-in-range, conversions, series, live state,
   errors, and shared types.
-- `@glucoseiq/core/metrics` — focused variability, risk, curve, episode, and
+- `@glucoseiq/core/metrics`: focused variability, risk, curve, episode, and
   profile calculations.
-- `@glucoseiq/core/connectors` — typed Dexcom, Libre, and Nightscout payload
+- `@glucoseiq/core/connectors`: typed Dexcom, Libre, and Nightscout payload
   normalization.
-- `@glucoseiq/core/interop` — FHIR CGM and Open mHealth transforms.
-- `@glucoseiq/core/render` — dependency-free AGP, TIR, and trend SVG strings.
+- `@glucoseiq/core/interop`: FHIR CGM and Open mHealth transforms.
+- `@glucoseiq/core/render`: dependency-free AGP, TIR, and trend SVG strings.
 
 ## Data and units
 

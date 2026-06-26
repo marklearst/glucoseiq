@@ -1,9 +1,8 @@
 /**
  * @file src/connectors/dexcom.ts
  *
- * Pure transformation adapter for Dexcom Share API payloads.
- * Maps raw Dexcom entries into NormalizedCGMReading objects.
- * Does NOT handle authentication — use with any Dexcom Share client library.
+ * Converts Dexcom Share API payloads to NormalizedCGMReading values.
+ * A Dexcom Share client must authenticate and fetch the payloads.
  *
  * @see https://github.com/brettfarrow/cgm.js
  * @see https://www.npmjs.com/package/@diakem/dexcom-api-client
@@ -72,7 +71,7 @@ export function parseDexcomDate(raw: string): string {
 }
 
 /**
- * Normalizes a Dexcom Share trend string into a canonical CGMTrend.
+ * Maps a Dexcom Share trend string to the shared `CGMTrend` values.
  */
 export function normalizeDexcomTrend(
   trend: DexcomTrendString | (string & {}) | null | undefined
