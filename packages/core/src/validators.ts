@@ -1,11 +1,10 @@
 // @file src/validators.ts
 
 /**
- * Validates a clinical fasting insulin value (µIU/mL).
- * Ensures value is a positive finite number and within plausible physiological range.
+ * Returns whether a value is finite and greater than 0 but less than
+ * 1000 µIU/mL. This is an input bound, not a reference interval.
  * @param value - Candidate insulin value
- * @returns True if value is a valid fasting insulin (µIU/mL)
- * @see https://www.ncbi.nlm.nih.gov/books/NBK279396/ (normal fasting insulin: ~2-25 µIU/mL, but allow wider plausible range for outliers)
+ * @returns True when the value satisfies the input bound
  */
 export function isValidInsulin(value: unknown): value is number {
   return (

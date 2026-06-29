@@ -1,7 +1,7 @@
 /**
  * @file src/connectors/types.ts
  *
- * Canonical types for CGM vendor data normalization.
+ * Shared types for CGM vendor data normalization.
  * All connector adapters map vendor-specific payloads into these types,
  * which are compatible with the existing GlucoseReading interface.
  */
@@ -30,7 +30,8 @@ export type CGMSource = 'dexcom' | 'libre' | 'nightscout' | 'unknown'
 
 /**
  * Extended glucose reading that preserves vendor metadata.
- * Superset of GlucoseReading — can be passed directly to all analytics functions.
+ * A `GlucoseReading` superset usable by APIs that accept reading objects,
+ * subject to each API's unit, ordering, and sufficiency contract.
  */
 export interface NormalizedCGMReading extends GlucoseReading {
   /** Trend direction from the CGM device */
@@ -41,7 +42,7 @@ export interface NormalizedCGMReading extends GlucoseReading {
   readonly vendorId?: string
   /** Unit the vendor natively reported, when it differs from `unit`. */
   readonly nativeUnit?: GlucoseUnit
-  /** Deterministic key for cross-poll de-duplication. */
+  /** Source-qualified key used to de-duplicate records across polls. */
   readonly dedupKey?: string
 }
 

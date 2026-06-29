@@ -49,8 +49,27 @@ describe('glucoseIQScore', () => {
       { value: 40, unit: 'mmol/L', timestamp: '2024-01-01T08:25:00Z' }, // ~720 mg/dL, out of range
       { value: 6.0, unit: 'mmol/L', timestamp: 'bad-timestamp' },
     ]
-    const res = glucoseIQScore(readings, { unit: 'mmol/L' })
+    const res = glucoseIQScore(readings)
     expect(res.valid).toBe(true)
     expect(res.score).toBe(100)
+  })
+
+  it('screens unsupported units consistently', () => {
+    const unsupported: GlucoseReading = {
+      value: 5,
+      unit: 'grams' as never,
+      timestamp: '2024-01-01T08:00:00Z',
+    }
+    const valid: GlucoseReading = {
+      value: 120,
+      unit: 'mg/dL',
+      timestamp: '2024-01-01T08:05:00Z',
+    }
+
+    expect(glucoseIQScore([unsupported]).valid).toBe(false)
+
+    const mixed = glucoseIQScore([unsupported, valid])
+    expect(mixed.valid).toBe(true)
+    expect(mixed.score).toBe(100)
   })
 })

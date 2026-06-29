@@ -1,10 +1,10 @@
 /**
  * @file src/components.tsx
  *
- * Headless chart components — thin React wrappers around the zero-dependency
- * SVG-string renderers in @glucoseiq/core. Each renders a wrapper element with
- * the chart SVG inlined; style it like any element (className/style pass
- * through). No chart library, no client-side layout work, SSR/RSC-friendly.
+ * These headless chart components wrap the SVG-string renderers in
+ * @glucoseiq/core. Each component inlines the chart SVG inside a wrapper
+ * element and passes through className and style. The components do not use a
+ * chart library or measure client-side layout.
  */
 
 import { useMemo, type CSSProperties, type JSX } from 'react'
@@ -35,7 +35,7 @@ function SvgBox(props: {
       className={props.className}
       style={props.style}
       // The SVG is produced by @glucoseiq/core from numeric data with
-      // XML-escaped text — safe to inline.
+      // The core renderer XML-escapes text before React inlines the SVG.
       dangerouslySetInnerHTML={{ __html: props.svg }}
     />
   )
@@ -59,7 +59,7 @@ export function TirBar(props: ChartBaseProps & { options?: TIRBarOptions }): JSX
   return <SvgBox svg={svg} className={props.className} style={props.style} />
 }
 
-/** The glanceable current-glucose tile (value, trend arrow, zone). */
+/** A current-glucose tile with a value, trend arrow, and zone label. */
 export function TrendTile(props: ChartBaseProps & { options?: TrendTileOptions }): JSX.Element {
   const svg = useMemo(
     () => trendTileToSVG(props.readings, props.options),

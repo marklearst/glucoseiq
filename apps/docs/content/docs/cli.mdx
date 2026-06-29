@@ -3,8 +3,8 @@ title: CLI
 description: Zero-code CGM analysis with npx @glucoseiq/cli.
 ---
 
-Point the CLI at any CGM CSV export — Dexcom Clarity, LibreView, Nightscout,
-Tidepool — and get a clinician-grade report with no code:
+Point the CLI at header-row delimited data, map its timestamp and glucose-value
+columns, and get a CGM analytics summary with no application code:
 
 ```bash
 npx @glucoseiq/cli report data.csv
@@ -22,7 +22,7 @@ Below range     2.1% low · 0.4% very low
 Above range     13.8% high · 1.3% very high
 Episodes        3 hypo · 11 hyper
 ────────────────────────────────
-Informational only — not medical advice.
+Informational only. Not medical advice.
 ```
 
 ## Options
@@ -38,9 +38,33 @@ npx @glucoseiq/cli report clarity.csv \
 
 | Flag | Meaning |
 | --- | --- |
-| `--timestamp-col`, `--value-col` | CSV column names |
+| `--timestamp-col`, `--value-col` | Exact CSV column names (defaults: `Timestamp` and `Glucose Value (mg/dL)`) |
 | `--unit` | `mg/dL` (default) or `mmol/L` |
 | `--delimiter` | Field delimiter (default `,`) |
-| `--timezone` | IANA zone for the AGP profile |
-| `--json` | Full report as JSON |
+| `--timezone` | IANA zone for the AGP profile (default `UTC`) |
+| `--json` | Emit `{ report, glucoseIQ }` as JSON |
 | `--agp-svg <file>` | Also write the AGP chart as a self-contained SVG |
+| `--help` | Show usage and return exit code 0 |
+
+The input must begin with a header row containing the two exact column names
+you map. Blank lines are ignored. A header-only document returns no readings
+after both mapped columns are validated, so the CLI returns 1 with `No valid
+readings found in the file.` Missing mapped columns make the underlying core
+parser throw `ParseError` with `CSV_COLUMN_NOT_FOUND`; the CLI catches it,
+returns 1, and writes its sanitized message to standard error. Data rows with
+a non-positive or non-finite value, or an unparseable timestamp, are skipped.
+
+The delimiter defaults to a comma and must be exactly one UTF-16 code unit
+other than double quote, NUL, carriage return, or line feed. An invalid CLI
+delimiter returns exit code 1 and writes `Invalid delimiter: expected exactly
+one character other than double quote, NUL, CR, or LF.` to standard error.
+Quoted fields and doubled quotes are supported within one physical line. A
+quoted field may not contain a physical newline.
+
+Successful reports and explicit `--help` return exit code 0. Calling the CLI
+without arguments prints help to standard output, returns 1, and leaves
+standard error empty. Other invalid arguments, read failures, invalid or empty
+data, and SVG write failures return 1 with one sanitized standard-error line.
+JSON mode serializes non-finite numbers as `null`. When JSON and `--agp-svg`
+are combined, the file is still written but the human SVG-success line is
+suppressed so standard output remains valid JSON.

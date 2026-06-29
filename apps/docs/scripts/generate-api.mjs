@@ -1,237 +1,452 @@
-// Generates the API Reference MDX from @glucoseiq/core's TSDoc.
-//   node scripts/generate-api.mjs
-// Runs typedoc to produce a JSON model, then emits categorized MDX pages.
-import { execSync } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
-const __dir = dirname(fileURLToPath(import.meta.url))
-const core = join(__dir, '../../../packages/core')
-const jsonPath = join(__dir, 'api-model.json')
-execSync(`./node_modules/.bin/typedoc src/index.ts --json ${jsonPath} --skipErrorChecking --excludeInternal`, { cwd: core, stdio: 'inherit' })
-process.argv[2] = process.argv[2] || join(__dir, '../content/docs/api')
-process.env.GIQ_API_JSON = jsonPath
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import {
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import { createRequire } from 'node:module'
+import { tmpdir } from 'node:os'
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
-const model = JSON.parse(readFileSync(process.env.GIQ_API_JSON, 'utf8'))
-const OUT = process.argv[2]
-mkdirSync(OUT, { recursive: true })
+import { renderApiModel } from './lib/api-renderer.mjs'
+import { compareUnicodeScalars } from './lib/unicode-scalar-compare.mjs'
 
-function writePage(path, content) {
-  writeFileSync(path, `${content.trimEnd()}\n`)
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
+const DOCS_DIR = resolve(SCRIPT_DIR, '..')
+const DEFAULT_CONFIG_PATH = join(DOCS_DIR, 'typedoc.api.json')
+const DEFAULT_OUTPUT_DIR = join(DOCS_DIR, 'content/docs/api/core')
+export const API_TEMP_PREFIX = `glucoseiq-api-${process.pid}-`
+
+function normalizedRelativePath(value) {
+  return value.split(sep).join('/')
 }
 
-// ---- category mapping (by source file) -------------------------------------
-const CATS = [
-  { slug: 'reports', title: 'Reports', match: (f) => /(^|\/)analyze\.ts$/.test(f), blurb: 'One-call clinical reports composed from the whole engine.' },
-  { slug: 'agp', title: 'AGP & Metrics Aggregate', match: (f) => /(^|\/)metrics\/agp(-profile)?\.ts$/.test(f), blurb: 'The Ambulatory Glucose Profile series and the all-in-one metrics call.' },
-  { slug: 'time-in-range', title: 'Time in Range', match: (f) => /(^|\/)tir(-enhanced)?\.ts$/.test(f), blurb: 'Enhanced 5-range TIR, pregnancy TIR, and Time in Tight Range.' },
-  { slug: 'score', title: 'Glucose IQ Score', match: (f) => /(^|\/)score\.ts$/.test(f), blurb: 'A single 0–100 wellness score derived from the peer-reviewed GRI.' },
-  { slug: 'variability', title: 'Variability & Risk Metrics', match: (f) => /(variability|mage|bgi|adrr|grade|gri|jindex|modd|conga|active-percent|m-value|igc|gvi-pgs|curve)\.ts$/.test(f), blurb: 'Cited variability and risk indices — every formula golden-tested.' },
-  { slug: 'meals', title: 'Meals & AUC', match: (f) => /(^|\/)metrics\/(meal|auc)\.ts$/.test(f), blurb: 'Postprandial meal response and area-under-the-curve.' },
-  { slug: 'episodes', title: 'Episodes', match: (f) => /(^|\/)metrics\/episodes\.ts$/.test(f), blurb: 'Consensus ≥15-minute hypo/hyper event detection.' },
-  { slug: 'live', title: 'Live Model', match: (f) => /(^|\/)live\.ts$/.test(f), blurb: 'Rate-of-change, trend derivation, and sensor staleness.' },
-  { slug: 'series', title: 'Time-Series Primitives', match: (f) => /(^|\/)(timeseries|align)\.ts$/.test(f), blurb: 'Gap detection, day/night split, and uniform-grid resampling.' },
-  { slug: 'cohort', title: 'Cohort', match: (f) => /(^|\/)cohort\.ts$/.test(f), blurb: 'Population metric distributions across many patients.' },
-  { slug: 'render', title: 'Rendering (SVG)', match: (f) => /(^|\/)render\//.test(f), blurb: 'Zero-dependency SVG-string renderers for any surface.' },
-  { slug: 'connectors', title: 'Connectors', match: (f) => /(^|\/)connectors\//.test(f), blurb: 'Dexcom, Libre, and Nightscout normalization, capabilities, and safe variants.' },
-  { slug: 'ingestion', title: 'Ingestion', match: (f) => /(^|\/)csv\.ts$/.test(f), blurb: 'Parse any Dexcom/Libre/Nightscout/Tidepool CSV export.' },
-  { slug: 'interop', title: 'Interoperability', match: (f) => /(^|\/)interop\//.test(f), blurb: 'FHIR CGM IG and Open mHealth payload builders.' },
-  { slug: 'conversions', title: 'Conversions, A1C & GMI', match: (f) => /(^|\/)(conversions|a1c)\.ts$/.test(f), blurb: 'Unit conversions and A1C / eAG / GMI estimation.' },
-  { slug: 'glucose', title: 'Glucose Values & Formatting', match: (f) => /(^|\/)(glucose|validators|guards|formatters|alignment)\.ts$/.test(f), blurb: 'Labeling, validation, parsing, and formatting helpers.' },
-  { slug: 'errors', title: 'Errors', match: (f) => /\/errors\.ts$/.test(f), blurb: 'Typed error classes with stable codes.' },
-]
-const OTHER = { slug: 'other', title: 'Other', match: () => true, blurb: '' }
-
-// ---- comment/type helpers --------------------------------------------------
-function parts(arr) {
-  if (!arr) return ''
-  return arr.map((p) => (p.kind === 'inline-tag' ? (p.text || p.target?.name || '') : p.text || '')).join('')
-}
-function esc(s) {
-  return String(s).replace(/</g, '&lt;').replace(/\{/g, '&#123;').replace(/\}/g, '&#125;')
-}
-function typeStr(t) {
-  if (!t) return 'void'
-  switch (t.type) {
-    case 'intrinsic': return t.name
-    case 'literal': return JSON.stringify(t.value)
-    case 'reference': return t.name + (t.typeArguments?.length ? `<${t.typeArguments.map(typeStr).join(', ')}>` : '')
-    case 'array': return `${typeStr(t.elementType)}[]`
-    case 'union': return t.types.map(typeStr).join(' | ')
-    case 'intersection': return t.types.map(typeStr).join(' & ')
-    case 'tuple': return `[${(t.elements || []).map(typeStr).join(', ')}]`
-    case 'reflection': return t.declaration?.signatures ? 'function' : '{ … }'
-    case 'indexedAccess': return `${typeStr(t.objectType)}[${typeStr(t.indexType)}]`
-    case 'intrinsic': return t.name
-    default: return t.name || 'unknown'
+function safeOutputPath(root, relativePath) {
+  if (
+    typeof relativePath !== 'string' ||
+    relativePath.length === 0 ||
+    isAbsolute(relativePath) ||
+    relativePath.includes('\\')
+  ) {
+    throw new Error(`Invalid generated API path: ${String(relativePath)}`)
   }
-}
-
-function tableCell(value) {
-  const rendered = esc(value || '').replace(/\|/g, '\\|').replace(/\n/g, ' ').trim()
-  return rendered || '—'
-}
-function sigString(name, sig) {
-  const ps = (sig.parameters || []).map((p) => {
-    const opt = p.flags?.isOptional || p.defaultValue !== undefined ? '?' : ''
-    return `${p.name}${opt}: ${typeStr(p.type)}`
-  })
-  return `${name}(${ps.join(', ')}): ${typeStr(sig.type)}`
-}
-
-// ---- collect public reflections --------------------------------------------
-const reflections = []
-function walk(n) {
-  if ([32, 64, 128, 256, 2097152].includes(n.kind)) reflections.push(n)
-  ;(n.children || []).forEach(walk)
-}
-walk(model)
-
-const fns = reflections.filter((n) => n.kind === 64 && n.signatures)
-const variables = reflections.filter((n) => n.kind === 32)
-const classes = reflections.filter((n) => n.kind === 128)
-const interfaces = reflections.filter((n) => n.kind === 256)
-const aliases = reflections.filter((n) => n.kind === 2097152)
-
-function catFor(fn) {
-  const file = fn.sources?.[0]?.fileName || ''
-  return (CATS.find((c) => c.match(file)) || OTHER)
-}
-const byCat = new Map()
-for (const fn of fns) {
-  const c = catFor(fn)
-  if (!byCat.has(c.slug)) byCat.set(c.slug, { cat: c, items: [] })
-  byCat.get(c.slug).items.push(fn)
-}
-
-// ---- render ----------------------------------------------------------------
-function renderFn(fn) {
-  const sig = fn.signatures[0]
-  const summary = parts(sig.comment?.summary)
-  const tags = sig.comment?.blockTags || []
-  const ret = tags.find((t) => t.tag === '@returns')
-  const example = tags.find((t) => t.tag === '@example')
-  const sees = tags.filter((t) => t.tag === '@see')
-  const throwsT = tags.filter((t) => t.tag === '@throws')
-  const params = (sig.parameters || []).filter((p) => parts(p.comment?.summary))
-
-  let md = `### ${fn.name}\n\n`
-  md += '```ts\n' + sigString(fn.name, sig) + '\n```\n\n'
-  if (summary) md += esc(summary).trim() + '\n\n'
-  if (params.length) {
-    md += '| Parameter | Description |\n| --- | --- |\n'
-    for (const p of params) md += `| \`${p.name}\` | ${esc(parts(p.comment.summary)).replace(/\n/g, ' ').trim()} |\n`
-    md += '\n'
+  const target = resolve(root, relativePath)
+  const fromRoot = normalizedRelativePath(relative(root, target))
+  if (fromRoot === '..' || fromRoot.startsWith('../')) {
+    throw new Error(`Generated API path escapes its output root: ${relativePath}`)
   }
-  if (ret) { const r = esc(parts(ret.content)).trim(); if (r) md += `**Returns** — ${r}\n\n` }
-  if (throwsT.length) md += throwsT.map((t) => `**Throws** — ${esc(parts(t.content)).trim()}`).join('\n\n') + '\n\n'
-  if (example) {
-    let ex = parts(example.content).trim()
-    if (!ex.startsWith('```')) ex = '```ts\n' + ex + '\n```'
-    md += ex + '\n\n'
-  }
-  if (sees.length) md += 'See: ' + sees.map((s) => esc(parts(s.content)).trim()).join(' · ') + '\n\n'
-  return md
+  return target
 }
 
-function renderInterface(item) {
-  const summary = parts(item.comment?.summary).trim()
-  const extended = (item.extendedTypes || []).map(typeStr)
-  const properties = (item.children || []).filter((child) => child.kind === 1024 && !child.flags?.isInherited)
-  let md = `### ${item.name}\n\n`
-  md += '```ts\n' + `interface ${item.name}${extended.length ? ` extends ${extended.join(', ')}` : ''}` + '\n```\n\n'
-  if (summary) md += esc(summary) + '\n\n'
-  if (properties.length) {
-    md += '| Property | Type | Description |\n| --- | --- | --- |\n'
-    for (const property of properties) {
-      const optional = property.flags?.isOptional ? '?' : ''
-      md += `| \`${property.name}${optional}\` | \`${tableCell(typeStr(property.type))}\` | ${tableCell(parts(property.comment?.summary))} |\n`
+function inventoryCandidate(root, current = root) {
+  if (current === root) {
+    const rootStats = lstatSync(root)
+    if (rootStats.isSymbolicLink()) {
+      throw new Error('Symlink is not allowed in generated API candidate: .')
     }
-    md += '\n'
+    if (!rootStats.isDirectory()) {
+      throw new Error('Unsupported file type in generated API candidate: .')
+    }
   }
-  return md
+  const files = []
+  for (const entry of readdirSync(current, { withFileTypes: true })) {
+    const absolute = join(current, entry.name)
+    const relativePath = normalizedRelativePath(relative(root, absolute))
+    const stats = lstatSync(absolute)
+    if (stats.isSymbolicLink()) {
+      throw new Error(`Symlink is not allowed in generated API candidate: ${relativePath}`)
+    }
+    if (stats.isDirectory()) files.push(...inventoryCandidate(root, absolute))
+    else if (stats.isFile()) files.push(relativePath)
+    else throw new Error(`Unsupported file type in generated API candidate: ${relativePath}`)
+  }
+  return files.sort(compareUnicodeScalars)
 }
 
-function renderAlias(item) {
-  const summary = parts(item.comment?.summary).trim()
-  let md = `### ${item.name}\n\n`
-  md += '```ts\n' + `type ${item.name} = ${typeStr(item.type)}` + '\n```\n\n'
-  if (summary) md += esc(summary) + '\n\n'
-  return md
+function writeAndValidateCandidate(candidateDir, renderedFiles) {
+  mkdirSync(candidateDir, { recursive: true })
+  for (const [relativePath, content] of renderedFiles) {
+    if (typeof content !== 'string') {
+      throw new Error(`Generated API content must be a string: ${relativePath}`)
+    }
+    const target = safeOutputPath(candidateDir, relativePath)
+    mkdirSync(dirname(target), { recursive: true })
+    writeFileSync(target, content)
+  }
+
+  const expected = [...renderedFiles.keys()].sort(compareUnicodeScalars)
+  const actual = inventoryCandidate(candidateDir)
+  if (expected.length !== actual.length || expected.some((file, index) => file !== actual[index])) {
+    throw new Error(
+      `Generated API candidate inventory mismatch: expected ${expected.join(', ')}, received ${actual.join(', ')}`,
+    )
+  }
+  for (const [relativePath, content] of renderedFiles) {
+    const actualBytes = readFileSync(safeOutputPath(candidateDir, relativePath))
+    if (!actualBytes.equals(Buffer.from(content))) {
+      throw new Error(`Generated API candidate byte validation failed: ${relativePath}`)
+    }
+  }
 }
 
-function renderVariable(item) {
-  const summary = parts(item.comment?.summary).trim()
-  let md = `### ${item.name}\n\n`
-  md += '```ts\n' + `const ${item.name}: ${typeStr(item.type)}` + '\n```\n\n'
-  if (summary) md += esc(summary) + '\n\n'
-  return md
+function replaceManagedOutput(candidateDir, outputDir, operations) {
+  return replaceManagedOutputTransactional(candidateDir, outputDir, operations)
 }
 
-function renderClass(item) {
-  const summary = parts(item.comment?.summary).trim()
-  const extended = (item.extendedTypes || []).map(typeStr)
-  const ctor = (item.children || []).find((child) => child.kind === 512)?.signatures?.[0]
-  let md = `### ${item.name}\n\n`
-  md += '```ts\n' + `class ${item.name}${extended.length ? ` extends ${extended.join(', ')}` : ''}` + '\n```\n\n'
-  if (summary) md += esc(summary) + '\n\n'
-  if (ctor) {
-    const params = (ctor.parameters || []).map((parameter) => {
-      const optional = parameter.flags?.isOptional || parameter.defaultValue !== undefined ? '?' : ''
-      return `${parameter.name}${optional}: ${typeStr(parameter.type)}`
+function lstatIfPresent(path) {
+  try {
+    return lstatSync(path)
+  } catch (error) {
+    if (error?.code === 'ENOENT') return null
+    throw error
+  }
+}
+
+function assertNoSymlinkBelow(root, target) {
+  const relativeTarget = normalizedRelativePath(relative(root, target))
+  const components = [root]
+  let current = root
+  for (const part of relativeTarget.split('/').filter(Boolean)) {
+    current = join(current, part)
+    components.push(current)
+  }
+  for (const component of components) {
+    const stats = lstatIfPresent(component)
+    if (stats?.isSymbolicLink()) {
+      throw new Error(`Refusing generated API output with symlink component: ${component}`)
+    }
+  }
+}
+
+export function validateManagedOutputDirectory(outputDirectory) {
+  const output = resolve(outputDirectory)
+  if (output === DEFAULT_OUTPUT_DIR) {
+    assertNoSymlinkBelow(realpathSync(DOCS_DIR), output)
+    return output
+  }
+
+  const temporaryDirectory = resolve(tmpdir())
+  const fromTemporaryDirectory = normalizedRelativePath(
+    relative(temporaryDirectory, output),
+  )
+  const parts = fromTemporaryDirectory.split('/')
+  const temporaryRootName = parts[0]
+  const temporaryRoot = join(temporaryDirectory, temporaryRootName)
+  const isDescendant =
+    parts.length >= 2 &&
+    fromTemporaryDirectory !== '..' &&
+    !fromTemporaryDirectory.startsWith('../')
+  const hasOwnedPrefix = /^glucoseiq-api-[^/]+$/u.test(temporaryRootName)
+  const temporaryRootStats = lstatIfPresent(temporaryRoot)
+  if (!isDescendant || !hasOwnedPrefix || !temporaryRootStats) {
+    throw new Error(`Refusing unsafe generated API output directory: ${output}`)
+  }
+  const currentUser = typeof process.getuid === 'function' ? process.getuid() : null
+  if (
+    temporaryRootStats.isSymbolicLink() ||
+    !temporaryRootStats.isDirectory() ||
+    (currentUser !== null && temporaryRootStats.uid !== currentUser)
+  ) {
+    throw new Error(`Refusing unowned generated API temporary root: ${temporaryRoot}`)
+  }
+  assertNoSymlinkBelow(temporaryRoot, output)
+  return output
+}
+
+function assertCopiedTreeMatches(candidateDirectory, stagedDirectory) {
+  const candidateFiles = inventoryCandidate(candidateDirectory)
+  const stagedFiles = inventoryCandidate(stagedDirectory)
+  if (
+    candidateFiles.length !== stagedFiles.length ||
+    candidateFiles.some((file, index) => file !== stagedFiles[index])
+  ) {
+    throw new Error('Staged generated API inventory does not match the validated candidate')
+  }
+  for (const file of candidateFiles) {
+    if (
+      !readFileSync(join(candidateDirectory, ...file.split('/'))).equals(
+        readFileSync(join(stagedDirectory, ...file.split('/'))),
+      )
+    ) {
+      throw new Error(`Staged generated API bytes do not match: ${file}`)
+    }
+  }
+}
+
+export function replaceManagedOutputTransactional(
+  candidateDirectory,
+  outputDirectory,
+  {
+    copyDirectory = (source, destination) =>
+      cpSync(source, destination, { recursive: true, force: true }),
+    renamePath = renameSync,
+    removePath = (path) => rmSync(path, { recursive: true, force: true }),
+  } = {},
+) {
+  const candidate = resolve(candidateDirectory)
+  const output = validateManagedOutputDirectory(outputDirectory)
+  const outputParent = dirname(output)
+  mkdirSync(outputParent, { recursive: true })
+  const transactionRoot = mkdtempSync(
+    join(outputParent, `.${basename(output)}-staging-`),
+  )
+  const stagedTree = join(transactionRoot, 'tree')
+  const backupPath = join(
+    outputParent,
+    `.${basename(output)}-backup-${basename(transactionRoot)}`,
+  )
+  let backupExists = false
+  let committed = false
+  let preserveTransactionRoot = false
+  let failure
+  const cleanupWarnings = []
+  try {
+    copyDirectory(candidate, stagedTree)
+    assertCopiedTreeMatches(candidate, stagedTree)
+    if (existsSync(output)) {
+      renamePath(output, backupPath)
+      backupExists = true
+    }
+    try {
+      renamePath(stagedTree, output)
+    } catch (swapError) {
+      if (backupExists) {
+        try {
+          renamePath(backupPath, output)
+          backupExists = false
+        } catch (rollbackError) {
+          preserveTransactionRoot = true
+          throw new AggregateError(
+            [swapError, rollbackError],
+            `Unable to install generated API output or restore ${output}. Recovery paths: staged tree ${stagedTree}; prior backup ${backupPath}`,
+            { cause: rollbackError },
+          )
+        }
+      }
+      throw swapError
+    }
+    committed = true
+
+    if (backupExists) {
+      try {
+        removePath(backupPath)
+        backupExists = false
+      } catch (cleanupError) {
+        cleanupWarnings.push({
+          phase: 'prior-backup',
+          path: backupPath,
+          error: cleanupError,
+        })
+      }
+    }
+  } catch (error) {
+    failure = error
+  }
+
+  if (!preserveTransactionRoot) {
+    try {
+      removePath(transactionRoot)
+    } catch (cleanupError) {
+      if (committed && !failure) {
+        cleanupWarnings.push({
+          phase: 'transaction-root',
+          path: transactionRoot,
+          error: cleanupError,
+        })
+      } else {
+        failure = failure
+          ? new AggregateError(
+              [failure, cleanupError],
+              `Generated API transaction failed and cleanup also failed for ${transactionRoot}`,
+            )
+          : cleanupError
+      }
+    }
+  }
+
+  if (failure) throw failure
+  return { cleanupWarnings, committed }
+}
+
+export function resolveTypeDocBinary() {
+  const docsRequire = createRequire(join(DOCS_DIR, 'package.json'))
+  const packagePath = docsRequire.resolve('typedoc/package.json')
+  const manifest = JSON.parse(readFileSync(packagePath, 'utf8'))
+  const declaredBinary =
+    typeof manifest.bin === 'string' ? manifest.bin : manifest.bin?.typedoc
+  if (typeof declaredBinary !== 'string' || declaredBinary.length === 0) {
+    throw new Error(`TypeDoc does not declare a typedoc binary in ${packagePath}`)
+  }
+  return {
+    binaryPath: resolve(dirname(packagePath), declaredBinary),
+    packagePath,
+    version: manifest.version,
+  }
+}
+
+function commandOutput(result) {
+  return [result.stdout, result.stderr]
+    .filter((value) => typeof value === 'string' && value.trim().length > 0)
+    .join('\n')
+}
+
+export function assertSpawnResult(result) {
+  const output = commandOutput(result)
+  if (result.error) {
+    throw new Error(
+      `Unable to start TypeDoc: ${result.error.message}${output ? `\n${output}` : ''}`,
+    )
+  }
+  if (result.signal) {
+    throw new Error(
+      `TypeDoc terminated by signal ${result.signal}${output ? `\n${output}` : ''}`,
+    )
+  }
+  if (result.status !== 0) {
+    throw new Error(
+      `TypeDoc exited with status ${String(result.status)}${output ? `\n${output}` : ''}`,
+    )
+  }
+  return result
+}
+
+export function runTypeDoc({ binaryPath, configPath, modelPath }) {
+  const result = spawnSync(
+    process.execPath,
+    [resolve(binaryPath), '--options', resolve(configPath), '--json', resolve(modelPath)],
+    {
+      cwd: DOCS_DIR,
+      encoding: 'utf8',
+      shell: false,
+    },
+  )
+  return assertSpawnResult(result)
+}
+
+export function generateApiReference({
+  outputDir = DEFAULT_OUTPUT_DIR,
+  typedocBinaryPath,
+  typedocConfigPath = DEFAULT_CONFIG_PATH,
+  transactionOperations,
+  removeTemporaryRoot = (path) =>
+    rmSync(path, { recursive: true, force: true }),
+} = {}) {
+  const validatedOutputDirectory = validateManagedOutputDirectory(outputDir)
+  const temporaryRoot = mkdtempSync(join(tmpdir(), API_TEMP_PREFIX))
+  let result
+  let failure
+  try {
+    const modelPath = join(temporaryRoot, 'api-model.json')
+    const candidateDir = join(temporaryRoot, 'candidate')
+    const resolvedTypeDoc = typedocBinaryPath
+      ? { binaryPath: typedocBinaryPath }
+      : resolveTypeDocBinary()
+    const typeDocResult = runTypeDoc({
+      binaryPath: resolvedTypeDoc.binaryPath,
+      configPath: typedocConfigPath,
+      modelPath,
     })
-    md += `**Constructor**\n\n\`new ${item.name}(${params.join(', ')})\`\n\n`
+    const model = JSON.parse(readFileSync(modelPath, 'utf8'))
+    const renderedFiles = renderApiModel(model)
+    writeAndValidateCandidate(candidateDir, renderedFiles)
+    const transactionResult = replaceManagedOutput(
+      candidateDir,
+      validatedOutputDirectory,
+      transactionOperations,
+    )
+    result = {
+      outputDir: validatedOutputDirectory,
+      renderedFiles,
+      typeDocResult,
+      cleanupWarnings: [...transactionResult.cleanupWarnings],
+    }
+  } catch (error) {
+    failure = error
   }
-  return md
+
+  try {
+    removeTemporaryRoot(temporaryRoot)
+  } catch (cleanupError) {
+    if (result) {
+      result.cleanupWarnings.push({
+        phase: 'generation-temporary-root',
+        path: temporaryRoot,
+        error: cleanupError,
+      })
+    } else {
+      failure = failure
+        ? new AggregateError(
+            [failure, cleanupError],
+            `API generation failed and temporary cleanup also failed for ${temporaryRoot}`,
+          )
+        : cleanupError
+    }
+  }
+
+  if (failure) throw failure
+  return result
 }
 
-const functionOrder = [...CATS, OTHER].map((c) => c.slug).filter((s) => byCat.has(s))
-for (const slug of functionOrder) {
-  const { cat, items } = byCat.get(slug)
-  items.sort((a, b) => a.name.localeCompare(b.name))
-  let page = `---\ntitle: ${cat.title}\ndescription: ${cat.blurb}\n---\n\n`
-  page += `<Callout title="${items.length} function${items.length === 1 ? '' : 's'}">Generated from the source TSDoc — every signature, parameter, and example is the real thing.</Callout>\n\n`
-  page += items.map(renderFn).join('\n---\n\n')
-  writePage(`${OUT}/${slug}.mdx`, page)
+function formatErrorInternal(error, active) {
+  const tracked = Boolean(error && typeof error === 'object')
+  if (tracked && active.has(error)) return '[circular error]'
+  if (tracked) active.add(error)
+  try {
+    const message = error instanceof Error ? error.message : String(error)
+    if (error instanceof AggregateError) {
+      const causes = [...error.errors]
+        .map((cause, index) => `${index + 1}. ${formatErrorInternal(cause, active)}`)
+        .join('; ')
+      return causes ? `${message} [${causes}]` : message
+    }
+    if (error instanceof Error && error.cause !== undefined) {
+      return `${message} [cause: ${formatErrorInternal(error.cause, active)}]`
+    }
+    return message
+  } finally {
+    if (tracked) active.delete(error)
+  }
 }
 
-
-const referencePages = [
-  {
-    slug: 'types',
-    title: 'Types & Interfaces',
-    description: 'The public contracts that connect ingestion, analytics, rendering, and integrations.',
-    items: [...interfaces.map((item) => ({ item, render: renderInterface })), ...aliases.map((item) => ({ item, render: renderAlias }))],
-  },
-  {
-    slug: 'constants',
-    title: 'Constants',
-    description: 'Exported thresholds, goals, conversion factors, colors, and connector capabilities.',
-    items: variables.map((item) => ({ item, render: renderVariable })),
-  },
-  {
-    slug: 'errors',
-    title: 'Error Classes',
-    description: 'Typed failures with stable machine-readable error codes.',
-    items: classes.map((item) => ({ item, render: renderClass })),
-  },
-]
-
-for (const page of referencePages) {
-  page.items.sort((a, b) => a.item.name.localeCompare(b.item.name))
-  let md = `---\ntitle: ${page.title}\ndescription: ${page.description}\n---\n\n`
-  md += `<Callout title="${page.items.length} export${page.items.length === 1 ? '' : 's'}">Generated from the public source TSDoc and TypeScript declarations.</Callout>\n\n`
-  md += page.items.map(({ item, render }) => render(item)).join('\n---\n\n')
-  writePage(`${OUT}/${page.slug}.mdx`, md)
+export function formatError(error) {
+  return formatErrorInternal(error, new Set())
 }
 
-// index + meta
-const order = [...functionOrder, ...referencePages.map((page) => page.slug)]
-const meta = { title: 'API Reference', pages: order }
-writeFileSync(`${OUT}/meta.json`, JSON.stringify(meta, null, 2) + '\n')
-const totals = `${fns.length} functions, ${interfaces.length} interfaces, ${aliases.length} type aliases, ${variables.length} constants, and ${classes.length} classes`
-const idx = `---\ntitle: API Reference\ndescription: The complete GlucoseIQ public API, generated from source TSDoc — ${totals}.\n---\n\nThe public functions and contracts exported by \`@glucoseiq/core\`, generated directly from source declarations and TSDoc.\n\n` +
-  functionOrder.map((s) => { const { cat, items } = byCat.get(s); return `## [${cat.title}](/docs/api/${s})\n${cat.blurb} — ${items.length} function${items.length === 1 ? '' : 's'}.` }).join('\n\n') + '\n\n' +
-  referencePages.map((page) => `## [${page.title}](/docs/api/${page.slug})\n${page.description} — ${page.items.length} export${page.items.length === 1 ? '' : 's'}.`).join('\n\n') + '\n'
-writePage(`${OUT}/index.mdx`, idx)
-console.log(`Wrote ${order.length} API reference pages (${totals}) → ${OUT}`)
+export function formatCleanupWarning(warning) {
+  return `Warning: ${warning.phase} cleanup failed for ${warning.path}: ${formatError(warning.error)}. Inspect ${warning.path} and remove it manually after verifying it is no longer needed.`
+}
+
+function isDirectInvocation() {
+  return Boolean(
+    process.argv[1] &&
+      pathToFileURL(resolve(process.argv[1])).href === import.meta.url,
+  )
+}
+
+if (isDirectInvocation()) {
+  try {
+    const result = generateApiReference({
+      outputDir: process.argv[2] ? resolve(process.argv[2]) : DEFAULT_OUTPUT_DIR,
+    })
+    if (result.typeDocResult.stdout) process.stdout.write(result.typeDocResult.stdout)
+    if (result.typeDocResult.stderr) process.stderr.write(result.typeDocResult.stderr)
+    for (const warning of result.cleanupWarnings) {
+      console.error(formatCleanupWarning(warning))
+    }
+    console.log(
+      `Wrote ${result.renderedFiles.size} generated API files to ${result.outputDir}`,
+    )
+  } catch (error) {
+    console.error(formatError(error))
+    process.exitCode = 1
+  }
+}

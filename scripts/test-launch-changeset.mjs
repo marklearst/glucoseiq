@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -8,6 +7,7 @@ import {
   assertLaunchVersionPolicy,
   queryPublicLaunchVersions,
 } from './lib/package-contracts.mjs'
+import { spawnPackageContractCommandSync } from './lib/package-command.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const launchChangeset = join(root, '.changeset/launch-glucoseiq-one.md')
@@ -54,6 +54,7 @@ if (!hasLaunchChangeset) {
       const message = error instanceof Error ? error.message : String(error)
       throw new Error(
         `Independent package versions cannot be validated because public npm registry verification failed: ${message}`,
+        { cause: error },
       )
     }
   }
@@ -76,7 +77,7 @@ if (!hasLaunchChangeset) {
       ? ` Missing from the public npm registry: ${publicLaunchStatus.missing.join(', ')}.`
       : ''
     const message = error instanceof Error ? error.message : String(error)
-    throw new Error(`${message}.${missing}`)
+    throw new Error(`${message}.${missing}`, { cause: error })
   }
   process.exit(0)
 }
@@ -93,11 +94,15 @@ const temporaryRoot = mkdtempSync(join(tmpdir(), 'glucoseiq-changeset-'))
 const outputPath = join(temporaryRoot, 'status.json')
 
 try {
-  const result = spawnSync('pnpm', ['changeset', 'status', '--output', outputPath], {
-    cwd: root,
-    encoding: 'utf8',
-    env: process.env,
-  })
+  const result = spawnPackageContractCommandSync(
+    'pnpm',
+    ['changeset', 'status', '--output', outputPath],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      env: process.env,
+    },
+  )
   if (result.status !== 0) {
     throw new Error([result.stdout, result.stderr].filter(Boolean).join('\n'))
   }

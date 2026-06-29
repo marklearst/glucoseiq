@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   // Dexcom
   parseDexcomDate,
@@ -14,11 +14,30 @@ import {
   normalizeNightscoutEntry,
   normalizeNightscoutEntries,
 } from '../src/connectors'
+import { DomainError, TimestampError } from '../src/errors'
+import { MGDL_MMOLL_CONVERSION } from '../src/constants'
 import type {
   DexcomShareEntry,
   LibreLinkUpEntry,
   NightscoutEntry,
 } from '../src/connectors'
+
+function expectCodedError(
+  call: () => unknown,
+  type: typeof DomainError | typeof TimestampError,
+  code: 'INVALID_GLUCOSE_VALUE' | 'INVALID_UNIT' | 'TIMESTAMP_UNPARSEABLE',
+  message: string
+): void {
+  let thrown: unknown
+  try {
+    call()
+  } catch (error) {
+    thrown = error
+  }
+
+  expect(thrown).toBeInstanceOf(type)
+  expect(thrown).toMatchObject({ code, message })
+}
 
 // ---------------------------------------------------------------------------
 // Dexcom Share adapter
@@ -43,6 +62,77 @@ describe('Dexcom Share adapter', () => {
     it('throws on unparseable date', () => {
       expect(() => parseDexcomDate('not-a-date')).toThrow(
         'Unable to parse Dexcom date'
+      )
+    })
+
+    it('throws a timestamp error when the parsed date is invalid', () => {
+      const raw = '2024-01-15T10:30:00Z'
+      const dateParseSpy = vi
+        .spyOn(Date, 'parse')
+        .mockReturnValue(Number.MAX_SAFE_INTEGER)
+      let thrown: unknown
+
+      try {
+        parseDexcomDate(raw)
+      } catch (error) {
+        thrown = error
+      } finally {
+        dateParseSpy.mockRestore()
+      }
+
+      expect(thrown).toBeInstanceOf(TimestampError)
+      expect(thrown).toMatchObject({
+        code: 'TIMESTAMP_UNPARSEABLE',
+        message: `Unable to parse Dexcom date: ${raw}`,
+      })
+    })
+
+    it('wraps a native timestamp parser failure', () => {
+      const raw = '2024-01-15T10:30:00Z'
+      const dateParseSpy = vi.spyOn(Date, 'parse').mockImplementation(() => {
+        throw new TypeError('parser failed')
+      })
+      let thrown: unknown
+
+      try {
+        parseDexcomDate(raw)
+      } catch (error) {
+        thrown = error
+      } finally {
+        dateParseSpy.mockRestore()
+      }
+
+      expect(thrown).toBeInstanceOf(TimestampError)
+      expect(thrown).toMatchObject({
+        code: 'TIMESTAMP_UNPARSEABLE',
+        message: `Unable to parse Dexcom date: ${raw}`,
+      })
+    })
+
+    it.each([
+      1700000000000,
+      new Date('2024-01-15T10:30:00Z'),
+      1700000000000n,
+      Symbol('timestamp'),
+    ])('rejects a non-string timestamp without leaking a native error (%s)', (raw) => {
+      expectCodedError(
+        () => parseDexcomDate(raw as unknown as string),
+        TimestampError,
+        'TIMESTAMP_UNPARSEABLE',
+        `Unable to parse Dexcom date: ${String(raw)}`
+      )
+    })
+
+    it.each([
+      'prefixDate(1700000000000)',
+      'Date(1700000000000)suffix',
+      '/Date(1700000000000)/suffix',
+    ])('rejects a partial Dexcom Date wrapper (%s)', (raw) => {
+      expectCodedError(
+        () => parseDexcomDate(raw),
+        TimestampError,
+        'TIMESTAMP_UNPARSEABLE',
+        `Unable to parse Dexcom date: ${raw}`
       )
     })
   })
@@ -110,6 +200,61 @@ describe('Dexcom Share adapter', () => {
       const result = normalizeDexcomEntry(entry)
       expect(result.vendorId).toBeUndefined()
     })
+
+    it('accepts the inclusive 600 mg/dL boundary', () => {
+      expect(
+        normalizeDexcomEntry({
+          Value: 600,
+          Trend: 'Flat',
+          WT: 'Date(1700000000000)',
+        }).value
+      ).toBe(600)
+    })
+
+    it.each([NaN, Infinity, -Infinity, 0, -1, 601])(
+      'rejects an unusable glucose value (%s)',
+      (value) => {
+        expectCodedError(
+          () =>
+            normalizeDexcomEntry({
+              Value: value,
+              Trend: 'Flat',
+              WT: 'Date(1700000000000)',
+            }),
+          DomainError,
+          'INVALID_GLUCOSE_VALUE',
+          `Dexcom entry has invalid glucose value: ${String(value)}`
+        )
+      }
+    )
+
+    it.each(['120', 120n, Symbol('value')])(
+      'rejects a non-number glucose value without leaking a native error (%s)',
+      (value) => {
+        expectCodedError(
+          () =>
+            normalizeDexcomEntry({
+              Value: value as unknown as number,
+              Trend: 'Flat',
+              WT: 'Date(1700000000000)',
+            }),
+          DomainError,
+          'INVALID_GLUCOSE_VALUE',
+          `Dexcom entry has invalid glucose value: ${String(value)}`
+        )
+      }
+    )
+
+    it('rejects an out-of-range vendor timestamp', () => {
+      const timestamp = 'Date(8640000000000001)'
+      expectCodedError(
+        () =>
+          normalizeDexcomEntry({ Value: 120, Trend: 'Flat', WT: timestamp }),
+        TimestampError,
+        'TIMESTAMP_UNPARSEABLE',
+        `Unable to parse Dexcom date: ${timestamp}`
+      )
+    })
   })
 
   describe('normalizeDexcomEntries', () => {
@@ -153,6 +298,19 @@ describe('Libre LinkUp adapter', () => {
       expect(normalizeLibreTrend(4.5 as any)).toBe('unknown')
     })
 
+    it.each([
+      '3',
+      3n,
+      Symbol('trend'),
+      {},
+      NaN,
+      Infinity,
+      -Infinity,
+      3.5,
+    ])('returns unknown for a runtime-invalid trend value (%s)', (trend) => {
+      expect(normalizeLibreTrend(trend as unknown as number)).toBe('unknown')
+    })
+
     it('returns unknown for null or undefined trend', () => {
       expect(normalizeLibreTrend(null)).toBe('unknown')
       expect(normalizeLibreTrend(undefined)).toBe('unknown')
@@ -182,6 +340,213 @@ describe('Libre LinkUp adapter', () => {
       }
       expect(() => normalizeLibreEntry(entry)).toThrow(
         'Unable to parse Libre timestamp'
+      )
+    })
+
+    it('throws a timestamp error when Date.parse returns an out-of-range epoch', () => {
+      const timestamp = '2024-06-15T08:30:00Z'
+      const dateParseSpy = vi
+        .spyOn(Date, 'parse')
+        .mockReturnValue(Number.MAX_SAFE_INTEGER)
+      let thrown: unknown
+
+      try {
+        normalizeLibreEntry({ Value: 120, TrendArrow: 3, Timestamp: timestamp })
+      } catch (error) {
+        thrown = error
+      } finally {
+        dateParseSpy.mockRestore()
+      }
+
+      expect(thrown).toBeInstanceOf(TimestampError)
+      expect(thrown).toMatchObject({
+        code: 'TIMESTAMP_UNPARSEABLE',
+        message: `Unable to parse Libre timestamp: ${timestamp}`,
+      })
+    })
+
+    it('wraps a native timestamp parser failure', () => {
+      const timestamp = '2024-06-15T08:30:00Z'
+      const dateParseSpy = vi.spyOn(Date, 'parse').mockImplementation(() => {
+        throw new TypeError('parser failed')
+      })
+      let thrown: unknown
+
+      try {
+        normalizeLibreEntry({ Value: 120, TrendArrow: 3, Timestamp: timestamp })
+      } catch (error) {
+        thrown = error
+      } finally {
+        dateParseSpy.mockRestore()
+      }
+
+      expect(thrown).toBeInstanceOf(TimestampError)
+      expect(thrown).toMatchObject({
+        code: 'TIMESTAMP_UNPARSEABLE',
+        message: `Unable to parse Libre timestamp: ${timestamp}`,
+      })
+    })
+
+    it.each([
+      1700000000000,
+      new Date('2024-06-15T08:30:00Z'),
+      1700000000000n,
+      Symbol('timestamp'),
+    ])('rejects a non-string timestamp without leaking a native error (%s)', (timestamp) => {
+      expectCodedError(
+        () =>
+          normalizeLibreEntry({
+            Value: 120,
+            TrendArrow: 3,
+            Timestamp: timestamp as unknown as string,
+          }),
+        TimestampError,
+        'TIMESTAMP_UNPARSEABLE',
+        `Unable to parse Libre timestamp: ${String(timestamp)}`
+      )
+    })
+
+    it.each([
+      { value: 600, unit: 1 as const },
+      { value: 600 / MGDL_MMOLL_CONVERSION, unit: 0 as const },
+    ])(
+      'accepts the inclusive 600 mg/dL boundary in native unit $unit',
+      ({ value, unit }) => {
+        expect(
+          normalizeLibreEntry({
+            Value: value,
+            GlucoseUnits: unit,
+            TrendArrow: 3,
+            Timestamp: '2024-06-15T08:30:00Z',
+          }).value
+        ).toBe(value)
+      }
+    )
+
+    it.each([NaN, Infinity, -Infinity, 0, -1, 601])(
+      'rejects an unusable mg/dL value (%s)',
+      (value) => {
+        expectCodedError(
+          () =>
+            normalizeLibreEntry({
+              Value: value,
+              GlucoseUnits: 1,
+              TrendArrow: 3,
+              Timestamp: '2024-06-15T08:30:00Z',
+            }),
+          DomainError,
+          'INVALID_GLUCOSE_VALUE',
+          `Libre entry has invalid glucose value: ${String(value)}`
+        )
+      }
+    )
+
+    it.each(['120', 120n, Symbol('value')])(
+      'rejects a non-number glucose value without leaking a native error (%s)',
+      (value) => {
+        expectCodedError(
+          () =>
+            normalizeLibreEntry({
+              Value: value as unknown as number,
+              TrendArrow: 3,
+              Timestamp: '2024-06-15T08:30:00Z',
+            }),
+          DomainError,
+          'INVALID_GLUCOSE_VALUE',
+          `Libre entry has invalid glucose value: ${String(value)}`
+        )
+      }
+    )
+
+    it('rejects a mmol/L value that normalizes above 600 mg/dL', () => {
+      expectCodedError(
+        () =>
+          normalizeLibreEntry({
+            Value: 34,
+            GlucoseUnits: 0,
+            TrendArrow: 3,
+            Timestamp: '2024-06-15T08:30:00Z',
+          }),
+        DomainError,
+        'INVALID_GLUCOSE_VALUE',
+        'Libre entry has invalid glucose value: 34'
+      )
+    })
+
+    it('rejects an invalid runtime unit flag', () => {
+      expectCodedError(
+        () =>
+          normalizeLibreEntry({
+            Value: 120,
+            GlucoseUnits: 2 as 0,
+            TrendArrow: 3,
+            Timestamp: '2024-06-15T08:30:00Z',
+          }),
+        DomainError,
+        'INVALID_UNIT',
+        'Libre entry has unsupported glucose unit: 2'
+      )
+    })
+
+    it('rejects an invalid runtime unit flag when an explicit mg/dL value exists', () => {
+      expectCodedError(
+        () =>
+          normalizeLibreEntry({
+            Value: 6.7,
+            ValueInMgPerDl: 121,
+            GlucoseUnits: 2 as 0,
+            TrendArrow: 3,
+            Timestamp: '2024-06-15T08:30:00Z',
+          }),
+        DomainError,
+        'INVALID_UNIT',
+        'Libre entry has unsupported glucose unit: 2'
+      )
+    })
+
+    it.each([null, '0', NaN, {}, Symbol('unit')])(
+      'rejects malformed runtime unit flags even with explicit mg/dL (%s)',
+      (unit) => {
+        expectCodedError(
+          () =>
+            normalizeLibreEntry({
+              Value: 6.7,
+              ValueInMgPerDl: 121,
+              GlucoseUnits: unit as unknown as 0,
+              TrendArrow: 3,
+              Timestamp: '2024-06-15T08:30:00Z',
+            }),
+          DomainError,
+          'INVALID_UNIT',
+          `Libre entry has unsupported glucose unit: ${String(unit)}`
+        )
+      }
+    )
+
+    it('rejects an unusable explicit mg/dL value', () => {
+      expectCodedError(
+        () =>
+          normalizeLibreEntry({
+            Value: 6.7,
+            ValueInMgPerDl: 601,
+            GlucoseUnits: 0,
+            TrendArrow: 3,
+            Timestamp: '2024-06-15T08:30:00Z',
+          }),
+        DomainError,
+        'INVALID_GLUCOSE_VALUE',
+        'Libre entry has invalid glucose value: 601'
+      )
+    })
+
+    it('rejects an out-of-range timestamp', () => {
+      const timestamp = '+275760-09-13T00:00:00.001Z'
+      expectCodedError(
+        () =>
+          normalizeLibreEntry({ Value: 120, TrendArrow: 3, Timestamp: timestamp }),
+        TimestampError,
+        'TIMESTAMP_UNPARSEABLE',
+        `Unable to parse Libre timestamp: ${timestamp}`
       )
     })
   })
@@ -275,6 +640,26 @@ describe('Nightscout adapter', () => {
       expect(result.timestamp).toBe(new Date(1700000000000).toISOString())
     })
 
+    it('falls back to date when the native dateString parser throws', () => {
+      const dateParseSpy = vi.spyOn(Date, 'parse').mockImplementation(() => {
+        throw new TypeError('parser failed')
+      })
+      let result: ReturnType<typeof normalizeNightscoutEntry> | undefined
+
+      try {
+        result = normalizeNightscoutEntry({
+          sgv: 110,
+          date: 1700000000000,
+          dateString: '2023-11-14T22:13:20.000Z',
+          direction: 'Flat',
+        })
+      } finally {
+        dateParseSpy.mockRestore()
+      }
+
+      expect(result?.timestamp).toBe(new Date(1700000000000).toISOString())
+    })
+
     it('throws when dateString is invalid and date fallback is invalid', () => {
       const entry: NightscoutEntry = {
         sgv: 110,
@@ -296,6 +681,113 @@ describe('Nightscout adapter', () => {
       }
       expect(() => normalizeNightscoutEntry(entry)).toThrow(
         "Unable to parse Nightscout timestamp from 'date' field"
+      )
+    })
+
+    it('accepts the inclusive 600 mg/dL boundary', () => {
+      expect(
+        normalizeNightscoutEntry({ sgv: 600, date: 1700000000000 }).value
+      ).toBe(600)
+    })
+
+    it.each([NaN, Infinity, -Infinity, 0, -1, 601])(
+      'rejects an unusable glucose value (%s)',
+      (value) => {
+        expectCodedError(
+          () =>
+            normalizeNightscoutEntry({
+              sgv: value,
+              date: 1700000000000,
+            }),
+          DomainError,
+          'INVALID_GLUCOSE_VALUE',
+          `Nightscout entry has invalid glucose value: ${String(value)}`
+        )
+      }
+    )
+
+    it.each(['120', 120n, Symbol('value')])(
+      'rejects a non-number glucose value without leaking a native error (%s)',
+      (value) => {
+        expectCodedError(
+          () =>
+            normalizeNightscoutEntry({
+              sgv: value as unknown as number,
+              date: 1700000000000,
+            }),
+          DomainError,
+          'INVALID_GLUCOSE_VALUE',
+          `Nightscout entry has invalid glucose value: ${String(value)}`
+        )
+      }
+    )
+
+    it.each([
+      new Date('2023-11-14T22:13:20.000Z'),
+      1700000000000n,
+      Symbol('timestamp'),
+    ])(
+      'rejects a non-number date field without leaking a native error (%s)',
+      (date) => {
+        expectCodedError(
+          () =>
+            normalizeNightscoutEntry({
+              sgv: 120,
+              date: date as unknown as number,
+            }),
+          TimestampError,
+          'TIMESTAMP_UNPARSEABLE',
+          `Unable to parse Nightscout timestamp from 'date' field: ${String(date)}`
+        )
+      }
+    )
+
+    it.each([null, 0, false])(
+      'rejects a present falsy non-string dateString (%s)',
+      (dateString) => {
+        expectCodedError(
+          () =>
+            normalizeNightscoutEntry({
+              sgv: 120,
+              date: 1700000000000,
+              dateString: dateString as unknown as string,
+            }),
+          TimestampError,
+          'TIMESTAMP_UNPARSEABLE',
+          `Unable to parse Nightscout timestamp from 'dateString': ${String(dateString)}`
+        )
+      }
+    )
+
+    it.each([
+      1700000000000,
+      new Date('2023-11-14T22:13:20.000Z'),
+      1700000000000n,
+      Symbol('timestamp'),
+    ])(
+      'rejects a non-string dateString without leaking a native error (%s)',
+      (dateString) => {
+        expectCodedError(
+          () =>
+            normalizeNightscoutEntry({
+              sgv: 120,
+              date: Number.NaN,
+              dateString: dateString as unknown as string,
+            }),
+          TimestampError,
+          'TIMESTAMP_UNPARSEABLE',
+          `Unable to parse Nightscout timestamp from 'dateString': ${String(dateString)}`
+        )
+      }
+    )
+
+    it('rejects an out-of-range epoch timestamp', () => {
+      const timestamp = 8640000000000001
+      expectCodedError(
+        () => normalizeNightscoutEntry({ sgv: 120, date: timestamp }),
+        TimestampError,
+        'TIMESTAMP_UNPARSEABLE',
+        `Unable to parse Nightscout timestamp from 'date' field: ${timestamp}`
       )
     })
   })
@@ -330,6 +822,53 @@ describe('Nightscout adapter', () => {
       expect(normalizeNightscoutEntries([])).toEqual([])
     })
   })
+})
+
+describe('strict connector validation precedence', () => {
+  it.each([
+    {
+      vendor: 'Dexcom',
+      call: () =>
+        normalizeDexcomEntry({
+          Value: Number.NaN,
+          Trend: 'Flat',
+          WT: 'bad-dexcom-timestamp',
+        }),
+      message: 'Unable to parse Dexcom date: bad-dexcom-timestamp',
+    },
+    {
+      vendor: 'Libre',
+      call: () =>
+        normalizeLibreEntry({
+          Value: Number.NaN,
+          GlucoseUnits: 2 as 0,
+          TrendArrow: 3,
+          Timestamp: 'bad-libre-timestamp',
+        }),
+      message: 'Unable to parse Libre timestamp: bad-libre-timestamp',
+    },
+    {
+      vendor: 'Nightscout',
+      call: () =>
+        normalizeNightscoutEntry({
+          sgv: Number.NaN,
+          date: Number.NaN,
+          dateString: 'bad-nightscout-timestamp',
+        }),
+      message:
+        "Unable to parse Nightscout timestamp from 'dateString': bad-nightscout-timestamp",
+    },
+  ])(
+    '$vendor reports its timestamp error before glucose or unit errors',
+    ({ call, message }) => {
+      expectCodedError(
+        call,
+        TimestampError,
+        'TIMESTAMP_UNPARSEABLE',
+        message
+      )
+    }
+  )
 })
 
 // ---------------------------------------------------------------------------

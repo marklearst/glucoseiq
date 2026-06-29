@@ -32,6 +32,20 @@ describe('aggregateCohort', () => {
     expect(res.tir.max).toBe(100)
   })
 
+  it('averages the middle pair for even medians while keeping nearest-rank quartiles', () => {
+    const result = aggregateCohort([
+      createGlucoseReadings([100], 'mg/dL', 5),
+      createGlucoseReadings([200], 'mg/dL', 5),
+    ])
+
+    expect(result.meanGlucose.median).toBe(150)
+    expect(result.meanGlucose.p25).toBe(100)
+    expect(result.meanGlucose.p75).toBe(200)
+    expect(result.tir.median).toBe(50)
+    expect(result.tir.p25).toBe(0)
+    expect(result.tir.p75).toBe(100)
+  })
+
   it('normalizes mmol/L patients and ignores invalid readings', () => {
     const mmolPatient: GlucoseReading[] = [
       { value: 5.5, unit: 'mmol/L', timestamp: '2024-01-01T08:00:00Z' }, // ~99 in range
@@ -40,7 +54,7 @@ describe('aggregateCohort', () => {
       { value: -1, unit: 'mmol/L', timestamp: '2024-01-01T08:15:00Z' },
       { value: 40, unit: 'mmol/L', timestamp: '2024-01-01T08:20:00Z' }, // ~720 mg/dL, out of range
     ]
-    const res = aggregateCohort([mmolPatient], { unit: 'mmol/L' })
+    const res = aggregateCohort([mmolPatient])
     expect(res.patientCount).toBe(1)
     expect(res.tir.mean).toBe(100)
   })

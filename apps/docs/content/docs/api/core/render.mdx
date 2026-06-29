@@ -1,0 +1,99 @@
+---
+title: "Rendering (SVG)"
+description: "Dependency-free SVG-string renderers."
+---
+
+### agpChartToSVG
+
+**Import:** `@glucoseiq/core/render`
+
+```ts fragment="generated API declaration or signature"
+agpChartToSVG(readings: GlucoseReading[], options?: AGPChartOptions): string
+```
+
+Renders an AGP-style percentile-band chart as an SVG string.
+
+**Returns:** A complete, self-contained SVG document string
+
+**Throws:** If width or height is not a finite positive number, or if a present title is not a string
+
+```ts typecheck
+import { type GlucoseReading } from '@glucoseiq/core'
+import { agpChartToSVG } from '@glucoseiq/core/render'
+
+const readings: GlucoseReading[] = [
+  { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+  { value: 145, unit: 'mg/dL', timestamp: '2024-01-02T08:00:00Z' },
+]
+const svg = agpChartToSVG(readings, { theme: 'dark' })
+```
+
+| Parameter | Description |
+| --- | --- |
+| `readings` | Glucose readings with ISO 8601 timestamps (mg/dL or mmol/L) |
+| `options` | Dimensions, theme, time zone, and title |
+
+
+---
+
+### tirBarToSVG
+
+**Import:** `@glucoseiq/core/render`
+
+```ts fragment="generated API declaration or signature"
+tirBarToSVG(readings: GlucoseReading[], options?: TIRBarOptions): string
+```
+
+Renders a Time-in-Range stacked bar as an SVG string. Zone fills remain
+fixed; the surface theme changes only the background and text.
+
+**Returns:** A self-contained SVG document string
+
+**Throws:** If width or height is not a finite positive number
+
+```ts typecheck
+import { type GlucoseReading } from '@glucoseiq/core'
+import { tirBarToSVG } from '@glucoseiq/core/render'
+
+const readings: GlucoseReading[] = [
+  { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+]
+const svg = tirBarToSVG(readings)
+```
+
+| Parameter | Description |
+| --- | --- |
+| `readings` | Glucose readings (mg/dL or mmol/L) |
+| `options` | Dimensions and theme |
+
+
+---
+
+### trendTileToSVG
+
+**Import:** `@glucoseiq/core/render`
+
+```ts fragment="generated API declaration or signature"
+trendTileToSVG(readings: GlucoseReading[], options?: TrendTileOptions): string
+```
+
+Renders a current-glucose trend tile as an SVG string.
+
+**Returns:** A self-contained SVG document string
+
+**Throws:** If width or height is not a finite positive number
+
+```ts typecheck
+import { type GlucoseReading } from '@glucoseiq/core'
+import { trendTileToSVG } from '@glucoseiq/core/render'
+
+const readings: GlucoseReading[] = [
+  { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+]
+const svg = trendTileToSVG(readings) // 120 → IN RANGE
+```
+
+| Parameter | Description |
+| --- | --- |
+| `readings` | Glucose readings with ISO 8601 timestamps |
+| `options` | Dimensions and theme |

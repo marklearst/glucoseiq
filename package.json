@@ -2,24 +2,35 @@
   "name": "glucoseiq",
   "private": true,
   "version": "0.0.0",
-  "description": "GlucoseIQ — the headless engine behind glucose on every screen. Zero-dependency TypeScript for CGM & diabetes analytics.",
+  "description": "TypeScript packages for CGM analytics, SVG rendering, React bindings, test fixtures, and diabetic-utils migration support.",
   "repository": {
     "type": "git",
     "url": "https://github.com/marklearst/glucoseiq.git"
   },
-  "homepage": "https://glucoseiq.health",
+  "homepage": "https://glucoseiq.dev",
   "bugs": {
     "url": "https://github.com/marklearst/glucoseiq/issues"
   },
   "author": "Mark Learst",
   "license": "MIT",
-  "packageManager": "pnpm@11.12.0",
+  "packageManager": "pnpm@11.17.0",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
     "test": "turbo run test",
     "test:coverage": "turbo run test:coverage",
+    "test:security": "pnpm audit --audit-level=low",
+    "test:size": "node scripts/measure-core-bundle.mjs",
+    "typecheck": "turbo run typecheck",
+    "lint": "eslint . --max-warnings 0",
+    "test:docs": "turbo run build --filter=@glucoseiq/core --filter=@glucoseiq/react --filter=@glucoseiq/tokens --filter=@glucoseiq/testing --filter=@glucoseiq/cli --filter=diabetic-utils && pnpm --filter docs test:site && pnpm --filter docs test:home && pnpm --filter docs test:image && node --test scripts/doc-snippet-contracts.unit.test.mjs scripts/doc-snippet-contracts.test.mjs && node scripts/test-doc-snippets.mjs",
+    "test:errors": "node scripts/check-core-error-contract.mjs",
     "test:packages": "node scripts/package-contract-helpers.test.mjs && turbo run build --filter=@glucoseiq/core --filter=@glucoseiq/react --filter=@glucoseiq/tokens --filter=@glucoseiq/testing --filter=@glucoseiq/cli --filter=diabetic-utils && node scripts/test-package-contracts.mjs",
+    "test:packages:candidate": "node scripts/package-contract-helpers.test.mjs && turbo run build --filter=@glucoseiq/core --filter=@glucoseiq/react --filter=@glucoseiq/tokens --filter=@glucoseiq/testing --filter=@glucoseiq/cli --filter=diabetic-utils && node scripts/test-package-contracts.mjs --source candidate",
+    "test:packages:registry": "node scripts/package-contract-helpers.test.mjs && node scripts/test-package-contracts.mjs --source registry",
+    "test:changesets": "node scripts/test-changeset-policy.mjs",
+    "test:release-safety": "node --test scripts/test-changeset-policy.test.mjs scripts/release-preflight.test.mjs scripts/verify-published-packages.test.mjs",
+    "test:published": "node scripts/verify-published-packages.mjs",
     "test:launch": "node scripts/test-launch-changeset.mjs && node scripts/release-metadata.test.mjs",
     "clean": "turbo run clean",
     "changeset": "changeset",
@@ -28,7 +39,14 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.0",
-    "turbo": "^2.5.0"
+    "@changesets/parse": "0.4.3",
+    "@eslint/js": "10.0.1",
+    "es-module-lexer": "1.7.0",
+    "eslint": "10.7.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.7.0",
+    "turbo": "^2.5.0",
+    "typescript-eslint": "8.63.0"
   },
   "engines": {
     "node": ">=24"

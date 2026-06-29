@@ -1,9 +1,8 @@
 /**
  * @file src/connectors/dexcom.ts
  *
- * Pure transformation adapter for Dexcom Share API payloads.
- * Maps raw Dexcom entries into NormalizedCGMReading objects.
- * Does NOT handle authentication — use with any Dexcom Share client library.
+ * Converts Dexcom Share API payloads to NormalizedCGMReading values.
+ * A Dexcom Share client must authenticate and fetch the payloads.
  *
  * @see https://github.com/brettfarrow/cgm.js
  * @see https://www.npmjs.com/package/@diakem/dexcom-api-client
@@ -11,6 +10,7 @@
 
 import { MG_DL } from '../constants'
 import { TimestampError } from '../errors'
+import { toUsableMgDl } from '../reading-policy'
 import type {
   DexcomShareEntry,
   DexcomTrendString,
@@ -36,21 +36,42 @@ const DEXCOM_TREND_MAP: Record<DexcomTrendString, CGMTrend> = {
  *
  * Dexcom Share returns dates in the format `"Date(epochMs)"` or
  * `"/Date(epochMs)/"`. This helper handles both, plus plain ISO strings.
+ *
+ * @throws {TimestampError} If the date string cannot be parsed
  */
 export function parseDexcomDate(raw: string): string {
-  const epochMatch = raw.match(/Date\((\d+)\)/)
+  const parseErrorMessage = `Unable to parse Dexcom date: ${String(raw)}`
+  if (typeof raw !== 'string') {
+    throw new TimestampError(parseErrorMessage)
+  }
+  const epochMatch = raw.match(
+    /^(?:Date\((\d+)\)|\/Date\((\d+)\)\/)$/
+  )
   if (epochMatch) {
-    return new Date(Number(epochMatch[1])).toISOString()
+    const date = new Date(Number(epochMatch[1] ?? epochMatch[2]))
+    if (Number.isNaN(date.getTime())) {
+      throw new TimestampError(parseErrorMessage)
+    }
+    return date.toISOString()
   }
-  const parsed = Date.parse(raw)
-  if (isNaN(parsed)) {
-    throw new TimestampError(`Unable to parse Dexcom date: ${raw}`)
+  let parsed = Number.NaN
+  try {
+    parsed = Date.parse(raw)
+  } catch {
+    throw new TimestampError(parseErrorMessage)
   }
-  return new Date(parsed).toISOString()
+  if (!Number.isFinite(parsed)) {
+    throw new TimestampError(parseErrorMessage)
+  }
+  const date = new Date(parsed)
+  if (Number.isNaN(date.getTime())) {
+    throw new TimestampError(parseErrorMessage)
+  }
+  return date.toISOString()
 }
 
 /**
- * Normalizes a Dexcom Share trend string into a canonical CGMTrend.
+ * Maps a Dexcom Share trend string to the shared `CGMTrend` values.
  */
 export function normalizeDexcomTrend(
   trend: DexcomTrendString | (string & {}) | null | undefined
@@ -65,13 +86,15 @@ export function normalizeDexcomTrend(
  * Converts a single Dexcom Share entry into a NormalizedCGMReading.
  *
  * @param entry - Raw Dexcom Share entry
- * @returns Normalized reading compatible with all `@glucoseiq/core` analytics functions
- * @throws {Error} If the date string cannot be parsed
+ * @returns A normalized reading usable by APIs that accept `GlucoseReading`, subject to each API's contract
+ * @throws {TimestampError} If the date string cannot be parsed
+ * @throws {DomainError} If the glucose value is not usable
  */
 export function normalizeDexcomEntry(
   entry: DexcomShareEntry
 ): NormalizedCGMReading {
   const timestamp = parseDexcomDate(entry.WT)
+  toUsableMgDl(entry.Value, MG_DL, 'Dexcom entry')
   const vendorId = entry.ST ?? entry.DT
   return {
     value: entry.Value,

@@ -1,0 +1,108 @@
+---
+title: Integration Testing
+description: Test GlucoseIQ at the data, package, rendering, and deployment boundaries.
+---
+
+Test the same inputs, package artifacts, and host behavior that your application
+uses in production.
+
+## Repeatable fixtures
+
+Use `@glucoseiq/testing` for repeatable software tests. Specify the seed, start
+timestamp, interval, and unit when a result depends on them.
+
+```ts typecheck
+import { analyzeGlucose } from '@glucoseiq/core'
+import { generateCGMSeries } from '@glucoseiq/testing'
+
+const readings = generateCGMSeries({
+  days: 14,
+  intervalMin: 5,
+  seed: 17,
+  start: '2025-01-01T00:00:00Z',
+  unit: 'mg/dL',
+})
+const report = analyzeGlucose(readings, { timeZone: 'UTC' })
+
+if (!report.valid || !report.timeInRange || !report.agpProfile) {
+  throw new Error('Expected a valid repeatable analysis')
+}
+if (report.dataSufficiency.totalReadings !== 14 * 288) {
+  throw new Error('Unexpected fixture size')
+}
+```
+
+Synthetic fixtures verify software behavior, not clinical validity. Add
+appropriately governed reference datasets when the product's intended use
+requires them.
+
+## Ingestion boundary
+
+Each source adapter needs coverage for:
+
+- supported and unsupported unit literals
+- zero, negative, non-finite, and implausible values
+- invalid, duplicate, unsorted, and offset timestamps
+- missing fields and malformed records
+- pagination overlap and stable source identifiers
+- authentication, rate-limit, timeout, and retry behavior in the host layer
+
+Connector tests should assert the normalized `GlucoseReading` contract and the
+typed error code, not only a rendered string.
+
+## User-visible failures
+
+Exercise empty, sparse, stale, duplicate, mixed-unit, and conflicting data.
+Assert that the application presents freshness, coverage, gaps, and unavailable
+states without turning missing evidence into zero.
+
+For live views, test both flows independently:
+
+1. the transport adds or replaces readings; and
+2. the staleness clock advances while no reading arrives.
+
+Passing `refreshMs` to `useGlucoseLive` only drives the second flow. It does not
+poll a source.
+
+## Installed package
+
+Source-workspace imports can hide packaging mistakes. Install the packed
+tarball in a clean temporary application that matches your module system,
+TypeScript configuration, and React version.
+
+Check the public entrypoints you import at runtime and in TypeScript. For the
+supported module and declaration contracts, see
+[Runtime Support](/docs/runtime-support).
+
+Repository maintainers can run the full package-consumer matrix with:
+
+```bash
+pnpm test:packages
+```
+
+## Renderer behavior
+
+Core renderer fixtures protect stable SVG output. Test layout, accessibility,
+the trusted-markup boundary, and export conversion in the host:
+
+- the adjacent textual summary contains the chart's important values
+- zone and trend meaning does not depend on color alone
+- zoom and narrow layouts do not clip labels
+- the consuming screen has an appropriate accessible name and reading order
+- email, PDF, image, or native conversion preserves the required content
+
+Do not replace host-level tests with an SVG snapshot alone.
+
+## Deployed route
+
+Run a small production smoke suite against the real deployment:
+
+- load the application over HTTPS
+- exercise one valid and one invalid data flow
+- verify server credentials do not appear in browser assets or responses
+- confirm cache behavior does not serve one user's data to another
+- test refresh, back/forward navigation, and a direct deep link
+- verify error monitoring contains no raw health payloads or secrets
+
+Use [Deployment](/docs/deployment) for the production boundary and
+[Safety and Limitations](/docs/safety) for the claims checklist.

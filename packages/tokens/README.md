@@ -1,17 +1,53 @@
 # @glucoseiq/tokens
 
-GlucoseIQ design tokens — the canonical 5-zone glucose palette, trend glyphs, and zone classification shared by every GlucoseIQ surface.
+Shared glucose-zone names, palettes, trend glyphs, brand values, and CSS custom
+properties for GlucoseIQ surfaces. Requires Node `>=24` and has no runtime
+dependencies.
+
+## Install
 
 ```bash
 npm install @glucoseiq/tokens
 ```
 
-```ts
-import { classifyGlucoseZone, zoneColor, cssVariables } from "@glucoseiq/tokens"
+## First use
 
-classifyGlucoseZone(65)      // "low"
-zoneColor("inRange")         // "#22c55e"
-document.documentElement.style.cssText += cssVariables("dark")
+```ts typecheck
+import { classifyGlucoseZone, cssVariables, zoneColor } from '@glucoseiq/tokens'
+
+const zone = classifyGlucoseZone(112)
+const color = zoneColor(zone, 'light')
+const rootStyles = cssVariables('light')
+
+console.log({ zone, color, rootStyles })
 ```
 
-MIT © Mark Learst
+## Options and defaults
+
+`zoneColor(zone, theme)` and `cssVariables(theme)` accept `dark` or `light`;
+the theme defaults to `dark`. `classifyGlucoseZone` has no options.
+
+The palettes are interface primitives and are not automatically applied to
+`@glucoseiq/core/render`. Its Time-in-Range SVG keeps stable zone fills in both
+surface themes; the renderer's `theme` option changes its background and text.
+
+## Invalid input
+
+`classifyGlucoseZone` accepts mg/dL only. A value must be positive and finite;
+zero, negative, `NaN`, and infinite values throw `RangeError`. Convert mmol/L
+before classification. Theme and zone names are closed TypeScript unions.
+
+## Safety limits
+
+Tokens provide consistent labels and values, not a complete accessibility or
+medical interpretation layer. Pair color with text, shape, or position and
+test contrast in the actual interface. Output is informational and not medical
+advice.
+
+## Documentation
+
+- [Tokens guide](https://glucoseiq.dev/docs/tokens)
+- [Public API](https://glucoseiq.dev/docs/api)
+- [Migration guide](https://glucoseiq.dev/docs/migration)
+- [Changelog](https://github.com/marklearst/glucoseiq/blob/main/CHANGELOG.md)
+- [MIT license](https://github.com/marklearst/glucoseiq/blob/main/LICENSE)

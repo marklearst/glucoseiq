@@ -1,8 +1,9 @@
 // @file src/a1c.ts
 
+import { DomainError } from './errors'
+
 /**
- * Formats a clinical A1C value as a percent string (e.g., "7.2%").
- * Used for clinical reporting and display.
+ * Formats an A1C value as a percent string (e.g., "7.2%").
  * @param val - A1C value (percentage)
  * @returns A1C as string with percent sign
  */
@@ -11,8 +12,7 @@ export function formatA1C(val: number): string {
 }
 
 /**
- * Validates a clinical A1C value (percentage).
- * Ensures value is within physiologically plausible range for clinical analytics.
+ * Returns whether a value is finite and greater than 0 but less than 20.
  * @param value - Candidate A1C value
  * @returns True if value is a valid A1C percentage
  */
@@ -26,27 +26,34 @@ export function isValidA1C(value: unknown): boolean {
 }
 
 /**
- * Returns the clinical category for an A1C value (normal, prediabetes, diabetes, or invalid).
- * Uses ADA thresholds by default, but allows custom cutoffs for research or population-specific use.
+ * Returns the CDC category for an A1C value (normal, prediabetes, diabetes, or invalid).
+ * Uses CDC defaults: normal below 5.7%, prediabetes from 5.7% to below 6.5%,
+ * and diabetes at 6.5% or above. Explicit custom maxima are inclusive. At
+ * runtime, nullish threshold objects or fields use the CDC defaults.
  * @param a1c - A1C value (percentage)
+ * @param thresholds - Optional inclusive custom maxima
  * @returns 'normal' | 'prediabetes' | 'diabetes' | 'invalid'
- */
-/**
- * Returns the clinical category for an A1C value (normal, prediabetes, diabetes, or invalid).
- * Uses ADA thresholds by default, but allows custom cutoffs for research or population-specific use.
- * @param a1c - A1C value (percentage)
- * @param thresholds - Optional custom thresholds: { normalMax?: number; prediabetesMax?: number }
- * @returns 'normal' | 'prediabetes' | 'diabetes' | 'invalid'
+ * @see https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html
  */
 export function getA1CCategory(
   a1c: number,
   thresholds?: { normalMax?: number; prediabetesMax?: number }
 ): 'normal' | 'prediabetes' | 'diabetes' | 'invalid' {
-  const normalMax = thresholds?.normalMax ?? 5.7
-  const prediabetesMax = thresholds?.prediabetesMax ?? 6.5
+  const normalMax = thresholds?.normalMax
+  const prediabetesMax = thresholds?.prediabetesMax
   if (!isValidA1C(a1c)) return 'invalid'
-  if (a1c <= normalMax) return 'normal'
-  if (a1c <= prediabetesMax) return 'prediabetes'
+  if (
+    normalMax === undefined || normalMax === null
+      ? a1c < 5.7
+      : a1c <= normalMax
+  )
+    return 'normal'
+  if (
+    prediabetesMax === undefined || prediabetesMax === null
+      ? a1c < 6.5
+      : a1c <= prediabetesMax
+  )
+    return 'prediabetes'
   return 'diabetes'
 }
 
@@ -72,11 +79,11 @@ export function isA1CInTarget(
  * @param current - Current A1C
  * @param previous - Previous A1C
  * @returns Delta (current - previous)
- * @throws If either value is invalid
+ * @throws {DomainError} If either value is invalid
  */
 export function a1cDelta(current: number, previous: number): number {
   if (!isValidA1C(current) || !isValidA1C(previous))
-    throw new Error('Invalid A1C value')
+    throw new DomainError('Invalid A1C value', 'INVALID_A1C_VALUE')
   return +(current - previous).toFixed(2)
 }
 

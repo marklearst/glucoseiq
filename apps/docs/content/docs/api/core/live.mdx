@@ -1,0 +1,101 @@
+---
+title: "Live Model"
+description: "Trend derivation and sensor staleness helpers."
+---
+
+### classifyGlucoseTrend
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+classifyGlucoseTrend(rocPerMin: number): CGMTrend
+```
+
+Classifies a rate-of-change (mg/dL per minute) into a CGM trend using
+Dexcom-style thresholds: &lt;1 flat, 1–2 slight, 2–3 single, ≥3 rapid.
+
+**Returns:** The corresponding [CGMTrend](/docs/api/core/types#cgmtrend)
+
+| Parameter | Description |
+| --- | --- |
+| `rocPerMin` | Rate of change in mg/dL per minute |
+
+
+---
+
+### computeGlucoseTrend
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+computeGlucoseTrend(readings: GlucoseReading[], options?: GlucoseTrendOptions): GlucoseTrendResult
+```
+
+Computes glucose rate-of-change and derives a trend from recent readings.
+
+Fits a least-squares slope over readings in the trailing window, normalizing
+mixed units to mg/dL. Useful for feeding a live trend arrow, and for
+back-filling a trend when a feed (e.g. Nightscout) does not provide one.
+
+**Returns:** Rate-of-change (mg/dL/min) and derived trend
+
+**Throws:** If `windowMin` is not a finite positive number
+
+```ts typecheck
+import { computeGlucoseTrend, type GlucoseReading } from '@glucoseiq/core'
+
+const readings: GlucoseReading[] = [
+  { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+  { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+]
+const { rocPerMin, trend } = computeGlucoseTrend(readings)
+// rocPerMin: 2, trend: 'rising'
+```
+
+| Parameter | Description |
+| --- | --- |
+| `readings` | Glucose readings with ISO 8601 timestamps |
+| `options` | Trailing window configuration |
+
+
+---
+
+### latestReading
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+latestReading(readings: GlucoseReading[]): null | GlucoseReading
+```
+
+Returns the most recent fully usable reading by timestamp (readings need not
+be sorted). A usable reading has a supported unit, a finite positive value at
+or below 600 mg/dL after normalization, and a parseable timestamp.
+
+**Returns:** The latest fully usable reading, or `null` when none are usable
+
+| Parameter | Description |
+| --- | --- |
+| `readings` | Glucose readings |
+
+
+---
+
+### minutesSinceLastReading
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+minutesSinceLastReading(readings: GlucoseReading[], now?: string | number | Date): null | number
+```
+
+Returns minutes elapsed since the most recent reading (sensor staleness).
+
+**Returns:** Minutes since the latest reading, or `null` if there are none
+
+**Throws:** If an explicit reference time is invalid
+
+| Parameter | Description |
+| --- | --- |
+| `readings` | Glucose readings |
+| `now` | Reference time (ISO string, epoch ms, or Date); defaults to the current time |

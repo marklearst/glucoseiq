@@ -1,30 +1,36 @@
 name: Release
 
-# On a push to main, release entries open or update the version PR. Merging
-# that PR publishes the approved packages to npm with provenance.
+# A main-branch push either refreshes the draft version pull request or publishes
+# a reviewed version commit. Quality, versioning, and publication use separate
+# least-privilege jobs.
 
 on:
   push:
     branches: [main]
 
-permissions:
-  actions: write
-  contents: write
-  pull-requests: write
-  id-token: write # npm provenance
+permissions: {}
 
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  release:
+  quality:
+    name: Release quality
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      has_changesets: ${{ steps.release-mode.outputs.has_changesets }}
+      should_publish: ${{ steps.release-mode.outputs.should_publish }}
+      expected_packages: ${{ steps.release-mode.outputs.expected_packages }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Prepare Changesets base branch
         run: |
@@ -32,16 +38,15 @@ jobs:
             git branch --track main origin/main
 
       - name: Install pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
         with:
-          version: 11.12.0
+          version: 11.17.0
 
       - name: Setup Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: 24
           cache: pnpm
-          registry-url: https://registry.npmjs.org
 
       - name: Pin npm
         run: npm install --global npm@11.17.0
@@ -49,23 +54,96 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Audit dependencies
+        run: pnpm test:security
+
+      - name: Detect release mode
+        id: release-mode
+        env:
+          CHANGESET_POLICY_BRANCH: ${{ github.ref_name }}
+          CHANGESET_POLICY_HEAD_REPOSITORY: ${{ github.repository }}
+          CHANGESET_POLICY_BASE_SHA: ${{ github.event.before }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process'
+          import { appendFileSync } from 'node:fs'
+          import {
+            isChangesetReaderPath,
+            parseNullDelimitedPaths,
+            runChangesetPolicy,
+          } from './scripts/test-changeset-policy.mjs'
+          import {
+            createExpectedPublicationPlan,
+            loadPublishedPackageSpecs,
+          } from './scripts/verify-published-packages.mjs'
+
+          const output = execFileSync(
+            'git',
+            ['ls-files', '-z', '--', '.changeset'],
+            { encoding: null, shell: false },
+          )
+          const paths = parseNullDelimitedPaths(output)
+          const hasChangesets = paths.some(isChangesetReaderPath)
+          const policy = runChangesetPolicy({ write: () => {} })
+          const generatedVersionCommit =
+            policy.reason === 'generated-version-commit'
+          if (hasChangesets && generatedVersionCommit) {
+            throw new Error(
+              'A stale release merge left newer Changesets on main; publication is blocked. Refresh and re-review the release candidate from current main.',
+            )
+          }
+          const shouldPublish = !hasChangesets && generatedVersionCommit
+          const expectedPackages = generatedVersionCommit
+            ? createExpectedPublicationPlan(
+                policy.versionedPackages,
+                loadPublishedPackageSpecs(),
+              )
+            : []
+          appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `has_changesets=${hasChangesets}\nshould_publish=${shouldPublish}\nexpected_packages=${JSON.stringify(expectedPackages)}\n`,
+          )
+          NODE
+
       - name: Build
         run: pnpm build
 
-      - name: Validate launch changeset
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test release safety contracts
+        run: pnpm test:release-safety
+
+      - name: Enforce Changeset policy
+        env:
+          CHANGESET_POLICY_BRANCH: ${{ github.head_ref || github.ref_name }}
+          CHANGESET_POLICY_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          CHANGESET_POLICY_BASE_SHA: ${{ github.event_name == 'push' && github.event.before || '' }}
+        run: pnpm test:changesets
+
+      - name: Validate launch metadata
         run: pnpm test:launch
 
-      - name: Test with coverage (100% enforced)
+      - name: Test API reference generation
+        run: pnpm --filter docs test:api
+
+      - name: Check generated API reference
+        run: pnpm --filter docs docs:api:check
+
+      - name: Test documentation contracts and snippets
+        run: pnpm test:docs
+
+      - name: Test with coverage
         run: pnpm test:coverage
 
-      - name: Bundle-size guard (core stays lean)
-        run: |
-          SIZE=$(gzip -c packages/core/dist/index.mjs | wc -c)
-          echo "core ESM gzipped: ${SIZE} bytes (budget 20000)"
-          if [ "$SIZE" -gt 20000 ]; then
-            echo "::error::@glucoseiq/core exceeds the 20KB gzipped budget (${SIZE} bytes)"
-            exit 1
-          fi
+      - name: Check intentional error contracts
+        run: pnpm test:errors
+
+      - name: Test reachable core bundle size
+        run: pnpm test:size
 
       - name: Test packed packages
         run: pnpm test:packages
@@ -73,23 +151,46 @@ jobs:
       - name: Build documentation
         run: pnpm --filter docs build
 
-      - name: Detect release entries
-        id: release-mode
-        run: |
-          RELEASE_ENTRIES=$(git ls-files '.changeset/*.md' ':(exclude).changeset/README.md')
+  version:
+    name: Version packages
+    needs: quality
+    if: needs.quality.outputs.has_changesets == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
-          if [ -n "$RELEASE_ENTRIES" ]; then
-            echo "has_changesets=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_changesets=false" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: 11.17.0
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Pin npm
+        run: npm install --global npm@11.17.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Version packages
-        if: steps.release-mode.outputs.has_changesets == 'true'
-        run: pnpm changeset version
+        run: |
+          pnpm changeset version
+          pnpm install --lockfile-only
 
       - name: Create or update release PR
-        if: steps.release-mode.outputs.has_changesets == 'true'
         id: version-pr
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
@@ -100,6 +201,7 @@ jobs:
           commit-message: 'chore(release): version packages'
           title: 'chore(release): version packages'
           body-path: .github/release-pr-body.md
+          draft: always-true
           add-paths: |
             .changeset/*.md
             packages/*/package.json
@@ -109,8 +211,122 @@ jobs:
           author: 'github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>'
           sign-commits: true
 
+      - name: Require release candidate
+        if: steps.version-pr.outputs.pull-request-head-sha == ''
+        run: |
+          echo "::error::Release entries exist but no release-candidate commit was created."
+          exit 1
+
+      - name: Checkout release candidate
+        if: steps.version-pr.outputs.pull-request-head-sha != ''
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          ref: ${{ steps.version-pr.outputs.pull-request-head-sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install candidate dependencies
+        if: steps.version-pr.outputs.pull-request-head-sha != ''
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify release candidate
+        if: steps.version-pr.outputs.pull-request-head-sha != ''
+        id: candidate
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          pnpm test:security
+          pnpm build
+          pnpm typecheck
+          pnpm lint
+          pnpm test:release-safety
+          pnpm test:launch
+          pnpm --filter docs test:api
+          pnpm --filter docs docs:api:check
+          pnpm test:docs
+          pnpm test:coverage
+          pnpm test:errors
+          pnpm test:size
+          pnpm test:packages:candidate
+          pnpm --filter docs build
+
+      - name: Publish candidate check
+        if: always() && steps.version-pr.outputs.pull-request-head-sha != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CANDIDATE_SHA: ${{ steps.version-pr.outputs.pull-request-head-sha }}
+          CANDIDATE_OUTCOME: ${{ steps.candidate.outcome }}
+          DETAILS_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          if [ "$CANDIDATE_OUTCOME" = "success" ]; then
+            CONCLUSION=success
+            SUMMARY="The versioned package candidate passed every release gate."
+          else
+            CONCLUSION=failure
+            SUMMARY="The versioned package candidate failed one or more release gates."
+          fi
+          gh api --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/$GITHUB_REPOSITORY/check-runs" \
+            --raw-field name='Build & test (Node 24)' \
+            --raw-field head_sha="$CANDIDATE_SHA" \
+            --raw-field status=completed \
+            --raw-field conclusion="$CONCLUSION" \
+            --raw-field details_url="$DETAILS_URL" \
+            --raw-field 'output[title]=Release candidate verification' \
+            --raw-field "output[summary]=$SUMMARY"
+
+      - name: Enforce candidate result
+        if: steps.candidate.outcome != 'success'
+        run: |
+          echo "::error::The release candidate did not pass every required gate."
+          exit 1
+
+  publish:
+    name: Publish packages
+    needs: quality
+    if: needs.quality.outputs.should_publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: 11.17.0
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Pin npm
+        run: npm install --global npm@11.17.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build publication artifacts
+        run: pnpm build
+
+      - name: Verify versioned tarballs
+        run: pnpm test:packages:candidate
+
+      - name: Verify live documentation domain
+        run: node scripts/release-preflight.mjs
+
       - name: Publish packages
-        if: steps.release-mode.outputs.has_changesets == 'false'
         id: changesets
         uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
@@ -120,41 +336,84 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
+      - name: Resolve publication inventory
+        id: publication-inventory
+        if: ${{ !cancelled() && (steps.changesets.outcome == 'success' || steps.changesets.outcome == 'failure') }}
+        env:
+          CHANGESETS_ACTION_OUTCOME: ${{ steps.changesets.outcome }}
+          CHANGESETS_PUBLISHED: ${{ steps.changesets.outputs.published }}
+          CHANGESETS_PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
+          EXPECTED_PUBLISHED_PACKAGES: ${{ needs.quality.outputs.expected_packages }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from 'node:fs'
+          import {
+            loadPublishedPackageSpecs,
+            resolvePublicationInventory,
+          } from './scripts/verify-published-packages.mjs'
+
+          const inventory = resolvePublicationInventory(
+            {
+              actionOutcome: process.env.CHANGESETS_ACTION_OUTCOME,
+              published: process.env.CHANGESETS_PUBLISHED,
+              publishedPackages: process.env.CHANGESETS_PUBLISHED_PACKAGES,
+              expectedPackages: process.env.EXPECTED_PUBLISHED_PACKAGES,
+            },
+            loadPublishedPackageSpecs(),
+          )
+          const reportedPackages = inventory.reportedPackages.map(({ name, version }) => ({
+            name,
+            version,
+          }))
+          const verificationPackages = inventory.verificationPackages.map(
+            ({ name, version }) => ({ name, version }),
+          )
+          console.log(
+            `Publication inventory source: ${inventory.source}; reported: ${JSON.stringify(reportedPackages)}; HEAD verification plan: ${JSON.stringify(verificationPackages)}`,
+          )
+          appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `reported_packages=${JSON.stringify(reportedPackages)}\nverification_packages=${JSON.stringify(verificationPackages)}\nincludes_compatibility=${verificationPackages.some(({ name }) => name === 'diabetic-utils')}\nsource=${inventory.source}\n`,
+          )
+          NODE
+
       - name: Preserve legacy npm release
-        if: steps.changesets.outcome == 'success'
+        if: ${{ !cancelled() && steps.publication-inventory.outputs.includes_compatibility == 'true' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          SHIM_VERSION=$(node -p "require('./packages/diabetic-utils/package.json').version")
-
-          if [ "$SHIM_VERSION" != "2.0.0" ] || [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-            exit 0
+          set -euo pipefail
+          if ! CURRENT_LEGACY=$(npm view diabetic-utils dist-tags.legacy \
+            --registry=https://registry.npmjs.org); then
+            echo "::error::Unable to read the diabetic-utils legacy dist-tag from npm."
+            exit 1
+          fi
+          if [ "$CURRENT_LEGACY" != "1.5.0" ]; then
+            if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+              echo "::error::The legacy dist-tag is missing and no bootstrap npm credential is available."
+              exit 1
+            fi
+            npm dist-tag add diabetic-utils@1.5.0 legacy \
+              --registry=https://registry.npmjs.org
           fi
 
-          npm dist-tag add diabetic-utils@1.5.0 legacy \
-            --registry=https://registry.npmjs.org
+      - name: Remove npm authentication
+        id: npm-auth-cleanup
+        if: ${{ !cancelled() && (steps.changesets.outcome == 'success' || steps.changesets.outcome == 'failure') }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { join } from 'node:path'
+          import { scrubUserNpmAuth } from './scripts/verify-published-packages.mjs'
 
-          for _ in 1 2 3 4 5 6; do
-            LEGACY_VERSION=$(npm view diabetic-utils dist-tags.legacy \
-              --registry=https://registry.npmjs.org 2>/dev/null || true)
-            LATEST_VERSION=$(npm view diabetic-utils dist-tags.latest \
-              --registry=https://registry.npmjs.org 2>/dev/null || true)
+          if (!process.env.HOME) throw new Error('HOME must be available for npm authentication cleanup')
+          const userConfig = join(process.env.HOME, '.npmrc')
+          const result = scrubUserNpmAuth({ userConfig })
+          console.log(`Removed ${result.removed} npm authentication entries from the user configuration.`)
+          NODE
 
-            if [ "$LEGACY_VERSION" = "1.5.0" ] && [ "$LATEST_VERSION" = "2.0.0" ]; then
-              exit 0
-            fi
-
-            sleep 5
-          done
-
-          echo "::error::Expected diabetic-utils dist-tags legacy=1.5.0 and latest=2.0.0; received legacy=${LEGACY_VERSION:-<missing>} and latest=${LATEST_VERSION:-<missing>}"
-          exit 1
-
-      - name: Run CI for release PR
-        if: steps.version-pr.outputs.pull-request-number != ''
+      - name: Verify published packages
+        if: ${{ !cancelled() && steps.publication-inventory.outcome == 'success' && steps.npm-auth-cleanup.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ steps.version-pr.outputs.pull-request-number }}
-        run: |
-          HEAD_REF=$(gh pr view "$PR_NUMBER" --json headRefName --jq .headRefName)
-          gh workflow run ci.yml --ref "$HEAD_REF"
+          CHANGESETS_VERIFICATION_PACKAGES: ${{ steps.publication-inventory.outputs.verification_packages }}
+        run: node scripts/verify-published-packages.mjs

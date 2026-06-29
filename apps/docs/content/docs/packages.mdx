@@ -1,0 +1,96 @@
+---
+title: Choose a Package
+description: Pick the smallest GlucoseIQ package that owns the contract your application needs.
+---
+
+GlucoseIQ splits analytics from framework adapters. Start with
+`@glucoseiq/core`, then add a package when your application needs its API.
+
+<table>
+  <caption>GlucoseIQ 1.0 package selection</caption>
+  <thead>
+    <tr>
+      <th scope="col">Package</th>
+      <th scope="col">Owns</th>
+      <th scope="col">Add it when</th>
+      <th scope="col">Runtime relationship</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><code>@glucoseiq/core</code></th>
+      <td>Analytics, mapped ingestion, connectors, interoperability, and optional SVG renderers</td>
+      <td>You need glucose-data primitives or render-ready data</td>
+      <td>No runtime dependencies</td>
+    </tr>
+    <tr>
+      <th scope="row"><code>@glucoseiq/react</code></th>
+      <td>Memoized hooks and React wrappers for the core SVG renderers</td>
+      <td>Your client interface uses React 18 or newer</td>
+      <td>Depends on core; React is a peer</td>
+    </tr>
+    <tr>
+      <th scope="row"><code>@glucoseiq/tokens</code></th>
+      <td>Zone names, thresholds, palettes, trend glyphs, and CSS variables</td>
+      <td>You are building your own visual layer</td>
+      <td>No runtime dependencies</td>
+    </tr>
+    <tr>
+      <th scope="row"><code>@glucoseiq/testing</code></th>
+      <td>Seeded synthetic CGM-shaped fixtures</td>
+      <td>You need repeatable tests, demos, stories, or screenshots</td>
+      <td>Depends on core types and contracts</td>
+    </tr>
+    <tr>
+      <th scope="row"><code>@glucoseiq/cli</code></th>
+      <td>Mapped delimited-data reports, JSON output, and AGP-style SVG files</td>
+      <td>You need a terminal workflow or an injectable command runner</td>
+      <td>Depends on core; exposes the <code>glucoseiq</code> executable</td>
+    </tr>
+    <tr>
+      <th scope="row"><code>diabetic-utils</code></th>
+      <td>The 107-export compatibility bridge</td>
+      <td>You are migrating an existing <code>diabetic-utils</code> application</td>
+      <td>Version 2 re-exports core; 1.5 remains on the <code>legacy</code> tag</td>
+    </tr>
+  </tbody>
+</table>
+
+All published packages require Node.js 24 or newer. The React package keeps a
+`react >=18` peer range and is the only package with a React boundary.
+
+## Start with core
+
+Install only the engine when you own the UI, use another framework, or run
+analytics in a server process:
+
+```bash
+npm install @glucoseiq/core
+```
+
+The root export covers the main data model and analytics. Four public subpaths
+group APIs by responsibility:
+
+- `@glucoseiq/core/metrics` for individual metrics
+- `@glucoseiq/core/connectors` for supported payload normalizers
+- `@glucoseiq/core/interop` for interoperability helpers
+- `@glucoseiq/core/render` for optional SVG-string renderers
+
+See the [core API reference](/docs/api/core) for the public contract.
+
+## Add packages by boundary
+
+Use [React](/docs/react) when React owns presentation, [tokens](/docs/tokens)
+when your design system owns rendering, [testing](/docs/testing) for synthetic
+fixtures, and the [CLI](/docs/cli) for file-oriented terminal workflows. The
+[API reference](/docs/api) lists each package's public exports.
+
+Install only the packages your application uses. The package boundaries show
+which code belongs in browser bundles and which dependencies affect upgrades.
+
+## Migrate existing applications
+
+New applications should import `@glucoseiq/core` directly. Existing
+`diabetic-utils` applications can move through the compatibility package
+without losing the 1.5 public export surface. Follow the
+[migration guide](/docs/migration) for version, runtime, and import changes.

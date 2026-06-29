@@ -577,6 +577,12 @@ describe('calculateCONGA', () => {
 // Active Percent
 // ---------------------------------------------------------------------------
 describe('calculateActivePercent', () => {
+  const readingAt = (timestamp: string): GlucoseReading => ({
+    value: 100,
+    unit: 'mg/dL',
+    timestamp,
+  })
+
   it('returns NaN for fewer than 2 readings', () => {
     const result = calculateActivePercent([])
     expect(result.activePercent).toBeNaN()
@@ -647,7 +653,130 @@ describe('calculateActivePercent', () => {
       { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:01:00Z' },
     ]
     const result = calculateActivePercent(readings)
-    expect(result.activePercent).toBeLessThanOrEqual(100)
+    expect(result).toMatchObject({
+      activePercent: 100,
+      actualReadings: 1,
+      expectedReadings: 1,
+      totalMinutes: 1,
+      meetsClinicalMinimum: true,
+    })
+  })
+
+  it('counts occupied expected-interval slots rather than duplicate rows', () => {
+    const readings = [
+      ...Array(3).fill(readingAt('2024-01-01T08:00:00Z')),
+      ...Array(2).fill(readingAt('2024-01-01T08:10:00Z')),
+    ]
+
+    expect(calculateActivePercent(readings)).toEqual({
+      activePercent: 66.7,
+      actualReadings: 2,
+      expectedReadings: 3,
+      totalMinutes: 10,
+      meetsClinicalMinimum: false,
+    })
+  })
+
+  it('uses half-open slots anchored to the earliest timestamp', () => {
+    const readings = [
+      readingAt('2024-01-01T08:10:00.000Z'),
+      readingAt('2024-01-01T08:04:59.999Z'),
+      readingAt('2024-01-01T08:00:00.000Z'),
+    ]
+    const withBoundary = [
+      ...readings,
+      readingAt('2024-01-01T08:05:00.000Z'),
+    ]
+
+    expect(calculateActivePercent(readings)).toMatchObject({
+      activePercent: 66.7,
+      actualReadings: 2,
+      expectedReadings: 3,
+    })
+    expect(calculateActivePercent([...readings].reverse())).toEqual(
+      calculateActivePercent(readings)
+    )
+    expect(calculateActivePercent(withBoundary)).toMatchObject({
+      activePercent: 100,
+      actualReadings: 3,
+      expectedReadings: 3,
+    })
+  })
+
+  it('treats duplicate-only input as one observation with insufficient span', () => {
+    const duplicate = readingAt('2024-01-01T08:00:00Z')
+    const result = calculateActivePercent([duplicate, duplicate])
+
+    expect(result.activePercent).toBeNaN()
+    expect(result).toMatchObject({
+      actualReadings: 1,
+      expectedReadings: 0,
+      totalMinutes: 0,
+      meetsClinicalMinimum: false,
+    })
+  })
+
+  it.each([0, -1, NaN, Infinity])(
+    'rejects invalid expected interval %s',
+    (expectedIntervalMinutes) => {
+      expect(() =>
+        calculateActivePercent([], { expectedIntervalMinutes })
+      ).toThrowError(
+        expect.objectContaining({
+          name: 'DomainError',
+          code: 'INVALID_OPTION',
+          message: 'expectedIntervalMinutes must be positive and finite',
+        })
+      )
+    }
+  )
+
+  it('rejects an interval that creates an unsafe expected-slot count', () => {
+    expect(() =>
+      calculateActivePercent(
+        [
+          readingAt('2024-01-01T08:00:00Z'),
+          readingAt('2024-01-01T08:05:00Z'),
+        ],
+        { expectedIntervalMinutes: Number.MIN_VALUE }
+      )
+    ).toThrowError(
+      expect.objectContaining({
+        name: 'DomainError',
+        code: 'INVALID_OPTION',
+        message:
+          'expectedIntervalMinutes creates an unsafe expected slot count',
+      })
+    )
+  })
+
+  it('uses the unrounded coverage ratio for the 70% flag', () => {
+    const start = Date.parse('2024-01-01T00:00:00Z')
+    const makeSlots = (slots: number[], totalSlots: number) => [
+      ...slots.map((slot) =>
+        readingAt(new Date(start + slot * 5 * 60000).toISOString())
+      ),
+      readingAt(new Date(start + (totalSlots - 1) * 5 * 60000).toISOString()),
+    ]
+    const justBelow = calculateActivePercent(
+      makeSlots(Array.from({ length: 141 }, (_, index) => index), 203)
+    )
+    const exact = calculateActivePercent(
+      makeSlots(Array.from({ length: 6 }, (_, index) => index), 10)
+    )
+
+    expect(justBelow).toMatchObject({
+      activePercent: 70,
+      actualReadings: 142,
+      expectedReadings: 203,
+      meetsClinicalMinimum: false,
+    })
+    expect(exact).toMatchObject({
+      activePercent: 70,
+      actualReadings: 7,
+      expectedReadings: 10,
+      meetsClinicalMinimum: true,
+    })
   })
 })
 
@@ -675,7 +804,7 @@ describe('calculateAGPMetrics', () => {
     expect(() => calculateAGPMetrics([])).toThrow('readings array is empty')
   })
 
-  it('returns comprehensive metrics for multi-day CGM data', () => {
+  it('returns finite aggregate fields for multi-day CGM data', () => {
     const readings = makeReadings(3)
     const result = calculateAGPMetrics(readings)
 

@@ -1,8 +1,8 @@
 /**
  * @file src/metrics/m-value.ts
  *
- * Schlichtkrull M-value — a classic index of glycemic control and variability,
- * weighting deviations from an ideal reference glucose (default 120 mg/dL) with
+ * The Schlichtkrull M-value measures glycemic control and variability. It
+ * weights deviations from an ideal reference glucose (default 120 mg/dL) with
  * a cubic term that penalizes hypoglycemia more steeply.
  *
  *   M*_i = |10 · log10(x_i / index)|^3         (the factor 10 is INSIDE the cube)
@@ -11,7 +11,7 @@
  * The W amplitude correction is part of the original 1965 definition (default
  * on); the "EasyGV"/CGM variant omits it.
  *
- * Pure and dependency-free. Values are computed in mg/dL.
+ * The calculation uses mg/dL.
  *
  * @see https://pubmed.ncbi.nlm.nih.gov/14163158/  Schlichtkrull et al. (1965)
  */

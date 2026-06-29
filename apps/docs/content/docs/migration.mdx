@@ -5,11 +5,11 @@ description: Move from diabetic-utils 1.5.x to its 2.0 compatibility bridge or a
 
 ## Choose a migration path
 
-GlucoseIQ 1.0 publishes the headless engine as `@glucoseiq/core`. The
+GlucoseIQ 1.0 publishes the analytics package as `@glucoseiq/core`. The
 `diabetic-utils` 2.0 package re-exports that public API so projects on 1.5.x
 can upgrade without changing source imports:
 
-```ts
+```ts typecheck
 import { calculateEnhancedTIR, estimateGMI } from 'diabetic-utils' // still works
 ```
 
@@ -25,7 +25,7 @@ New projects should install the scoped package:
 npm install @glucoseiq/core@^1
 ```
 
-```ts
+```ts typecheck
 import { calculateEnhancedTIR, estimateGMI } from '@glucoseiq/core'
 ```
 
@@ -43,23 +43,74 @@ dist-tag:
 npm install diabetic-utils@legacy
 ```
 
-## Clinical formula compatibility
+## Behavior changes in 1.0
 
-The clinical formulas keep their 1.5.x numeric behavior. Percentiles use
-nearest-rank by default, while interpolation remains opt-in. Golden-value
-tests preserve cited results across the package move.
+Conversion and metric formulas keep their 1.5.x numeric behavior except for the
+changes documented below.
 
-## Changes in the compatibility major
+### Enhanced and pregnancy Time in Range
 
-1. **Node ≥24** for the GlucoseIQ package ecosystem and compatibility bridge.
-2. **Typed errors** — intentional throws are now `GlucoseIQError` subclasses
-   with stable `code`s. Messages are byte-identical; only `instanceof` narrows
-   differently (e.g. GRI's `RangeError` → `DomainError`).
-3. **Corrected FHIR LOINC codes** — earlier releases used transposed/invalid
-   codes; all codes are now verified against the HL7 CGM IG v1.0.0 value set.
-   If you stored Observations with the old codes, re-emit them.
-4. **Libre unit fix** — LinkUp payloads with `GlucoseUnits: 0` (mmol/L) are no
-   longer mislabeled as mg/dL.
+Enhanced and pregnancy TIR reject zero and non-finite glucose values. Pregnancy
+results expose the `<54 mg/dL` (`<3.0 mmol/L`) subset as
+`belowRangeLevel2`.
+
+Population target checks use unrounded percentages. TIR must be strictly
+greater than 70% for the standard population or 50% for older/high-risk
+populations. TBR and TAR checks are cumulative, with their Level 2 subsets
+assessed separately. Older/high-risk checks use total TBR `<1%`, Level 2 TBR
+`<1%`, total TAR `<50%`, and Level 2 TAR `<10%`.
+
+`targetBasis` reports whether percentage goals were applied to consensus or
+caller-configured ranges. Enhanced TIR rejects unsupported population and
+reading-unit values at runtime. Pregnancy TIR also rejects unsupported unit
+options instead of selecting a fallback target model.
+
+### Coverage and duration
+
+Active percent counts occupied timestamp slots rather than raw rows. Exact
+duplicates and multiple readings in one slot count once, invalid timestamps
+are excluded, and threshold flags use the unrounded ratio.
+
+Enhanced and pregnancy TIR summary duration uses occupied five-minute-slot
+coverage. Quality fails closed for invalid, duplicate-only, or less-than-70%
+timestamp coverage. Each occupied slot is divided across its distinct
+observations and ranges, exact duplicates count once, invalid timestamps add no
+duration, and primary range durations conserve the covered total.
+
+### Validation and sentinel results
+
+Glucose string guards accept only positive finite values in a supported unit.
+GMI option guards require a positive finite value plus the exact `mg/dL` or
+`mmol/L` unit literal.
+
+`analyzeGlucose` and `glucoseIQScore` keep their sentinel-result behavior by
+screening unsupported-unit rows alongside other unusable readings.
+
+Episode detection returns timestamp-grouped candidates that satisfy the
+configured threshold, duration, and gap rules. It does not prove a recovered or
+clinically adjudicated event.
+
+Percentiles use nearest-rank by default. Set the interpolation option when you
+need type-7 percentiles.
+
+### A1C categories
+
+`getA1CCategory` uses corrected default boundaries in `@glucoseiq/core` 1.0 and
+the `diabetic-utils` 2.0 compatibility bridge. The
+[CDC defaults](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html)
+classify A1C below 5.7% as normal, 5.7% to below 6.5% as prediabetes, and 6.5%
+or higher as diabetes. Explicit custom maxima remain inclusive. The published
+`diabetic-utils` 1.5.x artifacts are unchanged, retain their previous boundary
+behavior, and remain available via the `legacy` dist-tag.
+
+## Compatibility package changes
+
+| Area | Change | Action |
+| --- | --- | --- |
+| Runtime | The package requires Node 24 or newer. | Upgrade Node or remain on `diabetic-utils@legacy`. |
+| Typed errors | Throws now use `GlucoseIQError` subclasses with stable `code`s. Messages are byte-identical, but `instanceof` can narrow differently, such as GRI's `RangeError` changing to `DomainError`. | Prefer the stable error `code` when handling failures. |
+| FHIR LOINC codes | Earlier releases used transposed or invalid codes. The new codes match the HL7 CGM IG v1.0.0 value set. | Re-emit stored Observations that contain the old codes. |
+| Libre units | LinkUp payloads with `GlucoseUnits: 0` are now labeled mmol/L. | Review code that compensated for the earlier mg/dL label. |
 
 ## Added since diabetic-utils 1.5.x
 

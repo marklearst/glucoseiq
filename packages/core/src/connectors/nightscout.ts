@@ -1,15 +1,16 @@
 /**
  * @file src/connectors/nightscout.ts
  *
- * Pure transformation adapter for Nightscout API payloads.
- * Maps raw Nightscout SGV entries into NormalizedCGMReading objects.
- * Does NOT handle authentication — use with the Nightscout REST API directly.
+ * Converts Nightscout API payloads to NormalizedCGMReading values.
+ * The caller must authenticate and fetch entries from the Nightscout REST API.
  *
  * @see https://nightscout.github.io/nightscout/setup_variables/#api
  * @see https://www.npmjs.com/package/nightscout
  */
 
 import { MG_DL } from '../constants'
+import { TimestampError } from '../errors'
+import { toUsableMgDl } from '../reading-policy'
 import type {
   NightscoutEntry,
   NightscoutDirection,
@@ -30,8 +31,15 @@ const NIGHTSCOUT_DIRECTION_MAP: Record<string, CGMTrend> = {
   'RATE OUT OF RANGE': 'unknown',
 }
 
+/** Converts a runtime vendor epoch to ISO without coercing non-numbers. */
+function parseNightscoutEpoch(value: unknown): string | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null
+  const date = new Date(value)
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null
+}
+
 /**
- * Normalizes a Nightscout direction string into a canonical CGMTrend.
+ * Maps a Nightscout direction string to the shared `CGMTrend` values.
  */
 export function normalizeNightscoutDirection(
   direction: NightscoutDirection | undefined
@@ -44,42 +52,60 @@ export function normalizeNightscoutDirection(
  * Converts a single Nightscout SGV entry into a NormalizedCGMReading.
  *
  * @param entry - Raw Nightscout SGV entry
- * @returns Normalized reading compatible with all `@glucoseiq/core` analytics functions
+ * @returns A normalized reading usable by APIs that accept `GlucoseReading`, subject to each API's contract
+ * @throws {TimestampError} If neither vendor timestamp can be normalized
+ * @throws {DomainError} If the glucose value is not usable
  */
 export function normalizeNightscoutEntry(
   entry: NightscoutEntry
 ): NormalizedCGMReading {
   const timestamp = (() => {
-    if (entry.dateString) {
-      const parsed = Date.parse(entry.dateString)
-      if (!Number.isNaN(parsed)) {
-        return new Date(parsed).toISOString()
+    if (entry.dateString !== undefined && entry.dateString !== '') {
+      if (typeof entry.dateString !== 'string') {
+        throw new TimestampError(
+          `Unable to parse Nightscout timestamp from 'dateString': ${String(
+            entry.dateString
+          )}`
+        )
+      }
+      let parsed = Number.NaN
+      try {
+        parsed = Date.parse(entry.dateString)
+      } catch {
+        parsed = Number.NaN
+      }
+      if (Number.isFinite(parsed)) {
+        const parsedDate = new Date(parsed)
+        if (Number.isFinite(parsedDate.getTime())) {
+          return parsedDate.toISOString()
+        }
       }
 
       // Fall back to `entry.date` if available and valid
       if (entry.date !== undefined && entry.date !== null) {
-        const fallbackDate = new Date(entry.date)
-        if (!Number.isNaN(fallbackDate.getTime())) {
-          return fallbackDate.toISOString()
-        }
+        const fallbackTimestamp = parseNightscoutEpoch(entry.date)
+        if (fallbackTimestamp !== null) return fallbackTimestamp
       }
 
-      throw new Error(
-        `Unable to parse Nightscout timestamp from 'dateString': ${entry.dateString}`
+      throw new TimestampError(
+        `Unable to parse Nightscout timestamp from 'dateString': ${String(
+          entry.dateString
+        )}`
       )
     }
 
-    const date = new Date(entry.date)
-    if (Number.isNaN(date.getTime())) {
-      throw new Error(
+    const fallbackTimestamp = parseNightscoutEpoch(entry.date)
+    if (fallbackTimestamp === null) {
+      throw new TimestampError(
         `Unable to parse Nightscout timestamp from 'date' field: ${String(
           entry.date
         )}`
       )
     }
 
-    return date.toISOString()
+    return fallbackTimestamp
   })()
+  toUsableMgDl(entry.sgv, MG_DL, 'Nightscout entry')
   return {
     value: entry.sgv,
     unit: MG_DL,

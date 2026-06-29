@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { alignToGrid } from '../src/align'
 import { createGlucoseReadings } from './test-helpers'
 import { MGDL_MMOLL_CONVERSION } from '../src/constants'
+import { DomainError } from '../src/errors'
 import type { GlucoseReading } from '../src/types'
 
 const base = Date.UTC(2024, 0, 1, 8, 0, 0)
@@ -10,6 +11,18 @@ const at = (min: number, value: number): GlucoseReading => ({
   unit: 'mg/dL',
   timestamp: new Date(base + min * 60000).toISOString(),
 })
+
+function expectInvalidOption(call: () => unknown, message: string): void {
+  let thrown: unknown
+  try {
+    call()
+  } catch (error) {
+    thrown = error
+  }
+
+  expect(thrown).toBeInstanceOf(DomainError)
+  expect(thrown).toMatchObject({ code: 'INVALID_OPTION', message })
+}
 
 describe('alignToGrid', () => {
   it('passes through readings already on the grid', () => {
@@ -79,5 +92,80 @@ describe('alignToGrid', () => {
         { value: 100, unit: 'mg/dL', timestamp: 'bad' },
       ])
     ).toEqual([])
+  })
+
+  it.each([-5, 0, NaN, Infinity])('rejects intervalMin %s', (intervalMin) => {
+    expectInvalidOption(
+      () => alignToGrid([at(0, 100), at(10, 120)], { intervalMin }),
+      'intervalMin must be positive and finite'
+    )
+  })
+
+  it.each([-1, NaN, Infinity])(
+    'rejects maxInterpolateGapMin %s',
+    (maxInterpolateGapMin) => {
+      expectInvalidOption(
+        () => alignToGrid([at(0, 100), at(10, 120)], { maxInterpolateGapMin }),
+        'maxInterpolateGapMin must be non-negative and finite'
+      )
+    }
+  )
+
+  it('accepts a zero-minute interpolation window', () => {
+    expect(
+      alignToGrid([at(0, 100), at(10, 120)], { maxInterpolateGapMin: 0 })
+    ).toHaveLength(2)
+  })
+
+  it('accepts grids containing exactly 100,000 points', () => {
+    expect(alignToGrid([at(0, 100), at(99_999, 120)], { intervalMin: 1 })).toHaveLength(2)
+  })
+
+  it.each([
+    {
+      boundary: 'upper',
+      timestamps: ['+275760-09-12T23:59:00.000Z', '+275760-09-13T00:00:00.000Z'],
+    },
+    {
+      boundary: 'lower',
+      timestamps: ['-271821-04-20T00:00:00.000Z', '-271821-04-20T00:01:00.000Z'],
+    },
+  ])('rejects grid rounding beyond the $boundary date boundary', ({ timestamps }) => {
+    const readings = timestamps.map((timestamp, index) => ({
+      value: 100 + index * 10,
+      unit: 'mg/dL' as const,
+      timestamp,
+    }))
+    expectInvalidOption(
+      () => alignToGrid(readings, { intervalMin: 11 }),
+      'alignToGrid grid timestamps must be valid dates'
+    )
+  })
+
+  it.each([
+    {
+      boundary: 'upper',
+      timestamps: ['+275760-09-12T23:59:00.000Z', '+275760-09-13T00:00:00.000Z'],
+    },
+    {
+      boundary: 'lower',
+      timestamps: ['-271821-04-20T00:00:00.000Z', '-271821-04-20T00:01:00.000Z'],
+    },
+  ])('preserves representable slots at the $boundary date boundary', ({ timestamps }) => {
+    const readings = timestamps.map((timestamp, index) => ({
+      value: 100 + index * 10,
+      unit: 'mg/dL' as const,
+      timestamp,
+    }))
+    expect(alignToGrid(readings, { intervalMin: 1 }).map((point) => point.timestamp)).toEqual(
+      timestamps
+    )
+  })
+
+  it('rejects grids larger than 100,000 points', () => {
+    expectInvalidOption(
+      () => alignToGrid([at(0, 100), at(100_000, 120)], { intervalMin: 1 }),
+      'alignToGrid would create more than 100000 grid points'
+    )
   })
 })

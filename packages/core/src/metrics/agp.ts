@@ -3,8 +3,8 @@
  *
  * Aggregate Ambulatory Glucose Profile (AGP) metrics calculator.
  *
- * Computes a comprehensive set of standardized CGM metrics in a single call,
- * returning an object with all Tier 1 metrics from the iglu reference set.
+ * Computes a selected aggregate set of CGM metrics in one call: mean, SD, CV,
+ * LBGI/HBGI, ADRR, GRADE, GRI, J-index, MODD, CONGA, and active percent.
  *
  * @see https://cran.r-project.org/web/packages/iglu/vignettes/metrics_list.html
  */
@@ -33,7 +33,7 @@ export interface AGPMetricsOptions {
   readonly activePercent?: ActivePercentOptions
 }
 
-/** Comprehensive AGP metrics result. */
+/** Selected aggregate AGP metrics result. */
 export interface AGPMetricsResult {
   /** Mean glucose in mg/dL */
   readonly meanGlucose: number
@@ -57,23 +57,24 @@ export interface AGPMetricsResult {
   readonly modd: number
   /** Continuous Overall Net Glycemic Action (mg/dL) */
   readonly conga: number
-  /** CGM active percent / wear time */
+  /** Timestamp-slot coverage estimate; not proof of sensor wear. */
   readonly activePercent: ActivePercentResult
   /** Number of valid readings used */
   readonly totalReadings: number
 }
 
 /**
- * Calculates a comprehensive set of AGP metrics from glucose readings.
+ * Calculates a selected aggregate set of AGP metrics from glucose readings.
  *
- * This is a convenience function that computes all Tier 1 metrics in a
- * single call. Individual metric functions are also available for
- * selective computation.
+ * This convenience function computes the fields in {@link AGPMetricsResult} in
+ * one call. Other public metrics remain available through their focused
+ * functions.
  *
  * @param readings - Array of GlucoseReading objects with timestamps
  * @param options - Optional configuration for individual metrics
- * @returns Comprehensive AGP metrics result
- * @throws {Error} If readings array is empty
+ * @returns Selected aggregate AGP metrics result
+ * @throws {EmptyDatasetError} If readings array is empty
+ * @throws {DomainError} If a nested metric rejects a reading or option
  */
 export function calculateAGPMetrics(
   readings: GlucoseReading[],

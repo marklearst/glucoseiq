@@ -5,11 +5,11 @@
  * - MAG: Mean Absolute Glucose change rate (total absolute change per hour).
  * - GVP: Glycemic Variability Percentage (excess trace length vs. a flat line).
  *
- * Pure and dependency-free. Both normalize mixed mg/dL and mmol/L input to
- * mg/dL and return NaN when there is insufficient data or no time span.
+ * Both metrics normalize mixed mg/dL and mmol/L input to mg/dL and return NaN
+ * when there is insufficient data or no time span.
  *
- * @see https://doi.org/10.1186/cc9002  Hermanides et al. (2010) — MAG
- * @see https://doi.org/10.1089/dia.2017.0187  Peyser et al. (2018) — GVP
+ * @see https://doi.org/10.1186/cc9002  Hermanides et al. (2010), MAG
+ * @see https://doi.org/10.1089/dia.2017.0187  Peyser et al. (2018), GVP
  */
 
 import type { GlucoseReading } from '../types'

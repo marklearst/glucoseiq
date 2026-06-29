@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { formatGlucose, formatPercentage, formatDate } from '../src/formatters'
 import { MG_DL, MMOL_L } from '../src/constants'
+import { TimestampError } from '../src/errors'
 
 describe('Formatters', () => {
   it('formats glucose values with units', () => {
@@ -31,7 +32,27 @@ describe('Formatters', () => {
   })
 
   it('throws on invalid ISO timestamps', () => {
-    expect(() => formatDate('not-a-date')).toThrow(RangeError)
+    expect(() => formatDate('not-a-date')).toThrow(TimestampError)
     expect(() => formatDate('')).toThrow('Invalid ISO timestamp')
+  })
+
+  it('rethrows unexpected date formatting errors unchanged', () => {
+    const unexpectedError = new Error('Unexpected date formatting failure')
+    const toLocaleStringSpy = vi
+      .spyOn(Date.prototype, 'toLocaleString')
+      .mockImplementation(() => {
+        throw unexpectedError
+      })
+    let thrown: unknown
+
+    try {
+      formatDate('2024-03-15T14:30:00Z')
+    } catch (error) {
+      thrown = error
+    } finally {
+      toLocaleStringSpy.mockRestore()
+    }
+
+    expect(thrown).toBe(unexpectedError)
   })
 })

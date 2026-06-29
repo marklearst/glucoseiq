@@ -8,6 +8,7 @@
 import { isValidA1C } from './a1c'
 import { isValidGlucoseValue } from './glucose'
 import { isValidInsulin } from './validators'
+import { DomainError } from './errors'
 import {
   HOMA_IR_DENOMINATOR,
   HOMA_IR_CUTOFFS,
@@ -21,24 +22,27 @@ import {
  *
  * Formula: HOMA-IR = (fasting glucose [mg/dL] × fasting insulin [µIU/mL]) / 405
  *
- * Used for estimating insulin resistance. Not a diagnostic tool.
+ * Returns the calculated value with the function's cutoff label. The result
+ * does not diagnose insulin resistance.
  *
  * @param glucose - Fasting glucose value in mg/dL. Must be a positive finite number.
  * @param insulin - Fasting insulin value in µIU/mL. Must be a positive finite number.
  * @returns Object with numeric HOMA-IR value and interpretation label.
- * @throws {Error} If glucose or insulin are invalid (non-finite, zero, or negative).
+ * @throws {DomainError} If glucose or insulin are invalid (non-finite, zero, or negative).
  * @see https://pubmed.ncbi.nlm.nih.gov/3899825/ (Original HOMA-IR publication)
  * @see https://diabetesjournals.org/care/article/26/1/118/22567/Prevalence-and-Concomitants-of-Glucose-Intolerance (ADA: Glucose Intolerance and HOMA-IR context)
  */
 export function calculateHOMAIR(glucose: number, insulin: number) {
   if (!isValidGlucoseValue(glucose, MG_DL)) {
-    throw new Error(
-      'Invalid fasting glucose value (must be a positive number in mg/dL)'
+    throw new DomainError(
+      'Invalid fasting glucose value (must be a positive number in mg/dL)',
+      'INVALID_GLUCOSE_VALUE'
     )
   }
   if (!isValidInsulin(insulin)) {
-    throw new Error(
-      'Invalid fasting insulin value (must be a positive number in µIU/mL)'
+    throw new DomainError(
+      'Invalid fasting insulin value (must be a positive number in µIU/mL)',
+      'INVALID_INSULIN_VALUE'
     )
   }
   const score = (glucose * insulin) / HOMA_IR_DENOMINATOR
@@ -75,21 +79,16 @@ function interpretHOMAIR(score: number): string {
 }
 
 /**
- * Checks consistency among A1C, fasting glucose, and fasting insulin markers.
- *
- * Returns:
- *   - Estimated average glucose (mg/dL), calculated per CDC formula
- *   - HOMA-IR result (value and interpretation)
- *   - Flags for potential inconsistencies
- *   - Informational note and disclaimer
- *
- * Used for high-level insight and trend alignment, not for diagnosis.
+ * Compares A1C-derived estimated average glucose with fasting glucose and
+ * calculates HOMA-IR from fasting glucose and insulin. Returns both calculated
+ * values, flags from fixed comparison rules, and an informational disclaimer.
+ * The result does not diagnose a condition.
  *
  * @param a1c - A1C value (percentage). Must be a positive finite number.
  * @param glucose - Fasting glucose value in mg/dL. Must be a positive finite number.
  * @param insulin - Fasting insulin value in µIU/mL. Must be a positive finite number.
  * @returns Object with estimated average glucose (mg/dL), HOMA-IR result object, flags array, recommendation string, and disclaimer.
- * @throws {Error} If any input value is invalid (non-finite, zero, or negative).
+ * @throws {DomainError} If any input value is invalid (non-finite, zero, or negative).
  * @see https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html (CDC: eAG formula)
  */
 export function checkGlycemicAlignment(
@@ -98,16 +97,21 @@ export function checkGlycemicAlignment(
   insulin: number
 ) {
   if (!isValidA1C(a1c)) {
-    throw new Error('Invalid A1C value (must be a positive number < 20%)')
+    throw new DomainError(
+      'Invalid A1C value (must be a positive number < 20%)',
+      'INVALID_A1C_VALUE'
+    )
   }
   if (!isValidGlucoseValue(glucose, MG_DL)) {
-    throw new Error(
-      'Invalid fasting glucose value (must be a positive number in mg/dL)'
+    throw new DomainError(
+      'Invalid fasting glucose value (must be a positive number in mg/dL)',
+      'INVALID_GLUCOSE_VALUE'
     )
   }
   if (!isValidInsulin(insulin)) {
-    throw new Error(
-      'Invalid fasting insulin value (must be a positive number in µIU/mL)'
+    throw new DomainError(
+      'Invalid fasting insulin value (must be a positive number in µIU/mL)',
+      'INVALID_INSULIN_VALUE'
     )
   }
 

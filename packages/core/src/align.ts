@@ -6,12 +6,29 @@
  * readings on a fixed grid. `alignToGrid` snaps readings to the nearest slot,
  * linearly interpolates slots inside small gaps (flagged `interpolated`), and
  * leaves genuine sensor gaps as holes rather than inventing data.
- *
- * Pure and dependency-free.
  */
 
 import type { GlucoseReading, GlucoseUnit } from './types'
 import { MG_DL, MGDL_MMOLL_CONVERSION } from './constants'
+import { DomainError } from './errors'
+
+const MAX_GRID_POINTS = 100_000
+
+function assertFiniteOption(name: string, value: number, allowZero = false): void {
+  const valid = Number.isFinite(value) && (allowZero ? value >= 0 : value > 0)
+  if (!valid) {
+    throw new DomainError(
+      `${name} must be ${allowZero ? 'non-negative' : 'positive'} and finite`,
+      'INVALID_OPTION'
+    )
+  }
+}
+
+function assertValidGridTimestamp(value: number): void {
+  if (!Number.isFinite(value) || Number.isNaN(new Date(value).getTime())) {
+    throw new DomainError('alignToGrid grid timestamps must be valid dates', 'INVALID_OPTION')
+  }
+}
 
 /** A resampled grid point. */
 export interface GridPoint {
@@ -41,7 +58,13 @@ export interface AlignOptions {
  * @returns Grid points from the first to the last reading; genuine gaps are holes
  *
  * @example
- * ```ts
+ * ```ts typecheck
+ * import { alignToGrid, type GlucoseReading } from '@glucoseiq/core'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ *   { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:10:00Z' },
+ * ]
  * const grid = alignToGrid(readings) // 5-min slots, gaps ≤15 min interpolated
  * ```
  *
@@ -55,6 +78,9 @@ export function alignToGrid(
   const intervalMin = options?.intervalMin ?? 5
   const maxGap = options?.maxInterpolateGapMin ?? 15
   const unit = options?.unit ?? MG_DL
+
+  assertFiniteOption('intervalMin', intervalMin)
+  assertFiniteOption('maxInterpolateGapMin', maxGap, true)
 
   const points: { t: number; v: number }[] = []
   for (const r of readings) {
@@ -71,12 +97,24 @@ export function alignToGrid(
   const intervalMs = intervalMin * 60000
   const startSlot = Math.round((points[0].t * 60000) / intervalMs) * intervalMs
   const endSlot = Math.round((points[points.length - 1].t * 60000) / intervalMs) * intervalMs
+  assertValidGridTimestamp(startSlot)
+  assertValidGridTimestamp(endSlot)
+  const slotCount = Math.floor((endSlot - startSlot) / intervalMs) + 1
+  if (!Number.isSafeInteger(slotCount) || slotCount > MAX_GRID_POINTS) {
+    throw new DomainError(
+      `alignToGrid would create more than ${MAX_GRID_POINTS} grid points`,
+      'INVALID_OPTION'
+    )
+  }
+  const lastSlot = startSlot + (slotCount - 1) * intervalMs
+  assertValidGridTimestamp(lastSlot)
 
   const grid: GridPoint[] = []
   const tolerance = intervalMin / 2
   let cursor = 0 // index of the last point at-or-before the slot
 
-  for (let slotMs = startSlot; slotMs <= endSlot; slotMs += intervalMs) {
+  for (let index = 0; index < slotCount; index++) {
+    const slotMs = startSlot + index * intervalMs
     const slotMin = slotMs / 60000
     while (cursor + 1 < points.length && points[cursor + 1].t <= slotMin) cursor++
 
@@ -108,7 +146,7 @@ export function alignToGrid(
         interpolated: true,
       })
     }
-    // Otherwise: a genuine gap — leave a hole.
+    // Leave a hole for a sensor gap beyond the interpolation window.
   }
   return grid
 }

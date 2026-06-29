@@ -1,0 +1,36 @@
+---
+title: "Reports"
+description: "Selected composed CGM analytics summaries."
+---
+
+### analyzeGlucose
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+analyzeGlucose(readings: GlucoseReading[], options?: AnalyzeGlucoseOptions): AnalyzeGlucoseResult
+```
+
+Produces a selected CGM analytics summary from glucose readings in one call.
+
+**Returns:** A typed report; `valid: false` when no usable readings remain after screening
+
+```ts typecheck
+import { analyzeGlucose, type GlucoseReading } from '@glucoseiq/core'
+
+const readings: GlucoseReading[] = [
+  { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+  { value: 145, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+]
+const report = analyzeGlucose(readings, { timeZone: 'America/New_York' })
+if (report.valid && report.timeInRange && report.agpProfile) {
+  const tir = report.timeInRange.inRange.percentage
+  const bins = report.agpProfile.bins
+  void { tir, bins }
+}
+```
+
+| Parameter | Description |
+| --- | --- |
+| `readings` | Glucose readings with ISO 8601 timestamps |
+| `options` | Time zone, profile toggle, and sufficiency thresholds |

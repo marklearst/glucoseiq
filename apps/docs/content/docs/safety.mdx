@@ -1,0 +1,106 @@
+---
+title: Safety and Limitations
+description: Understand the clinical, data-quality, privacy, rendering, and integration boundaries of GlucoseIQ.
+---
+
+GlucoseIQ provides informational analytics primitives for software products.
+It does not provide medical advice, diagnosis, treatment, dosing decisions, or
+emergency monitoring. A product that uses GlucoseIQ remains responsible for its
+own intended use, validation, risk controls, regulatory obligations, and human
+review.
+
+## Treat analytics as evidence, not a decision
+
+Time-in-Range, variability, GMI, risk metrics, episode candidates, and the
+Glucose IQ score summarize the supplied data. They do not establish sensor
+accuracy, treatment safety, or a clinical conclusion.
+
+- The Glucose IQ score is a project-defined, non-diagnostic wellness heuristic
+  derived from GRI.
+- Episode detection returns timestamp-grouped candidates that satisfy the
+  configured threshold, duration, and gap rules. It does not prove a recovered
+  or clinically adjudicated event.
+- The AGP-style profile and SVG renderer expose percentile bands and summaries;
+  they are not a complete standardized AGP report.
+- Pregnancy ranges are available for informational analysis. Quantified target
+  assessment follows the documented type 1 diabetes pregnancy basis; do not
+  infer percentage goals for populations where the cited guidance does not
+  quantify them.
+
+Show units, date range, coverage, source, and configured targets beside results
+that people may interpret.
+
+## Validate the data boundary
+
+TypeScript types do not validate JSON at runtime. Validate authentication,
+payload shape, unit literals, numeric bounds, timestamps, and source identity
+before data reaches an analytics function.
+
+Each API documents its unit contract:
+
+- Mixed-unit-aware `GlucoseReading` APIs normalize each supported reading.
+- Legacy `calculateTIR` expects one homogeneous unit for readings and bounds.
+- Numeric-array APIs expect one homogeneous series and the matching unit
+  argument or option where the signature provides one.
+- `@glucoseiq/tokens` classifies mg/dL values only.
+
+Do not silently treat an unknown unit as mmol/L. Preserve the source unit and
+reject unsupported literals at the ingestion boundary.
+
+## Make missing and conflicting data visible
+
+Timestamp coverage is not proof of sensor wear or sensor accuracy. Duplicate
+rows can distort reading-count percentages even when occupied-slot duration is
+conserved. Deduplicate by stable source identity when an upstream system can
+deliver the same record more than once.
+
+Use [Data Quality](/docs/data-quality) to expose gaps, invalid timestamps,
+coverage, and sufficiency. Keep low-coverage or stale states visible in the UI
+instead of filling them with a confident-looking value.
+
+## Keep credentials and health data in the host application
+
+Connector functions normalize supported payload shapes; they do not manage
+OAuth, vendor sessions, credential storage, consent, retention, deletion, or
+network transport. Keep credentials out of browser bundles and logs. Apply the
+privacy, encryption, access-control, and audit requirements appropriate to the
+application and jurisdiction.
+
+GlucoseIQ does not replace a backend authorization boundary. Passing a payload
+to a pure function does not establish that the caller was entitled to read it.
+
+## Integrate renderers safely
+
+Core renderers return SVG strings. The React wrappers inline only SVG produced
+by those renderers. Do not pass arbitrary third-party markup through the same
+trusted rendering path.
+
+Color cannot carry zone or trend meaning on its own. Add visible text,
+position, shape, or another non-color cue. Place a textual summary adjacent to
+an SVG chart so the same important values are available without interpreting
+the graphic. Test keyboard flow, zoom, contrast, screen-reader output, reduced
+motion, and high-contrast modes in the consuming application.
+
+Email, PDF, README, and watch hosts require host-specific embedding,
+conversion, or integration. Verify output in the actual host rather than
+assuming browser behavior transfers unchanged.
+
+## Keep synthetic fixtures out of decisions
+
+`@glucoseiq/testing` creates repeatable synthetic CGM-shaped data for
+software tests and demos. It does not model a person, device, therapy, or
+outcome and is not a substitute for validated reference datasets.
+
+## Release checklist for a user-facing result
+
+Before shipping a surface that presents glucose analytics:
+
+1. Define the intended use and the claims the product will not make.
+2. Validate source identity, timestamps, values, and units at runtime.
+3. Show freshness, gaps, coverage, configured targets, and failure states.
+4. Test representative malformed, sparse, duplicate, mixed-unit, and stale data.
+5. Pair visual encodings with text and test the host application.
+6. Review privacy, security, accessibility, and applicable regulatory duties.
+
+Use [Integration Testing](/docs/integration-testing) for the software test
+layers and [Deployment](/docs/deployment) for production boundaries.

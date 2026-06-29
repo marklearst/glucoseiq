@@ -1,9 +1,8 @@
 /**
  * @file src/connectors/capabilities.ts
  *
- * Connector capability descriptors — declarative metadata about each CGM data
- * source so pipelines can pick poll cadence, gap thresholds, and strictness
- * per source instead of hardcoding vendor quirks.
+ * Connector capability descriptors provide CGM-source metadata for poll
+ * cadence, gap thresholds, and validation strictness.
  */
 
 import type { CGMSource } from './types'

@@ -1,19 +1,22 @@
 /**
  * @file src/render/agp-svg.ts
  *
- * "AGP-in-a-tag": renders an Ambulatory Glucose Profile as a self-contained,
- * themeable SVG **string** — no DOM, no canvas, no framework. It runs
- * {@link buildAGPProfile} internally and draws the 5–95 and 25–75 percentile
- * bands, the median line, and the target range. Works anywhere a string does:
- * Node, email, PDF, a README, RSC, or any UI framework.
+ * Returns a self-contained SVG string for the 5–95 and 25–75 percentile bands,
+ * median, and target range from {@link buildAGPProfile}. The renderer does not
+ * access the DOM or canvas. Server and browser hosts can embed the string;
+ * other hosts must convert or integrate it. This renderer uses mg/dL only.
  *
- * Scoped to mg/dL (the standard AGP unit). Pure and dependency-free.
- *
- * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
+ * @see {@link https://doi.org/10.2337/dci19-0028 | International Consensus on Time in Range (2019)}
  */
 
 import type { GlucoseReading } from '../types'
 import { buildAGPProfile, type AGPProfileBin } from '../metrics/agp-profile'
+import { DomainError } from '../errors'
+import {
+  addFinite,
+  resolveSvgDimension,
+  roundToTenth,
+} from './svg-options'
 
 /** y-axis floor (mg/dL). */
 const Y_MIN = 40
@@ -84,28 +87,47 @@ function palette(theme: 'light' | 'dark'): ChartPalette {
 
 /** Escapes XML special characters in text content. @internal */
 function escapeXml(s: string): string {
-  return s.replace(
-    /[&<>"']/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!
-  )
+  return s
+    .replace(
+      /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uD800-\uDFFF\uFFFE\uFFFF]/gu,
+      '\ufffd'
+    )
+    .replace(
+      /[&<>"']/g,
+      (c) =>
+        ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;',
+        })[c]!
+    )
 }
 
-/** Rounds to one decimal for compact, deterministic coordinates. @internal */
+/** Rounds to one decimal so repeated renders use the same compact coordinates. @internal */
 function fmt(n: number): number {
-  return Math.round(n * 10) / 10
+  return roundToTenth(n)
 }
 
 /**
- * Renders an Ambulatory Glucose Profile chart as an SVG string.
+ * Renders an AGP-style percentile-band chart as an SVG string.
  *
  * @param readings - Glucose readings with ISO 8601 timestamps (mg/dL or mmol/L)
  * @param options - Dimensions, theme, time zone, and title
  * @returns A complete, self-contained SVG document string
+ * @throws {DomainError} If width or height is not a finite positive number, or if a present title is not a string
  *
  * @example
- * ```ts
+ * ```ts typecheck
+ * import { type GlucoseReading } from '@glucoseiq/core'
+ * import { agpChartToSVG } from '@glucoseiq/core/render'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ *   { value: 145, unit: 'mg/dL', timestamp: '2024-01-02T08:00:00Z' },
+ * ]
  * const svg = agpChartToSVG(readings, { theme: 'dark' })
- * // <svg ...>…</svg> — drop into HTML, a README, an email, or a PDF
  * ```
  *
  * @category Render
@@ -115,8 +137,26 @@ export function agpChartToSVG(
   readings: GlucoseReading[],
   options?: AGPChartOptions
 ): string {
-  const width = options?.width ?? 800
-  const height = options?.height ?? 320
+  const width = resolveSvgDimension(
+    options?.width,
+    800,
+    'agpChartToSVG',
+    'width'
+  )
+  const height = resolveSvgDimension(
+    options?.height,
+    320,
+    'agpChartToSVG',
+    'height'
+  )
+  const configuredTitle: unknown = options?.title
+  if (configuredTitle !== undefined && typeof configuredTitle !== 'string') {
+    throw new DomainError(
+      'agpChartToSVG: title must be a string',
+      'INVALID_OPTION'
+    )
+  }
+  const title = configuredTitle
   const theme = options?.theme ?? 'dark'
   const c = palette(theme)
 
@@ -127,14 +167,17 @@ export function agpChartToSVG(
   })
 
   const margin = { top: 20, right: 16, bottom: 28, left: 44 }
-  const plotW = width - margin.left - margin.right
-  const plotH = height - margin.top - margin.bottom
+  const plotW = Math.max(0, width - margin.left - margin.right)
+  const plotH = Math.max(0, height - margin.top - margin.bottom)
 
   const xScale = (minuteOfDay: number): number =>
-    margin.left + (minuteOfDay / 1440) * plotW
+    addFinite(margin.left, (minuteOfDay / 1440) * plotW)
   const yScale = (value: number): number => {
     const clamped = Math.max(Y_MIN, Math.min(Y_MAX, value))
-    return margin.top + (1 - (clamped - Y_MIN) / (Y_MAX - Y_MIN)) * plotH
+    return addFinite(
+      margin.top,
+      (1 - (clamped - Y_MIN) / (Y_MAX - Y_MIN)) * plotH
+    )
   }
 
   // Group consecutive bins that have data into runs (breaks at sensor gaps).
@@ -164,7 +207,9 @@ export function agpChartToSVG(
   parts.push(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Ambulatory Glucose Profile">`
   )
-  parts.push(`<rect width="${width}" height="${height}" fill="${c.bg}"/>`)
+  parts.push(
+    `<rect width="${width}" height="${height}" fill="${c.bg}"/>`
+  )
 
   // Target range shading + boundary lines (redundant encoding for CVD safety).
   const yHigh = fmt(yScale(TARGET_HIGH))
@@ -177,10 +222,10 @@ export function agpChartToSVG(
     [yHigh, `${TARGET_HIGH}`],
   ] as const) {
     parts.push(
-      `<line x1="${margin.left}" y1="${ty}" x2="${fmt(margin.left + plotW)}" y2="${ty}" stroke="${c.targetLine}" stroke-width="1" stroke-dasharray="4 3"/>`
+      `<line x1="${margin.left}" y1="${ty}" x2="${fmt(addFinite(margin.left, plotW))}" y2="${ty}" stroke="${c.targetLine}" stroke-width="1" stroke-dasharray="4 3"/>`
     )
     parts.push(
-      `<text x="${fmt(margin.left + plotW + 2)}" y="${fmt(ty + 3)}" fill="${c.targetLine}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" text-anchor="start">${label}</text>`
+      `<text x="${fmt(addFinite(addFinite(margin.left, plotW), 2))}" y="${fmt(addFinite(ty, 3))}" fill="${c.targetLine}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" text-anchor="start">${label}</text>`
     )
   }
 
@@ -188,10 +233,10 @@ export function agpChartToSVG(
   for (const ty of Y_TICKS) {
     const y = fmt(yScale(ty))
     parts.push(
-      `<line x1="${margin.left}" y1="${y}" x2="${fmt(margin.left + plotW)}" y2="${y}" stroke="${c.axis}" stroke-width="1"/>`
+      `<line x1="${margin.left}" y1="${y}" x2="${fmt(addFinite(margin.left, plotW))}" y2="${y}" stroke="${c.axis}" stroke-width="1"/>`
     )
     parts.push(
-      `<text x="${margin.left - 6}" y="${fmt(y + 3)}" fill="${c.text}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" text-anchor="end">${ty}</text>`
+      `<text x="${margin.left - 6}" y="${fmt(addFinite(y, 3))}" fill="${c.text}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="9" text-anchor="end">${ty}</text>`
     )
   }
 
@@ -217,9 +262,9 @@ export function agpChartToSVG(
     )
   }
 
-  if (options?.title) {
+  if (title) {
     parts.push(
-      `<text x="${margin.left}" y="13" fill="${c.text}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" font-weight="600" text-anchor="start">${escapeXml(options.title)}</text>`
+      `<text x="${margin.left}" y="13" fill="${c.text}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" font-weight="600" text-anchor="start">${escapeXml(title)}</text>`
     )
   }
 

@@ -1,12 +1,11 @@
 /**
- * @glucoseiq/tokens — the canonical GlucoseIQ design tokens.
+ * @glucoseiq/tokens exports shared design tokens for GlucoseIQ surfaces.
  *
- * One glucose-zone model (per the 2019 international consensus), one palette
- * (dark-first, colorblind-safe by redundancy — always pair color with a label
- * or position), one trend-glyph set. Shared by web, watch, native, and the
- * zero-dependency SVG renderers so every surface reads identically.
+ * The package includes consensus glucose-zone definitions, color palettes,
+ * trend glyphs, and CSS custom properties. Each host chooses how to translate
+ * and apply the values in its runtime. Pair color with a label or position.
  *
- * Zero runtime dependencies.
+ * The package has no runtime dependencies.
  */
 
 /** The five consensus glucose zones. */
@@ -33,6 +32,9 @@ export const ZONE_THRESHOLDS_MGDL = {
  * Classifies a glucose value (mg/dL) into its consensus zone.
  */
 export function classifyGlucoseZone(mgdl: number): GlucoseZone {
+  if (!Number.isFinite(mgdl) || mgdl <= 0) {
+    throw new RangeError('Glucose value must be positive and finite')
+  }
   if (mgdl < ZONE_THRESHOLDS_MGDL.veryLowMax) return 'veryLow'
   if (mgdl < ZONE_THRESHOLDS_MGDL.lowMax) return 'low'
   if (mgdl <= ZONE_THRESHOLDS_MGDL.inRangeMax) return 'inRange'
@@ -101,7 +103,9 @@ export function zoneColor(zone: GlucoseZone, theme: Theme = 'dark'): string {
  * Emits the tokens as a CSS custom-property block, e.g. for a `:root` rule.
  *
  * @example
- * ```ts
+ * ```ts typecheck
+ * import { cssVariables } from '@glucoseiq/tokens'
+ *
  * const style = `:root { ${cssVariables('dark')} }`
  * ```
  */

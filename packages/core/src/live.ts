@@ -1,22 +1,25 @@
 /**
  * @file src/live.ts
  *
- * Live / real-time glucose helpers: rate-of-change, trend derivation, and
- * latest-reading / staleness utilities for CGM home screens, dashboards, and
- * watch complications.
+ * Live and real-time glucose helpers for rate of change, trend derivation,
+ * latest readings, and staleness on CGM home screens and dashboards.
+ * Watch surfaces require host-application integration.
  *
- * All functions here are *descriptive of past readings* — rate-of-change is
- * computed from observed values, not projected forward. Short-horizon
- * forecasting is intentionally kept out of the zero-dep core (see the
- * @glucoseiq/forecast sibling) to avoid implying a predictive medical-device
- * function.
+ * These functions calculate rate of change and trend from observed readings.
+ * They do not forecast future glucose. Forecasting remains outside this
+ * descriptive package to avoid implying a predictive medical-device function.
  *
  * @see {@link https://www.dexcom.com | Dexcom trend-arrow rate thresholds}
  */
 
 import type { GlucoseReading } from './types'
 import type { CGMTrend } from './connectors/types'
-import { MG_DL, MGDL_MMOLL_CONVERSION } from './constants'
+import { DomainError, TimestampError } from './errors'
+import {
+  isUsableReading,
+  parseUsableTimestamp,
+  toUsableMgDl,
+} from './reading-policy'
 
 /** Default trailing window for rate-of-change (minutes). */
 const DEFAULT_WINDOW_MIN = 15
@@ -41,14 +44,21 @@ export interface GlucoseTrendResult {
 
 /** Normalizes a reading to mg/dL. @internal */
 function toMgdl(reading: GlucoseReading): number {
-  return reading.unit === MG_DL
-    ? reading.value
-    : reading.value * MGDL_MMOLL_CONVERSION
+  return toUsableMgDl(reading.value, reading.unit, 'Reading')
 }
 
-/** Parses a timestamp-ish value to epoch ms (NaN if invalid). @internal */
-function parseMs(value: string | number | Date): number {
-  return new Date(value).getTime()
+/** Parses an explicit reference time without coercing other runtime values. */
+function parseReferenceMs(value: unknown): number {
+  if (typeof value === 'string') {
+    try {
+      return Date.parse(value)
+    } catch {
+      return Number.NaN
+    }
+  }
+  if (typeof value === 'number') return new Date(value).getTime()
+  if (value instanceof Date) return value.getTime()
+  return Number.NaN
 }
 
 /**
@@ -61,6 +71,7 @@ function parseMs(value: string | number | Date): number {
  * @public
  */
 export function classifyGlucoseTrend(rocPerMin: number): CGMTrend {
+  if (!Number.isFinite(rocPerMin)) return 'unknown'
   const magnitude = Math.abs(rocPerMin)
   if (magnitude < 1) return 'flat'
   const rising = rocPerMin > 0
@@ -79,11 +90,18 @@ export function classifyGlucoseTrend(rocPerMin: number): CGMTrend {
  * @param readings - Glucose readings with ISO 8601 timestamps
  * @param options - Trailing window configuration
  * @returns Rate-of-change (mg/dL/min) and derived trend
+ * @throws {DomainError} If `windowMin` is not a finite positive number
  *
  * @example
- * ```ts
+ * ```ts typecheck
+ * import { computeGlucoseTrend, type GlucoseReading } from '@glucoseiq/core'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ *   { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+ * ]
  * const { rocPerMin, trend } = computeGlucoseTrend(readings)
- * // rocPerMin: 2.1, trend: 'rising'
+ * // rocPerMin: 2, trend: 'rising'
  * ```
  *
  * @category Live
@@ -93,7 +111,19 @@ export function computeGlucoseTrend(
   readings: GlucoseReading[],
   options?: GlucoseTrendOptions
 ): GlucoseTrendResult {
-  const windowMinutes = options?.windowMin ?? DEFAULT_WINDOW_MIN
+  const requestedWindow = options?.windowMin
+  const windowMinutes =
+    requestedWindow === undefined ? DEFAULT_WINDOW_MIN : requestedWindow
+  if (
+    typeof windowMinutes !== 'number' ||
+    !Number.isFinite(windowMinutes) ||
+    windowMinutes <= 0
+  ) {
+    throw new DomainError(
+      `windowMin must be a finite positive number: ${String(windowMinutes)}`,
+      'INVALID_OPTION'
+    )
+  }
   const unknown: GlucoseTrendResult = {
     rocPerMin: NaN,
     trend: 'unknown',
@@ -103,10 +133,9 @@ export function computeGlucoseTrend(
 
   const points: { t: number; mgdl: number }[] = []
   for (const r of readings) {
+    if (!isUsableReading(r)) continue
     const mgdl = toMgdl(r)
-    if (!Number.isFinite(mgdl) || mgdl <= 0) continue
-    const ms = parseMs(r.timestamp)
-    if (Number.isNaN(ms)) continue
+    const ms = parseUsableTimestamp(r.timestamp, 'Reading')
     points.push({ t: ms / 60000, mgdl })
   }
   if (points.length < 2) return unknown
@@ -129,9 +158,9 @@ export function computeGlucoseTrend(
   }
   if (den === 0) return { ...unknown, readingsUsed: n }
 
-  const rocPerMin = num / den
+  const rocPerMin = Math.round((num / den) * 1000) / 1000
   return {
-    rocPerMin: Math.round(rocPerMin * 1000) / 1000,
+    rocPerMin,
     trend: classifyGlucoseTrend(rocPerMin),
     windowMinutes,
     readingsUsed: n,
@@ -139,10 +168,12 @@ export function computeGlucoseTrend(
 }
 
 /**
- * Returns the most recent reading by timestamp (readings need not be sorted).
+ * Returns the most recent fully usable reading by timestamp (readings need not
+ * be sorted). A usable reading has a supported unit, a finite positive value at
+ * or below 600 mg/dL after normalization, and a parseable timestamp.
  *
  * @param readings - Glucose readings
- * @returns The latest reading, or `null` if none have a valid timestamp
+ * @returns The latest fully usable reading, or `null` when none are usable
  * @category Live
  * @public
  */
@@ -150,8 +181,8 @@ export function latestReading(readings: GlucoseReading[]): GlucoseReading | null
   let best: GlucoseReading | null = null
   let bestMs = -Infinity
   for (const r of readings) {
-    const ms = parseMs(r.timestamp)
-    if (Number.isNaN(ms)) continue
+    if (!isUsableReading(r)) continue
+    const ms = parseUsableTimestamp(r.timestamp, 'Reading')
     if (ms >= bestMs) {
       bestMs = ms
       best = r
@@ -166,6 +197,7 @@ export function latestReading(readings: GlucoseReading[]): GlucoseReading | null
  * @param readings - Glucose readings
  * @param now - Reference time (ISO string, epoch ms, or Date); defaults to the current time
  * @returns Minutes since the latest reading, or `null` if there are none
+ * @throws {TimestampError} If an explicit reference time is invalid
  * @category Live
  * @public
  */
@@ -173,8 +205,14 @@ export function minutesSinceLastReading(
   readings: GlucoseReading[],
   now?: string | number | Date
 ): number | null {
+  const nowMs = now === undefined ? Date.now() : parseReferenceMs(now)
+  if (now !== undefined && !Number.isFinite(nowMs)) {
+    throw new TimestampError(`Unable to parse reference time: ${String(now)}`)
+  }
   const latest = latestReading(readings)
   if (latest === null) return null
-  const nowMs = now === undefined ? Date.now() : parseMs(now)
-  return (nowMs - parseMs(latest.timestamp)) / 60000
+  return (
+    (nowMs - parseUsableTimestamp(latest.timestamp, 'Reading')) /
+    60000
+  )
 }
