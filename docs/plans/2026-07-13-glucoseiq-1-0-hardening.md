@@ -4,7 +4,7 @@
 
 **Architecture:** Stabilize public contracts before documentation and automation. Each behavior change begins with a focused failing test, receives a minimal implementation, and passes a task-level review before the next task starts. The final release workflow enforces the same package and documentation contracts verified locally.
 
-**Tech stack:** TypeScript, Node 24, pnpm 11.12.0, Turborepo, Vitest, tsup, TypeDoc, Next.js 16, Fumadocs, Changesets, GitHub Actions, and npm provenance.
+**Tech stack:** TypeScript, Node 24, pnpm 11.17.0, Turborepo, Vitest, tsup, TypeDoc, Next.js 16, Fumadocs, Changesets, GitHub Actions, and npm provenance.
 
 ## Global constraints
 
@@ -18,7 +18,7 @@
 - Keep `@glucoseiq/core` free of runtime dependencies.
 - Freeze the visual layer. Content, metadata, semantics, and documentation behavior remain in scope.
 - Do not inspect, delete, regenerate, stage, or commit `packages/core/docs-md/`.
-- Keep branch names, commits, pull requests, source, packages, releases, and public documentation free of assistant attribution, generated-by trailers, task links, and tool-focused naming.
+- Keep branch names, commits, pull requests, source, packages, releases, and public documentation focused on GlucoseIQ and its named contributors.
 - Use project-focused commit subjects and no commit trailers.
 
 ## Baseline evidence
@@ -1967,7 +1967,7 @@ Create:
 - `version`: after quality, `contents: write`, `pull-requests: write`, `checks: write`, no OIDC;
 - `publish`: after quality, `contents: write`, `id-token: write`, no pull-request permission.
 
-Use Node 24 and pnpm 11.12.0 in all three jobs. Pin npm 11.17.0 in the publish job. Keep every action SHA-pinned and keep public npm provenance enabled.
+Use Node 24 and pnpm 11.17.0 in all three jobs. Pin npm 11.17.0 in the publish job. Keep every action SHA-pinned and keep public npm provenance enabled.
 
 The version job must create or update `release/glucoseiq-packages` as a draft, check out the returned head SHA, run the full candidate suite against versioned manifests, and create a `Build & test (Node 24)` check run on that exact SHA with a link to the workflow run and its real conclusion. The durable gates include the release-safety unit suites and docs API generator tests. Remove the detached manual workflow dispatch. On the same-repository generated release branch, give the ordinary CI job a different name and skip it so the required check has exactly one producer; fork pull requests with the same branch name must still run ordinary CI.
 
@@ -2070,7 +2070,7 @@ git diff --check
 
 Confirm exact release predictions, six packed manifests, ten entrypoints, correct declaration routes, React peer installs, CLI success and failure paths, 107 compatibility exports, changelog inclusion, no `workspace:` ranges in tarballs, and no source-map local paths.
 
-Scan tracked files, the complete branch commit subjects and bodies, and the prepared pull-request text for prohibited attribution, generated-by trailers, task links, and tool-focused names. Do not place the prohibited terms in a tracked scanner or configuration file.
+Scan tracked files, the complete branch commit subjects and bodies, and the prepared pull-request text for unapproved attribution or internal workflow references. Keep the review policy outside tracked scanner and configuration files.
 
 - [ ] **Step 4: Review the complete branch**
 

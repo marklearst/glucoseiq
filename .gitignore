@@ -6,6 +6,9 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
+# Local browser verification artifacts
+output/
+
 # Planning, project documentation
 markdown/**/*.*
 
