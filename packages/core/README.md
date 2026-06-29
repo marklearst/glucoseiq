@@ -102,8 +102,8 @@ source data. The output is informational and not medical advice.
 
 ## Documentation
 
-- [Core concepts](https://glucoseiq.health/docs/core-concepts)
-- [Public API](https://glucoseiq.health/docs/api/core)
-- [Migration guide](https://glucoseiq.health/docs/migration)
+- [Core concepts](https://glucoseiq.dev/docs/core-concepts)
+- [Public API](https://glucoseiq.dev/docs/api/core)
+- [Migration guide](https://glucoseiq.dev/docs/migration)
 - [Changelog](https://github.com/marklearst/glucoseiq/blob/main/CHANGELOG.md)
 - [MIT license](https://github.com/marklearst/glucoseiq/blob/main/LICENSE)

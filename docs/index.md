@@ -2,7 +2,7 @@
 
 This directory preserves the generated API reference for the legacy
 `diabetic-utils` 1.5.x line. New development belongs in the
-[`@glucoseiq` package ecosystem](https://glucoseiq.health/docs), and
+[`@glucoseiq` package ecosystem](https://glucoseiq.dev/docs), and
 `diabetic-utils` 2.0 provides the compatibility path to `@glucoseiq/core` 1.0.
 
 ## Modules
@@ -48,4 +48,4 @@ Constants and clinical thresholds.
 
 _These files preserve the generated `diabetic-utils` 1.5.x API reference. For
 the current package guides and API documentation, visit
-[glucoseiq.health](https://glucoseiq.health/docs)._
+[glucoseiq.dev](https://glucoseiq.dev/docs)._

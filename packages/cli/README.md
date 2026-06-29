@@ -75,8 +75,8 @@ host environment. Output is informational and not medical advice.
 
 ## Documentation
 
-- [CLI guide](https://glucoseiq.health/docs/cli)
-- [Public API](https://glucoseiq.health/docs/api)
-- [Migration guide](https://glucoseiq.health/docs/migration)
+- [CLI guide](https://glucoseiq.dev/docs/cli)
+- [Public API](https://glucoseiq.dev/docs/api)
+- [Migration guide](https://glucoseiq.dev/docs/migration)
 - [Changelog](https://github.com/marklearst/glucoseiq/blob/main/CHANGELOG.md)
 - [MIT license](https://github.com/marklearst/glucoseiq/blob/main/LICENSE)

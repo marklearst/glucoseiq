@@ -115,8 +115,8 @@ composition example.
   standardized complete report.
 
 Package-specific options, defaults, invalid-input behavior, and safety limits
-are documented in the [GlucoseIQ guides](https://glucoseiq.health/docs) and
-[API reference](https://glucoseiq.health/docs/api).
+are documented in the [GlucoseIQ guides](https://glucoseiq.dev/docs) and
+[API reference](https://glucoseiq.dev/docs/api).
 
 ## Migration
 
@@ -130,7 +130,7 @@ const mmolL = mgDlToMmolL(180)
 void mmolL
 ```
 
-Read the [migration guide](https://glucoseiq.health/docs/migration) for runtime,
+Read the [migration guide](https://glucoseiq.dev/docs/migration) for runtime,
 type-declaration, and package-boundary changes. The published 1.5.x line remains
 available through the `legacy` npm dist-tag.
 

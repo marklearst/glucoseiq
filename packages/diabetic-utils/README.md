@@ -56,7 +56,7 @@ behavior. The same input policies and resource boundaries as
 
 ## Documentation
 
-- [Migration guide](https://glucoseiq.health/docs/migration)
-- [Core API](https://glucoseiq.health/docs/api/core)
+- [Migration guide](https://glucoseiq.dev/docs/migration)
+- [Core API](https://glucoseiq.dev/docs/api/core)
 - [Changelog](https://github.com/marklearst/glucoseiq/blob/main/CHANGELOG.md)
 - [MIT license](https://github.com/marklearst/glucoseiq/blob/main/LICENSE)

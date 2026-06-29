@@ -65,8 +65,8 @@ mutating values in place. Output is informational and not medical advice.
 
 ## Documentation
 
-- [React guide](https://glucoseiq.health/docs/react)
-- [Public API](https://glucoseiq.health/docs/api)
-- [Migration guide](https://glucoseiq.health/docs/migration)
+- [React guide](https://glucoseiq.dev/docs/react)
+- [Public API](https://glucoseiq.dev/docs/api)
+- [Migration guide](https://glucoseiq.dev/docs/migration)
 - [Changelog](https://github.com/marklearst/glucoseiq/blob/main/CHANGELOG.md)
 - [MIT license](https://github.com/marklearst/glucoseiq/blob/main/LICENSE)

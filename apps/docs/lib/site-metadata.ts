@@ -1,7 +1,7 @@
 import type { Metadata, MetadataRoute } from 'next'
 
 export const SITE_NAME = 'GlucoseIQ'
-export const SITE_ORIGIN = 'https://glucoseiq.health'
+export const SITE_ORIGIN = 'https://glucoseiq.dev'
 export const SITE_TITLE = 'GlucoseIQ | TypeScript tools for CGM analytics'
 export const SITE_DESCRIPTION =
   'TypeScript packages for analyzing CGM data and rendering charts, with no runtime dependencies in the core package.'

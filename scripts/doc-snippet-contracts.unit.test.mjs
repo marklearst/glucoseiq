@@ -83,44 +83,44 @@ test('shares one frozen six-package README contract and derives tracked docs rou
       {
         packageName: '@glucoseiq/core',
         path: 'packages/core/README.md',
-        guideUrl: 'https://glucoseiq.health/docs/core-concepts',
-        apiUrl: 'https://glucoseiq.health/docs/api/core',
-        migrationUrl: 'https://glucoseiq.health/docs/migration',
+        guideUrl: 'https://glucoseiq.dev/docs/core-concepts',
+        apiUrl: 'https://glucoseiq.dev/docs/api/core',
+        migrationUrl: 'https://glucoseiq.dev/docs/migration',
       },
       {
         packageName: '@glucoseiq/react',
         path: 'packages/react/README.md',
-        guideUrl: 'https://glucoseiq.health/docs/react',
-        apiUrl: 'https://glucoseiq.health/docs/api',
-        migrationUrl: 'https://glucoseiq.health/docs/migration',
+        guideUrl: 'https://glucoseiq.dev/docs/react',
+        apiUrl: 'https://glucoseiq.dev/docs/api',
+        migrationUrl: 'https://glucoseiq.dev/docs/migration',
       },
       {
         packageName: '@glucoseiq/tokens',
         path: 'packages/tokens/README.md',
-        guideUrl: 'https://glucoseiq.health/docs/tokens',
-        apiUrl: 'https://glucoseiq.health/docs/api',
-        migrationUrl: 'https://glucoseiq.health/docs/migration',
+        guideUrl: 'https://glucoseiq.dev/docs/tokens',
+        apiUrl: 'https://glucoseiq.dev/docs/api',
+        migrationUrl: 'https://glucoseiq.dev/docs/migration',
       },
       {
         packageName: '@glucoseiq/testing',
         path: 'packages/testing/README.md',
-        guideUrl: 'https://glucoseiq.health/docs/testing',
-        apiUrl: 'https://glucoseiq.health/docs/api',
-        migrationUrl: 'https://glucoseiq.health/docs/migration',
+        guideUrl: 'https://glucoseiq.dev/docs/testing',
+        apiUrl: 'https://glucoseiq.dev/docs/api',
+        migrationUrl: 'https://glucoseiq.dev/docs/migration',
       },
       {
         packageName: '@glucoseiq/cli',
         path: 'packages/cli/README.md',
-        guideUrl: 'https://glucoseiq.health/docs/cli',
-        apiUrl: 'https://glucoseiq.health/docs/api',
-        migrationUrl: 'https://glucoseiq.health/docs/migration',
+        guideUrl: 'https://glucoseiq.dev/docs/cli',
+        apiUrl: 'https://glucoseiq.dev/docs/api',
+        migrationUrl: 'https://glucoseiq.dev/docs/migration',
       },
       {
         packageName: 'diabetic-utils',
         path: 'packages/diabetic-utils/README.md',
-        guideUrl: 'https://glucoseiq.health/docs/migration',
-        apiUrl: 'https://glucoseiq.health/docs/api/core',
-        migrationUrl: 'https://glucoseiq.health/docs/migration',
+        guideUrl: 'https://glucoseiq.dev/docs/migration',
+        apiUrl: 'https://glucoseiq.dev/docs/api/core',
+        migrationUrl: 'https://glucoseiq.dev/docs/migration',
       },
     ]
   )
@@ -286,7 +286,7 @@ test('extracts Markdown, reference, image, HTML, and MDX URL destinations', () =
 [reference][ref]
 ![image](/image.png)
 <a href="/docs/core">Core</a>
-<Link href={'https://glucoseiq.health/docs/react'}>React</Link>
+<Link href={'https://glucoseiq.dev/docs/react'}>React</Link>
 <img src="https://example.com/image.png" />
 
 [ref]: ../relative.md
@@ -300,7 +300,7 @@ test('extracts Markdown, reference, image, HTML, and MDX URL destinations', () =
       { destination: '../relative.md', kind: 'link' },
       { destination: '/image.png', kind: 'image' },
       { destination: '/docs/core', kind: 'link' },
-      { destination: 'https://glucoseiq.health/docs/react', kind: 'link' },
+      { destination: 'https://glucoseiq.dev/docs/react', kind: 'link' },
       { destination: 'https://example.com/image.png', kind: 'image' },
     ]
   )
@@ -316,7 +316,7 @@ test('does not let rendered Markdown and MDX URL forms bypass validation', () =>
 <a href=javascript:alert(1)>unsafe</a>
 <Link href={\`javascript:alert(2)\`}>unsafe</Link>
 <Link href={dynamicDestination}>dynamic</Link>
-[trailing-dot](https://glucoseiq.health./docs/missing)
+[trailing-dot](https://glucoseiq.dev./docs/missing)
 
 [shortcut]: javascript:alert(3)
 [collapsed]: /docs/core
@@ -361,7 +361,7 @@ test('does not let rendered Markdown and MDX URL forms bypass validation', () =>
 
 test('maps canonical site URLs and rejects unsafe or tarball-relative links', () => {
   assert.equal(
-    mapSiteUrlToTrackedRoute('https://glucoseiq.health/docs/api/core#parse'),
+    mapSiteUrlToTrackedRoute('https://glucoseiq.dev/docs/api/core#parse'),
     '/docs/api/core'
   )
   assert.equal(mapSiteUrlToTrackedRoute('https://example.com/docs'), null)
@@ -371,7 +371,7 @@ test('maps canonical site URLs and rejects unsafe or tarball-relative links', ()
     text: `
 [fragment](#install)
 [relative](../../docs/index.md)
-[missing](https://glucoseiq.health/docs/missing)
+[missing](https://glucoseiq.dev/docs/missing)
 [unsafe](javascript:alert(1))
 [scheme-relative-https](https:relative)
 [scheme-relative-http](http:relative)
@@ -398,9 +398,9 @@ test('requires every packed README contract and accepts a complete one', () => {
   const base = {
     path: 'packages/example/README.md',
     packageName: '@glucoseiq/example',
-    guideUrl: 'https://glucoseiq.health/docs/example',
-    apiUrl: 'https://glucoseiq.health/docs/api',
-    migrationUrl: 'https://glucoseiq.health/docs/migration',
+    guideUrl: 'https://glucoseiq.dev/docs/example',
+    apiUrl: 'https://glucoseiq.dev/docs/api',
+    migrationUrl: 'https://glucoseiq.dev/docs/migration',
   }
   const incomplete = validateReadmeContract({ ...base, text: '# Example' })
   assert.deepEqual(codes(incomplete), [
@@ -444,7 +444,7 @@ Invalid input throws a typed error.
 
 Output is informational and bounded.
 
-[Guide](https://glucoseiq.health/docs/example) · [API](https://glucoseiq.health/docs/api) · [Migration](https://glucoseiq.health/docs/migration) · [License](https://github.com/marklearst/glucoseiq/blob/main/LICENSE) · [Changelog](https://github.com/marklearst/glucoseiq/blob/main/CHANGELOG.md)
+[Guide](https://glucoseiq.dev/docs/example) · [API](https://glucoseiq.dev/docs/api) · [Migration](https://glucoseiq.dev/docs/migration) · [License](https://github.com/marklearst/glucoseiq/blob/main/LICENSE) · [Changelog](https://github.com/marklearst/glucoseiq/blob/main/CHANGELOG.md)
 `
   assert.deepEqual(validateReadmeContract({ ...base, text: complete }), [])
   assert.ok(
@@ -485,15 +485,15 @@ Invalid input is rejected.
 
 The package has explicit limits.
 
-[Guide](${guideUrl}) [API](${apiUrl}) [Migration](https://glucoseiq.health/docs/migration) [License](https://github.com/marklearst/glucoseiq/blob/main/LICENSE) [Changelog](https://github.com/marklearst/glucoseiq/blob/main/CHANGELOG.md)
+[Guide](${guideUrl}) [API](${apiUrl}) [Migration](https://glucoseiq.dev/docs/migration) [License](https://github.com/marklearst/glucoseiq/blob/main/LICENSE) [Changelog](https://github.com/marklearst/glucoseiq/blob/main/CHANGELOG.md)
 `
   }
 
   const fixtures = [
     {
       packageName: '@glucoseiq/core',
-      guideUrl: 'https://glucoseiq.health/docs/core-concepts',
-      apiUrl: 'https://glucoseiq.health/docs/api/core',
+      guideUrl: 'https://glucoseiq.dev/docs/core-concepts',
+      apiUrl: 'https://glucoseiq.dev/docs/api/core',
       expected: [
         'readme-core-subpaths',
         'readme-core-errors',
@@ -507,8 +507,8 @@ The package has explicit limits.
     },
     {
       packageName: '@glucoseiq/react',
-      guideUrl: 'https://glucoseiq.health/docs/react',
-      apiUrl: 'https://glucoseiq.health/docs/api',
+      guideUrl: 'https://glucoseiq.dev/docs/react',
+      apiUrl: 'https://glucoseiq.dev/docs/api',
       expected: [
         'readme-react-peer',
         'readme-react-client',
@@ -518,14 +518,14 @@ The package has explicit limits.
     },
     {
       packageName: '@glucoseiq/tokens',
-      guideUrl: 'https://glucoseiq.health/docs/tokens',
-      apiUrl: 'https://glucoseiq.health/docs/api',
+      guideUrl: 'https://glucoseiq.dev/docs/tokens',
+      apiUrl: 'https://glucoseiq.dev/docs/api',
       expected: ['readme-tokens-unit', 'readme-tokens-range'],
     },
     {
       packageName: '@glucoseiq/testing',
-      guideUrl: 'https://glucoseiq.health/docs/testing',
-      apiUrl: 'https://glucoseiq.health/docs/api',
+      guideUrl: 'https://glucoseiq.dev/docs/testing',
+      apiUrl: 'https://glucoseiq.dev/docs/api',
       expected: [
         'readme-testing-options',
         'readme-testing-cap',
@@ -534,8 +534,8 @@ The package has explicit limits.
     },
     {
       packageName: '@glucoseiq/cli',
-      guideUrl: 'https://glucoseiq.health/docs/cli',
-      apiUrl: 'https://glucoseiq.health/docs/api',
+      guideUrl: 'https://glucoseiq.dev/docs/cli',
+      apiUrl: 'https://glucoseiq.dev/docs/api',
       expected: [
         'readme-cli-run',
         'readme-cli-flags',
@@ -549,8 +549,8 @@ The package has explicit limits.
     },
     {
       packageName: 'diabetic-utils',
-      guideUrl: 'https://glucoseiq.health/docs/migration',
-      apiUrl: 'https://glucoseiq.health/docs/api/core',
+      guideUrl: 'https://glucoseiq.dev/docs/migration',
+      apiUrl: 'https://glucoseiq.dev/docs/api/core',
       expected: ['readme-compat-legacy', 'readme-compat-scoped'],
     },
   ]
@@ -561,7 +561,7 @@ The package has explicit limits.
       packageName: fixture.packageName,
       guideUrl: fixture.guideUrl,
       apiUrl: fixture.apiUrl,
-      migrationUrl: 'https://glucoseiq.health/docs/migration',
+      migrationUrl: 'https://glucoseiq.dev/docs/migration',
       text: genericReadme(
         fixture.packageName,
         fixture.guideUrl,
@@ -714,7 +714,7 @@ moving from diabetic-utils 2.
       packageName: fixture.packageName,
       guideUrl: fixture.guideUrl,
       apiUrl: fixture.apiUrl,
-      migrationUrl: 'https://glucoseiq.health/docs/migration',
+      migrationUrl: 'https://glucoseiq.dev/docs/migration',
     }
     const complete = `${genericReadme(
       fixture.packageName,
