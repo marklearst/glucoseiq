@@ -2,9 +2,9 @@ import type { Metadata, MetadataRoute } from 'next'
 
 export const SITE_NAME = 'GlucoseIQ'
 export const SITE_ORIGIN = 'https://glucoseiq.health'
-export const SITE_TITLE = 'GlucoseIQ — glucose intelligence on every screen'
+export const SITE_TITLE = 'GlucoseIQ | TypeScript tools for CGM analytics'
 export const SITE_DESCRIPTION =
-  'TypeScript toolkit powered by a zero-runtime-dependency core for CGM analytics, percentile bands, Time-in-Range, variability, meal response, live trends, and optional SVG renderers.'
+  'TypeScript packages for analyzing CGM data and rendering charts, with no runtime dependencies in the core package.'
 
 interface PageMetadataOptions {
   readonly title: string

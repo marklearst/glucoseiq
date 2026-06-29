@@ -12,6 +12,7 @@
     "docs:api": "node scripts/generate-api.mjs",
     "docs:api:check": "node scripts/check-api.mjs",
     "test:api": "node --test scripts/generate-api.test.mjs",
+    "test:home": "node --test scripts/homepage-contracts.test.mjs",
     "test:site": "node --test scripts/site-contracts.test.mjs"
   },
   "dependencies": {

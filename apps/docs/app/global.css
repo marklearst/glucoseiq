@@ -4,9 +4,7 @@
 
 @source '../node_modules/fumadocs-ui/dist/**/*.js';
 
-/* ---------------------------------------------------------------------------
-   GlucoseIQ brand tokens — Apple HIG dark, graphite (never pure black).
---------------------------------------------------------------------------- */
+/* GlucoseIQ tokens for the dark documentation shell. */
 :root {
   --giq-bg: #161617;
   --giq-card: #1c1c1e;
