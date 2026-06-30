@@ -19,6 +19,11 @@
   --giq-orange: #ff9f0a;
   --giq-blue: #0a84ff;
   --giq-lime: #a3e635;
+  --giq-link-underline: color-mix(
+    in srgb,
+    var(--color-fd-primary) 58%,
+    transparent
+  );
   --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
@@ -29,4 +34,39 @@
 .dark {
   --color-fd-primary: #ff453a;
   --color-fd-background: hsl(240 3% 9%);
+}
+
+#nd-page
+  .prose
+  :where(a:not([data-card])):not(
+    :where([class~='not-prose'], [class~='not-prose'] *)
+  ) {
+  color: var(--color-fd-foreground);
+  opacity: 1;
+  text-decoration-color: var(--giq-link-underline);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  transition:
+    text-decoration-color 160ms ease,
+    opacity 160ms ease;
+}
+
+#nd-page
+  .prose
+  :where(a:not([data-card]):is(:hover, :focus-visible)):not(
+    :where([class~='not-prose'], [class~='not-prose'] *)
+  ) {
+  color: var(--color-fd-foreground);
+  opacity: 1;
+  text-decoration-color: var(--color-fd-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #nd-page
+    .prose
+    :where(a:not([data-card])):not(
+      :where([class~='not-prose'], [class~='not-prose'] *)
+    ) {
+    transition: none;
+  }
 }
