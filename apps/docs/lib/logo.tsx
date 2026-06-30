@@ -1,30 +1,106 @@
 import { useId, type JSX } from 'react'
 
-/**
- * The GlucoseIQ mark: a blood-drop outline holding the zone-gradient ring
- * (in-range green → elevated amber → high orange → red). Pure inline SVG.
- */
-export function LogoMark(props: { size?: number }): JSX.Element {
-  const gradientId = `giq-ring-${useId().replaceAll(':', '')}`
+/** GlucoseIQ drop and glucose-zone ring. */
+export function LogoMark(props: {
+  size?: number
+  motion?: boolean
+}): JSX.Element {
+  const id = useId().replaceAll(':', '')
+  const gradientId = `giq-ring-${id}`
+  const ringRevealId = `giq-ring-reveal-${id}`
+  const tipShadowId = `giq-ring-tip-shadow-${id}`
   const s = props.size ?? 28
   return (
-    <svg width={s} height={s} viewBox="0 0 64 84" fill="none" aria-hidden="true">
+    <svg
+      aria-hidden="true"
+      data-logo-motion={props.motion ? 'true' : undefined}
+      fill="none"
+      height={s}
+      viewBox="0 0 64 84"
+      width={s}
+    >
       <defs>
-        <linearGradient id={gradientId} x1="20" y1="38" x2="46" y2="66" gradientUnits="userSpaceOnUse">
+        <linearGradient
+          gradientUnits="userSpaceOnUse"
+          id={gradientId}
+          x1="32"
+          x2="32"
+          y1="37"
+          y2="67"
+        >
           <stop offset="0" stopColor="#30D158" />
-          <stop offset="0.45" stopColor="#FFD60A" />
-          <stop offset="0.75" stopColor="#FF9F0A" />
-          <stop offset="1" stopColor="#FF453A" />
+          <stop offset="0.34" stopColor="#9BE22D" />
+          <stop offset="0.58" stopColor="#FFD60A" />
+          <stop offset="0.82" stopColor="#FF9F0A" />
+          <stop offset="1" stopColor="#FF6B3D" />
         </linearGradient>
+        <mask
+          height="84"
+          id={ringRevealId}
+          maskUnits="userSpaceOnUse"
+          width="64"
+          x="0"
+          y="0"
+        >
+          <circle
+            cx="32"
+            cy="52"
+            data-logo-part="ring-reveal"
+            fill="none"
+            pathLength="1"
+            r="11.5"
+            stroke="white"
+            strokeDasharray="1"
+            strokeDashoffset="0"
+            strokeLinecap="round"
+            strokeWidth="8"
+            transform="rotate(-90 32 52)"
+          />
+        </mask>
+        <filter
+          height="300%"
+          id={tipShadowId}
+          width="300%"
+          x="-100%"
+          y="-100%"
+        >
+          <feDropShadow
+            dx="0"
+            dy="1"
+            floodColor="#000000"
+            floodOpacity="0.42"
+            stdDeviation="1.4"
+          />
+        </filter>
       </defs>
       <path
+        data-logo-part="drop"
         d="M32 7C32 7 9 36.5 9 52a23 23 0 0 0 46 0C55 36.5 32 7 32 7Z"
         stroke="#FF453A"
         strokeWidth="7.5"
         strokeLinejoin="round"
         strokeLinecap="round"
       />
-      <circle cx="32" cy="52" r="11.5" stroke={`url(#${gradientId})`} strokeWidth="7" />
+      <path
+        clipRule="evenodd"
+        d="M32 37a15 15 0 1 1 0 30 15 15 0 1 1 0-30ZM32 44a8 8 0 1 0 0 16 8 8 0 1 0 0-16Z"
+        data-logo-part="ring"
+        fill={`url(#${gradientId})`}
+        fillRule="evenodd"
+        mask={props.motion ? `url(#${ringRevealId})` : undefined}
+      />
+      {props.motion ? (
+        <g data-logo-part="ring-tip">
+          <circle
+            cx="32"
+            cy="40.5"
+            data-logo-part="ring-tip-disc"
+            fill="currentColor"
+            filter={`url(#${tipShadowId})`}
+            r="3.5"
+          />
+        </g>
+      ) : null}
     </svg>
   )
 }
