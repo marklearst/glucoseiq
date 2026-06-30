@@ -331,9 +331,25 @@ test('the visible homepage sample is explicitly marked and standalone', () => {
 
 test('homepage signal and UI examples pair visual shorthand with semantic text', () => {
   const homepage = readTracked('apps/docs/app/(home)/page.tsx')
-  assert.match(homepage, /<figure className=\{styles\.signalFigure\}>/u)
+  const glucoseTrace = readTracked(
+    'apps/docs/app/(home)/glucose-trace.tsx'
+  )
+  assert.match(homepage, /<figure className=\{styles\.signalInstrument\}>/u)
   assert.match(homepage, /<figcaption className=\{styles\.signalCaption\}>/u)
-  assert.match(homepage, /14 days of synthetic readings/u)
+  assert.match(homepage, /14-day distribution/u)
+  assert.match(
+    homepage,
+    /<GlucoseTrace profile=\{completeProfile\} readings=\{readings\} \/>/u
+  )
+  assert.match(
+    glucoseTrace,
+    /Last 24 hours of synthetic glucose readings/u
+  )
+  assert.match(glucoseTrace, /The trace ends at \{geometry\.latest\.value\}/u)
+  assert.match(
+    glucoseTrace,
+    /70 to 180 milligrams per deciliter\s+range/u
+  )
   assert.match(homepage, /mg\/dL/u)
   assert.match(homepage, /aria-label="Package documentation"/u)
   assert.doesNotMatch(homepage, /className=\{styles\.chartPanel\}/u)

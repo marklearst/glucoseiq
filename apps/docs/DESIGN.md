@@ -7,6 +7,8 @@ colors:
   muted: "#A1A1A6"
   line: "rgb(255 255 255 / 11%)"
   accent: "#FF453A"
+  range-red-deep: "#B91C1C"
+  range-red-low: "#FF6961"
   range-green: "#30D158"
   range-yellow: "#FFD60A"
   range-orange: "#FF9F0A"
@@ -33,18 +35,19 @@ width:
   outer: "1400px"
   content: "1120px"
 motion:
-  median-line: "800ms cubic-bezier(0.16, 1, 0.3, 1)"
+  drop: "700ms fall from above the page with one restrained impact"
+  ring: "720ms clockwise reveal, delayed 760ms"
 ---
 
 # Design System: GlucoseIQ Documentation
 
 ## 1. Direction
 
-The homepage uses one black surface from navigation through footer. A borderless AGP signal stretches across the outer width and gives visitors the first concrete proof of package output. The typed report, ownership boundary, and package index follow in flat sections separated by thin rules.
+The homepage uses one black surface from navigation through footer. A compact glucose instrument gives visitors the first concrete proof of package output without pretending to be a finished application. The typed report, ownership boundary, and package index follow in flat sections separated by thin rules.
 
 The design takes its cues from precise software documentation: direct system type, generous spacing, sharp alignment, and controls with a small fixed radius. Glucose range colors appear in the mark and data visual. The rest of the page stays black, white, and muted gray.
 
-Avoid generated landing-page patterns: centered gradient text, card walls, fake terminal controls, decorative status metrics, glass effects, ambient color effects, repeated labels, and scroll-triggered reveals.
+Avoid canned landing-page patterns: centered gradient text, card walls, fake terminal controls, decorative status metrics, frosted cards, repeated labels, and scroll-triggered reveals. Blur belongs only to the sticky navigation boundary. The shallow red field below it is atmosphere, not a section background.
 
 ## 2. Color
 
@@ -58,10 +61,11 @@ Avoid generated landing-page patterns: centered gradient text, card walls, fake 
 
 ### Glucose Ranges
 
-- **Green** (`#30D158`)
-- **Yellow** (`#FFD60A`)
-- **Orange** (`#FF9F0A`)
-- **Red** (`#FF453A`)
+- **Very low** (`#B91C1C`)
+- **Low** (`#FF6961`)
+- **In range** (`#30D158`)
+- **High** (`#FFD60A`)
+- **Very high** (`#FF9F0A`)
 
 Use range colors only when a label, value, or chart position identifies the glucose range. Color supplements the label; it never replaces it.
 
@@ -71,7 +75,7 @@ The page uses the system sans stack for labels, body copy, headings, actions, an
 
 `-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif`
 
-Use the system mono stack for package names, commands, code, types, and returned values:
+Use the system mono stack for package names, commands, code, types, and returned JSON. Glucose readings, units, chart labels, and report values stay in the sans stack.
 
 `"SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", monospace`
 
@@ -88,13 +92,14 @@ Use sentence case. Uppercase remains limited to established terms such as CGM, A
 
 - The outer page width stops at `1400px`.
 - Hero copy, sections, captions, and footer stop at `1120px`.
-- The hero is centered with generous top spacing. Its display size never exceeds `96px`.
-- The signal reaches the outer width. It has no enclosing fill, outline, corner treatment, or shadow.
+- The hero is centered with generous top spacing. Its mark is `92px`; its display type never exceeds `96px`.
+- The glucose instrument stops at the content width. Its top row pairs the latest reading with the 14-day range breakdown. A 24-hour trace spans the row below, followed by one shared caption.
 - Content sections use spacing and one-pixel rules instead of separate surfaces.
 - Code scrolls inside its own region if a line exceeds the available width.
-- At `760px` and below, report columns, ownership statements, package introductions, package rows, captions, and footer content stack.
+- At `860px` and below, report columns stack.
+- At `760px` and below, ownership statements, package introductions, package rows, captions, and footer content stack.
 - At `480px` and below, the hero actions stack to full width.
-- The page clips accidental outer overflow. The signal region can scroll horizontally on narrow screens so its labels remain readable.
+- The page clips accidental outer overflow. The glucose instrument stacks on narrow screens and does not create horizontal page scrolling.
 
 ## 5. Components
 
@@ -107,13 +112,13 @@ Use sentence case. Uppercase remains limited to established terms such as CGM, A
 - Hover feedback runs only when the device reports a fine pointer.
 - Keyboard focus uses a `2px` Accent outline with a `3px` offset.
 
-### Signal Figure
+### Glucose Instrument
 
-The server-rendered SVG comes from `agpChartToSVG` with the dark theme. The chart keeps its own dark plotting surface; homepage CSS raises SVG text and dashed target boundaries to accessible colors without changing the renderer API.
+The docs build runs `latestReading`, `computeGlucoseTrend`, and `analyzeGlucose` against the repeatable 14-day homepage fixture. The top row keeps the current reading, trend, range breakdown, and four report values in view. The 24-hour trace sits below that row, so the chart adds detail without displacing the report.
 
-The figure spans the outer width. Its caption uses one top rule and names the synthetic 14-day source, mg/dL unit, 70–180 mg/dL range, and calculated percentage.
+The chart renderer draws a monotone cubic curve through each valid five-minute reading. Each segment stays within its two readings, so the curve cannot add a false peak or low. GlucoseIQ reports the observed 24-hour low and high from the raw readings. The horizontal scale covers the 24 hours before the latest reading, with labels from the data timezone and the last point at Now. Sensor gaps stay open, and isolated readings remain visible as points. A `224px` signal field gives the data room on desktop; it steps down to `196px` on tablet and `184px` on small screens.
 
-The median polyline draws once over `800ms`. Bands, labels, and the caption remain visible throughout. With reduced motion enabled, the complete line appears without animation.
+The 70–180 mg/dL target range is a quiet illuminated field with labeled boundary lines. Sparse time guides and three right-axis labels provide context without turning the chart into a spreadsheet. In-range segments use Ink; high and low segments use their range colors. A broad, low-opacity under-stroke adds depth while the crisp path keeps the real data shape. The latest reading uses a thin ring, a short guide, and a plain sans label. The plot does not animate. The caption states the time span, unit, and synthetic-data limitation.
 
 ### Code and Output
 
@@ -135,14 +140,16 @@ The package index uses a full-width list. Every row has a top or bottom hairline
 - Every link and focusable code region shows a visible focus outline.
 - Hover styles do not carry required information and do not run on coarse pointers.
 - Text and controls meet WCAG 2.2 AA contrast against the Background color.
-- The chart exposes an image role and label; its caption supplies timeframe, data source, unit, target range, and result.
+- The glucose trace is a titled SVG image with a text description of the time span, target range, latest value, unit, and synthetic-data limitation.
 - Glucose states pair color with labels, values, or chart position.
 - Content remains visible when animation support is unavailable.
-- Reduced motion removes the median-line animation and shortens interaction transitions.
-- The mobile stack keeps outer page scrolling vertical. Code and the signal manage their own overflow.
+- The mark runs once on page load. Its outline starts `520px` above its resting position, falls beneath the navigation, takes one restrained impact, and settles before the ring begins.
+- The mask reveals the finished ring clockwise from 12 o’clock. A raised cap follows the leading edge and disappears when the ring closes. The animation does not loop.
+- Reduced motion renders the finished mark immediately and shortens interaction transitions.
+- The mobile stack keeps outer page scrolling vertical. Code manages its own overflow.
 
 ## 7. Use and Avoid
 
-Use the GlucoseIQ mark, one dark page, a borderless data signal, direct copy, thin rules, fixed control geometry, flat package rows, visible focus, and one purposeful load animation.
+Use the GlucoseIQ mark, one dark page, a compact synthetic-data instrument, direct copy, thin rules, fixed control geometry, flat package rows, visible focus, and one purposeful mark entrance.
 
 Avoid card-based section layouts, fake product frames, decorative charts, broad claims, scroll effects, or controls that change size during interaction.
