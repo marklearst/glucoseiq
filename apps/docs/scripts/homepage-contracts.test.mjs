@@ -15,6 +15,14 @@ const glucoseTracePath = join(
   docsRoot,
   'app/(home)/glucose-trace.tsx',
 )
+const signalFigurePath = join(
+  docsRoot,
+  'app/(home)/glucose-signal-figure.tsx',
+)
+const signalStylesPath = join(
+  docsRoot,
+  'app/(home)/glucose-signal.module.css',
+)
 const installerPath = join(docsRoot, 'components/install-command.tsx')
 const installerStylesPath = join(
   docsRoot,
@@ -31,6 +39,12 @@ const highlightedCode = existsSync(highlightedCodePath)
   : ''
 const glucoseTrace = existsSync(glucoseTracePath)
   ? readFileSync(glucoseTracePath, 'utf8')
+  : ''
+const signalFigure = existsSync(signalFigurePath)
+  ? readFileSync(signalFigurePath, 'utf8')
+  : ''
+const signalStyles = existsSync(signalStylesPath)
+  ? readFileSync(signalStylesPath, 'utf8')
   : ''
 const installer = existsSync(installerPath)
   ? readFileSync(installerPath, 'utf8')
@@ -234,115 +248,239 @@ test('homepage demonstrates output from workspace packages', () => {
   assert.doesNotMatch(page, /tirBarToSVG\(/u)
 })
 
-test('homepage keeps the distribution proof when it adds a glucose trace', () => {
+test('homepage renders one server-owned Signal Passage instrument', () => {
   assert.match(page, /const currentReading = latestReading\(readings\)/u)
   assert.match(page, /const currentTrend = computeGlucoseTrend\(readings\)/u)
   assert.match(page, /const profile = report\.agpProfile/u)
   assert.match(page, /!profile/u)
+  assert.doesNotMatch(page, /^\s*['"]use client['"];?/mu)
+  assert.doesNotMatch(signalFigure, /^\s*['"]use client['"];?/mu)
+  assert.doesNotMatch(glucoseTrace, /^\s*['"]use client['"];?/mu)
   assert.match(
     page,
-    /import \{ GlucoseTrace \} from '\.\/glucose-trace'/u,
+    /import \{ GlucoseSignalFigure \} from '\.\/glucose-signal-figure'/u,
   )
-  assert.match(page, /const RANGE_SEGMENTS = \[/u)
-  assert.match(page, /className=\{styles\.signalInstrument\}/u)
-  assert.match(page, /className=\{styles\.currentReading\}/u)
-  assert.match(page, /className=\{styles\.rangeSummary\}/u)
-  assert.match(page, /className=\{styles\.rangeRail\}/u)
-  assert.match(page, /className=\{styles\.rangeLegend\}/u)
-  assert.match(page, /aria-label=\{rangeSummaryLabel\}/u)
+  assert.match(page, /<GlucoseSignalFigure/u)
   assert.match(
     page,
-    /<GlucoseTrace\s+readings=\{readings\}\s+timeZone=\{completeProfile\.timeZone\}\s*\/>/u,
+    /const displayedTrend = currentTrend\.trend[\s\S]*?<GlucoseSignalFigure\s+currentReading=\{displayedReading\}\s+currentTrend=\{displayedTrend\}\s+cv=\{report\.cv\}\s+gmi=\{report\.gmi\}\s+meanGlucose=\{report\.meanGlucose\}\s+readings=\{readings\}\s+timeInRange=\{timeInRange\}\s+timeZone=\{completeProfile\.timeZone\}\s+totalReadings=\{report\.dataSufficiency\.totalReadings\}\s*\/>/u,
   )
-  assert.match(
-    page,
-    /className=\{styles\.currentReading\}[\s\S]*?className=\{styles\.readingStatus\}[\s\S]*?className=\{styles\.rangeSummary\}[\s\S]*?<GlucoseTrace\s+readings=\{readings\}\s+timeZone=\{completeProfile\.timeZone\}\s*\/>[\s\S]*?<figcaption/u,
-  )
-  assert.match(page, /className=\{styles\.signalMetrics\}/u)
-  assert.match(page, /report\.dataSufficiency\.totalReadings/u)
-  assert.match(page, /report\.meanGlucose/u)
-  assert.match(page, /report\.gmi/u)
-  assert.match(page, /report\.cv/u)
-  assert.match(page, /data-zone=\{currentZone\}/u)
-  assert.match(page, /className=\{styles\.statusCheck\}/u)
-  assert.match(page, /strokeWidth="1\.5"/u)
-  assert.match(page, /readings/u)
-  assert.match(
-    page,
-    /<dt>Mean · mg\/dL<\/dt>\s*<dd>\{report\.meanGlucose\}<\/dd>/u,
-  )
-  assert.doesNotMatch(page, /dataSufficiency\.meetsCGMStandard/u)
-  assert.doesNotMatch(page, /statusDot/u)
+  assert.match(signalFigure, /<GlucoseTrace geometry=\{geometry\} \/>/u)
+  assert.match(signalFigure, /<dt>Time in range<\/dt>/u)
+  assert.match(signalFigure, /<dt>Mean<\/dt>/u)
+  assert.match(signalFigure, /<dt>GMI<\/dt>/u)
+  assert.match(signalFigure, /<dt>CV<\/dt>/u)
   assert.equal(
-    existsSync(glucoseTracePath),
-    true,
-    'glucose trace component must exist',
+    (signalFigure.match(/Time in range/gu) ?? []).length,
+    1,
+  )
+  assert.match(
+    signalFigure,
+    /const geometry = createGlucoseTraceGeometry\(\{\s*readings,\s*timeZone,\s*width: PLOT_WIDTH,\s*height: PLOT_HEIGHT,\s*yMin: Y_MIN,\s*yMax: Y_MAX,\s*\}\)/u,
+  )
+  assert.match(
+    signalFigure,
+    /<dt>Mean<\/dt>\s*<dd>\{meanGlucose\} mg\/dL<\/dd>/u,
+  )
+  assert.match(
+    signalFigure,
+    /<dt>Time in range<\/dt>\s*<dd>\{timeInRange\}%<\/dd>/u,
+  )
+  assert.match(
+    signalFigure,
+    /<dt>GMI<\/dt>\s*<dd>\{gmi\}%<\/dd>/u,
+  )
+  assert.match(
+    signalFigure,
+    /<dt>CV<\/dt>\s*<dd>\{cv\}%<\/dd>/u,
+  )
+  assert.match(signalFigure, /data-zone=\{currentZone\}/u)
+  assert.match(signalFigure, /className=\{styles\.statusCheck\}/u)
+  assert.match(signalFigure, /strokeWidth="1\.5"/u)
+  assert.doesNotMatch(signalFigure, /statusDot/u)
+
+  for (const removed of [
+    'RANGE_SEGMENTS',
+    'rangeRail',
+    'rangeLegend',
+    'X_GRID_TICKS',
+    'traceGlow',
+    'feGaussianBlur',
+    'traceLatestLabel',
+  ]) {
+    assert.equal(
+      `${page}\n${signalFigure}\n${glucoseTrace}\n${signalStyles}`.includes(removed),
+      false,
+      `remove ${removed}`,
+    )
+  }
+
+  assert.match(glucoseTrace, /const THRESHOLDS = \[180, 70\] as const/u)
+  const transitionWidth = Number(
+    /const transitionWidth = ([\d.]+)/u.exec(glucoseTrace)?.[1],
+  )
+  assert.equal(Number.isFinite(transitionWidth), true)
+  assert.equal(transitionWidth > 0 && transitionWidth <= 2, true)
+  assert.equal((glucoseTrace.match(/<title\b/gu) ?? []).length, 1)
+  assert.equal((glucoseTrace.match(/<desc\b/gu) ?? []).length, 1)
+  assert.match(glucoseTrace, /const id = useId\(\)\.replaceAll\(':', ''\)/u)
+  assert.match(
+    glucoseTrace,
+    /const titleId = `glucose-trace-title-\$\{id\}`/u,
   )
   assert.match(
     glucoseTrace,
-    /import \{ createGlucoseTraceGeometry \} from '@\/lib\/glucose-profile'/u,
+    /const descriptionId = `glucose-trace-description-\$\{id\}`/u,
   )
-  assert.match(glucoseTrace, /<svg[\s\S]*?role="img"/u)
-  assert.match(glucoseTrace, /aria-labelledby=\{`\$\{titleId\} \$\{descriptionId\}`\}/u)
+  assert.match(
+    glucoseTrace,
+    /const traceGradientId = `glucose-trace-gradient-\$\{id\}`/u,
+  )
+  assert.match(
+    glucoseTrace,
+    /const traceMaskId = `glucose-trace-mask-\$\{id\}`/u,
+  )
+  assert.match(
+    glucoseTrace,
+    /aria-labelledby=\{`\$\{titleId\} \$\{descriptionId\}`\}/u,
+  )
   assert.match(glucoseTrace, /<title id=\{titleId\}>/u)
   assert.match(glucoseTrace, /<desc id=\{descriptionId\}>/u)
-  for (const part of ['profile-trace', 'profile-latest']) {
+  assert.equal(
+    (glucoseTrace.match(/data-motion-part="trace-mask"/gu) ?? []).length,
+    1,
+  )
+  assert.match(
+    glucoseTrace,
+    /<rect\s+className=\{styles\.traceMask\}\s+data-motion-part="trace-mask"[\s\S]*?\/>/u,
+  )
+  assert.match(
+    signalStyles,
+    /\.traceMask\s*\{[^}]*transform:\s*scaleX\(1\);[^}]*transform-origin:\s*left center;/u,
+  )
+  assert.equal(
+    (glucoseTrace.match(/data-motion-part="latest-point"/gu) ?? []).length,
+    1,
+  )
+  assert.match(
+    glucoseTrace,
+    /<g transform=\{`translate\(\$\{geometry\.latest\.x\} \$\{geometry\.latest\.y\}\)`\}>/u,
+  )
+  assert.match(
+    glucoseTrace,
+    /className=\{styles\.traceLatestPoint\}\s+data-motion-part="latest-point"\s+data-zone=\{geometry\.latest\.zone\}\s*>[\s\S]*?<circle className=\{styles\.traceLatestRing\} r="5" \/>\s*<circle className=\{styles\.traceLatestCore\} r="1\.75" \/>/u,
+  )
+  assert.doesNotMatch(glucoseTrace, /stroke-dashoffset/u)
+
+  const motionSources = `${signalFigure}\n${glucoseTrace}`
+  for (const part of [
+    'instrument',
+    'target-field',
+    'thresholds',
+    'trace-mask',
+    'latest-reading',
+    'latest-point',
+    'metrics',
+    'caption',
+  ]) {
     assert.equal(
-      glucoseTrace.includes(`data-profile-part="${part}"`),
-      true,
-      `trace must expose ${part}`,
+      (motionSources.match(new RegExp(`data-motion-part="${part}"`, 'gu')) ??
+        []).length,
+      1,
+      `render ${part} exactly once`,
     )
   }
-  assert.match(glucoseTrace, /geometry\.target\.highY/u)
-  assert.match(glucoseTrace, /geometry\.target\.lowY/u)
+
   assert.match(
-    styles,
-    /\.signalInstrument\s*\{[^}]*display:\s*grid;[^}]*max-width:\s*var\(--home-content-width\);[^}]*grid-template-columns:\s*minmax\(248px,\s*0\.66fr\)\s+minmax\(0,\s*1\.34fr\);/u,
+    signalStyles,
+    /\.traceTarget\s*\{[^}]*fill:\s*rgb\(48 209 88 \/ 5%\);/u,
   )
   assert.match(
-    styles,
-    /\.rangeRail\s*\{[^}]*display:\s*flex;[^}]*height:\s*10px;/u,
+    signalStyles,
+    /\.traceThreshold\s*\{[^}]*stroke:\s*rgb\(48 209 88 \/ 24%\);/u,
+  )
+  assert.doesNotMatch(
+    signalStyles,
+    /\.traceTarget\s*\{[^}]*\bopacity:\s*0\.05;/u,
+  )
+
+  assert.match(
+    glucoseTrace,
+    /Latest 24 hours from a synthetic 14-day glucose report\./u,
+  )
+  assert.match(glucoseTrace, /observed range is \{geometry\.observedRange\.min\} to\{' '\}\s*\{geometry\.observedRange\.max\} milligrams per deciliter/u)
+  assert.match(
+    glucoseTrace,
+    /target\s*range is 70 to 180 milligrams per deciliter/u,
   )
   assert.match(
-    styles,
-    /\.trace\s*\{[^}]*grid-column:\s*1\s*\/\s*-1;[^}]*border-top:\s*1px solid var\(--home-line\);/u,
+    glucoseTrace,
+    /Three high excursions\s*rise above the target range\./u,
+  )
+  assert.match(glucoseTrace, /latest reading is\{' '\}\s*\{geometry\.latest\.value\} milligrams per deciliter/u)
+  assert.match(glucoseTrace, /Synthetic data;\s*not clinically representative\./u)
+
+  assert.match(
+    signalFigure,
+    /\{totalReadings\.toLocaleString\('en-US'\)\} readings\. Synthetic\s*14-day report with its latest 24-hour trace\./u,
   )
   assert.match(
-    styles,
-    /\.traceSvg\s*\{[^}]*display:\s*block;[^}]*width:\s*100%;[^}]*height:\s*224px;/u,
+    signalFigure,
+    /Synthetic data\. Not clinically representative\./u,
   )
+  assert.doesNotMatch(page, /dataSufficiency\.meetsCGMStandard/u)
+
+  assert.match(glucoseTrace, /height=\{geometry\.height\}/u)
+  assert.match(glucoseTrace, /width=\{geometry\.width\}/u)
   assert.match(
-    styles,
-    /\.traceGraph\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+36px;/u,
+    glucoseTrace,
+    /viewBox=\{`0 0 \$\{geometry\.width\} \$\{geometry\.height\}`\}/u,
   )
-  assert.match(
-    styles,
-    /\.signalMetrics\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\);/u,
-  )
-  assert.match(glucoseTrace, /Last 24 hours/u)
-  assert.match(glucoseTrace, /geometry\.observedRange\.min/u)
-  assert.match(glucoseTrace, /geometry\.observedRange\.max/u)
-  assert.match(glucoseTrace, /const Y_AXIS_TICKS = \[/u)
-  assert.match(glucoseTrace, /const X_GRID_TICKS = \[/u)
-  assert.match(glucoseTrace, /className=\{styles\.traceGridLine\}/u)
-  assert.match(glucoseTrace, /className=\{styles\.traceGlow\}/u)
-  assert.match(glucoseTrace, /className=\{styles\.traceLatestGuide\}/u)
-  assert.match(glucoseTrace, /className=\{styles\.traceLatestLabel\}/u)
-  assert.match(glucoseTrace, /Now · \{geometry\.latest\.value\}/u)
   assert.match(glucoseTrace, /geometry\.tracePaths\.map/u)
-  assert.match(glucoseTrace, /data-zone=\{geometry\.latest\.zone\}/u)
-  assert.doesNotMatch(glucoseTrace, /profileOuterBand/u)
-  assert.doesNotMatch(glucoseTrace, /profileInnerBand/u)
-  assert.doesNotMatch(glucoseTrace, /profileMedian/u)
-  assert.doesNotMatch(styles, /\.readingValue span\s*\{[^}]*font-family:\s*var\(--home-mono\);/u)
-  assert.doesNotMatch(styles, /\.rangeHeading > span\s*\{[^}]*font-family:\s*var\(--home-mono\);/u)
-  assert.doesNotMatch(styles, /\.rangeLegend\s*\{[^}]*font-family:\s*var\(--home-mono\);/u)
-  assert.doesNotMatch(styles, /\.traceTimeAxis\s*\{[^}]*font-family:\s*var\(--home-mono\);/u)
-  assert.doesNotMatch(styles, /\.traceYAxis\s*\{[^}]*font-family:\s*var\(--home-mono\);/u)
-  assert.doesNotMatch(styles, /\.signalMetrics dd\s*\{[^}]*font-family:\s*var\(--home-mono\);/u)
+  assert.match(glucoseTrace, /geometry\.isolatedTracePoints\.map/u)
+  assert.match(glucoseTrace, /geometry\.timeLabels\.map/u)
   assert.match(
+    glucoseTrace,
+    /<g mask=\{`url\(#\$\{traceMaskId\}\)`\}>[\s\S]*?geometry\.tracePaths\.map[\s\S]*?geometry\.isolatedTracePoints\.map[\s\S]*?<\/g>/u,
+  )
+  assert.doesNotMatch(glucoseTrace, /createGlucoseTraceGeometry/u)
+  assert.doesNotMatch(glucoseTrace, /GlucoseReading/u)
+
+  assert.match(
+    signalStyles,
+    /\.signalInstrument\s*\{[^}]*width:\s*calc\(100% - var\(--home-gutter\) - var\(--home-gutter\)\);[^}]*max-width:\s*var\(--home-content-width\);[^}]*margin:\s*0 auto;[^}]*overflow:\s*hidden;[^}]*border:\s*1px solid rgb\(255 255 255 \/ 10%\);[^}]*border-radius:\s*24px;[^}]*background:\s*#0e0e10;[^}]*color:\s*var\(--home-ink\);[^}]*font-variant-numeric:\s*tabular-nums;/u,
+  )
+  assert.match(
+    signalStyles,
+    /\.traceLine\s*\{[^}]*stroke-linecap:\s*round;[^}]*stroke-linejoin:\s*round;[^}]*stroke-width:\s*2\.15;/u,
+  )
+  assert.match(
+    signalStyles,
+    /\.tracePlot\s*\{[^}]*height:\s*224px;[^}]*overflow:\s*visible;/u,
+  )
+  assert.match(
+    signalStyles,
+    /@media\s*\(max-width:\s*768px\)\s*\{[\s\S]*?\.tracePlot,\s*\.traceSvg\s*\{[^}]*height:\s*196px;/u,
+  )
+  assert.match(
+    signalStyles,
+    /@media\s*\(max-width:\s*480px\)\s*\{[\s\S]*?\.tracePlot,\s*\.traceSvg\s*\{[^}]*height:\s*184px;[\s\S]*?\.traceTimeAxis \[data-minor='true'\]\s*\{[^}]*display:\s*none;/u,
+  )
+  assert.doesNotMatch(
+    signalStyles,
+    /\b(?:animation|filter|box-shadow|opacity):\s*(?:0|[^;]+)/u,
+  )
+  assert.doesNotMatch(signalStyles, /font-family:[^;]*mono/u)
+  assert.doesNotMatch(
     styles,
-    /\.readingValue strong\s*\{[^}]*letter-spacing:\s*-0\.04em;/u,
+    /\.(?:signal|range|trace|metric|caption)[\w-]*\s*(?:[,{:]|>)/u,
+  )
+})
+
+test('homepage metrics reflow into labeled rows at extreme zoom widths', () => {
+  assert.match(
+    signalStyles,
+    /@media \(max-width: 360px\)\s*\{[\s\S]*?\.signalMetrics\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);[^}]*gap:\s*14px;[^}]*\}[\s\S]*?\.signalMetrics > div\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\) auto;[^}]*align-items:\s*baseline;[^}]*gap:\s*12px;[^}]*\}[\s\S]*?\.signalMetrics dd\s*\{[^}]*margin:\s*0;[^}]*text-align:\s*right;/u,
   )
 })
 
@@ -618,11 +756,23 @@ test('home layout owns the main landmark and page presents a semantic glucose in
   assert.doesNotMatch(page, /<main\b/u)
   assert.match(page, /<div className=\{styles\.home\}>/u)
   assert.match(layout, /<HomeLayout\b/u)
-  assert.match(page, /<figure className=\{styles\.signalInstrument\}>/u)
-  assert.match(page, /<figcaption className=\{styles\.signalCaption\}>/u)
-  assert.match(page, /14 days of synthetic readings · mg\/dL/u)
-  assert.match(page, /mg\/dL/u)
-  assert.match(page, /Synthetic data\. Not clinically representative\./u)
+  assert.match(
+    signalFigure,
+    /<figure\s+className=\{styles\.signalInstrument\}\s+data-motion-part="instrument"\s*>/u,
+  )
+  assert.match(
+    signalFigure,
+    /<figcaption\s+className=\{styles\.signalCaption\}\s+data-motion-part="caption"\s*>/u,
+  )
+  assert.match(
+    signalFigure,
+    /Synthetic\s*14-day report with its latest 24-hour trace\./u,
+  )
+  assert.match(signalFigure, /mg\/dL/u)
+  assert.match(
+    signalFigure,
+    /Synthetic data\. Not clinically representative\./u,
+  )
 })
 
 test('homepage keeps visible focus, 44-pixel navigation, and reduced-motion support', () => {
