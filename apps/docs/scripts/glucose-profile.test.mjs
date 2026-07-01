@@ -1,14 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { createGlucoseProfileGeometry } from '../lib/glucose-profile.ts'
-
-const completePercentiles = {
-  5: 40,
-  25: 70,
-  50: 100,
-  75: 180,
-  95: 250,
-}
+import { generateCGMSeries } from '@glucoseiq/testing'
+import { createGlucoseTraceGeometry } from '../lib/glucose-profile.ts'
 
 function cubicSegments(path) {
   const tokens = path.match(/[MC]|-?\d+(?:\.\d+)?/gu) ?? []
@@ -41,20 +34,7 @@ function cubicSegments(path) {
   return segments
 }
 
-test('profile geometry maps the fixed glucose domain to literal SVG paths', () => {
-  const profile = {
-    bins: [
-      { minuteOfDay: 0, n: 14, percentiles: completePercentiles },
-      { minuteOfDay: 720, n: 14, percentiles: completePercentiles },
-      { minuteOfDay: 1435, n: 14, percentiles: completePercentiles },
-    ],
-    binMinutes: 5,
-    percentiles: [5, 25, 50, 75, 95],
-    unit: 'mg/dL',
-    timeZone: 'UTC',
-    totalReadings: 42,
-    valid: true,
-  }
+test('trace geometry maps the fixed glucose domain to literal SVG paths', () => {
   const readings = [
     {
       value: 70,
@@ -73,24 +53,27 @@ test('profile geometry maps the fixed glucose domain to literal SVG paths', () =
     },
   ]
 
-  const geometry = createGlucoseProfileGeometry({
-    profile,
+  const geometry = createGlucoseTraceGeometry({
     readings,
+    timeZone: 'UTC',
     width: 144,
     height: 210,
     yMin: 40,
     yMax: 250,
   })
 
-  assert.deepEqual(geometry.outerBandPaths, [
-    'M0,0 L72,0 L143.5,0 L143.5,210 L72,210 L0,210 Z',
+  assert.deepEqual(Object.keys(geometry).sort(), [
+    'height',
+    'isolatedTracePoints',
+    'latest',
+    'observedRange',
+    'target',
+    'timeLabels',
+    'tracePaths',
+    'width',
   ])
-  assert.deepEqual(geometry.innerBandPaths, [
-    'M0,70 L72,70 L143.5,70 L143.5,180 L72,180 L0,180 Z',
-  ])
-  assert.deepEqual(geometry.medianPaths, [
-    'M0,150 L72,150 L143.5,150',
-  ])
+  assert.equal(geometry.width, 144)
+  assert.equal(geometry.height, 210)
   assert.deepEqual(geometry.tracePaths, [
     'M0.5,180',
     'M72.5,70',
@@ -109,44 +92,33 @@ test('profile geometry maps the fixed glucose domain to literal SVG paths', () =
   assert.deepEqual(geometry.target, { lowY: 180, highY: 70 })
 })
 
-test('profile geometry derives the observed range from the plotted 24-hour window', () => {
-  const profile = {
-    bins: [
-      { minuteOfDay: 0, n: 14, percentiles: completePercentiles },
-      { minuteOfDay: 720, n: 14, percentiles: completePercentiles },
-    ],
-    binMinutes: 5,
-    percentiles: [5, 25, 50, 75, 95],
-    unit: 'mg/dL',
-    timeZone: 'UTC',
-    totalReadings: 28,
-    valid: true,
-  }
+test('trace geometry derives the observed range from the plotted 24-hour window', () => {
+  const readings = [
+    {
+      value: 260,
+      unit: 'mg/dL',
+      timestamp: '2024-01-12T23:55:00.000Z',
+    },
+    {
+      value: 64,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T00:00:00.000Z',
+    },
+    {
+      value: 196,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T12:00:00.000Z',
+    },
+    {
+      value: 106,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T23:55:00.000Z',
+    },
+  ]
 
-  const geometry = createGlucoseProfileGeometry({
-    profile,
-    readings: [
-      {
-        value: 260,
-        unit: 'mg/dL',
-        timestamp: '2024-01-12T23:55:00.000Z',
-      },
-      {
-        value: 64,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T00:00:00.000Z',
-      },
-      {
-        value: 196,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T12:00:00.000Z',
-      },
-      {
-        value: 106,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T23:55:00.000Z',
-      },
-    ],
+  const geometry = createGlucoseTraceGeometry({
+    readings,
+    timeZone: 'UTC',
     width: 144,
     height: 210,
     yMin: 40,
@@ -159,39 +131,28 @@ test('profile geometry derives the observed range from the plotted 24-hour windo
   })
 })
 
-test('profile geometry places the latest reading at the end of a trailing 24-hour axis', () => {
-  const profile = {
-    bins: [
-      { minuteOfDay: 0, n: 14, percentiles: completePercentiles },
-      { minuteOfDay: 720, n: 14, percentiles: completePercentiles },
-    ],
-    binMinutes: 5,
-    percentiles: [5, 25, 50, 75, 95],
-    unit: 'mg/dL',
-    timeZone: 'UTC',
-    totalReadings: 28,
-    valid: true,
-  }
+test('trace geometry places the latest reading at the end of a trailing 24-hour axis', () => {
+  const readings = [
+    {
+      value: 90,
+      unit: 'mg/dL',
+      timestamp: '2024-01-13T12:00:00.000Z',
+    },
+    {
+      value: 100,
+      unit: 'mg/dL',
+      timestamp: '2024-01-13T12:15:00.000Z',
+    },
+    {
+      value: 110,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T12:00:00.000Z',
+    },
+  ]
 
-  const geometry = createGlucoseProfileGeometry({
-    profile,
-    readings: [
-      {
-        value: 90,
-        unit: 'mg/dL',
-        timestamp: '2024-01-13T12:00:00.000Z',
-      },
-      {
-        value: 100,
-        unit: 'mg/dL',
-        timestamp: '2024-01-13T12:15:00.000Z',
-      },
-      {
-        value: 110,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T12:00:00.000Z',
-      },
-    ],
+  const geometry = createGlucoseTraceGeometry({
+    readings,
+    timeZone: 'UTC',
     width: 144,
     height: 210,
     yMin: 40,
@@ -209,39 +170,28 @@ test('profile geometry places the latest reading at the end of a trailing 24-hou
   )
 })
 
-test('profile geometry keeps the last reading when timestamps are duplicated', () => {
-  const profile = {
-    bins: [
-      { minuteOfDay: 0, n: 14, percentiles: completePercentiles },
-      { minuteOfDay: 720, n: 14, percentiles: completePercentiles },
-    ],
-    binMinutes: 5,
-    percentiles: [5, 25, 50, 75, 95],
-    unit: 'mg/dL',
-    timeZone: 'UTC',
-    totalReadings: 28,
-    valid: true,
-  }
+test('trace geometry keeps the last reading when timestamps are duplicated', () => {
+  const readings = [
+    {
+      value: 100,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T11:55:00.000Z',
+    },
+    {
+      value: 120,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T11:55:00.000Z',
+    },
+    {
+      value: 130,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T12:00:00.000Z',
+    },
+  ]
 
-  const geometry = createGlucoseProfileGeometry({
-    profile,
-    readings: [
-      {
-        value: 100,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T11:55:00.000Z',
-      },
-      {
-        value: 120,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T11:55:00.000Z',
-      },
-      {
-        value: 130,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T12:00:00.000Z',
-      },
-    ],
+  const geometry = createGlucoseTraceGeometry({
+    readings,
+    timeZone: 'UTC',
     width: 144,
     height: 210,
     yMin: 40,
@@ -255,53 +205,29 @@ test('profile geometry keeps the last reading when timestamps are duplicated', (
   })
 })
 
-test('profile geometry leaves sensor gaps open', () => {
-  const profile = {
-    bins: [
-      { minuteOfDay: 0, n: 14, percentiles: completePercentiles },
-      { minuteOfDay: 360, n: 14, percentiles: completePercentiles },
-      {
-        minuteOfDay: 720,
-        n: 0,
-        percentiles: { 5: null, 25: null, 50: null, 75: null, 95: null },
-      },
-      { minuteOfDay: 1080, n: 14, percentiles: completePercentiles },
-      { minuteOfDay: 1435, n: 14, percentiles: completePercentiles },
-    ],
-    binMinutes: 5,
-    percentiles: [5, 25, 50, 75, 95],
-    unit: 'mg/dL',
-    timeZone: 'UTC',
-    totalReadings: 56,
-    valid: true,
-  }
+test('trace geometry leaves sensor gaps open', () => {
+  const readings = [
+    {
+      value: 100,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T00:00:00.000Z',
+    },
+    {
+      value: 100,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T23:55:00.000Z',
+    },
+  ]
 
-  const geometry = createGlucoseProfileGeometry({
-    profile,
-    readings: [
-      {
-        value: 100,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T00:00:00.000Z',
-      },
-      {
-        value: 100,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T23:55:00.000Z',
-      },
-    ],
+  const geometry = createGlucoseTraceGeometry({
+    readings,
+    timeZone: 'UTC',
     width: 144,
     height: 210,
     yMin: 40,
     yMax: 250,
   })
 
-  assert.deepEqual(geometry.medianPaths, [
-    'M0,150 L36,150',
-    'M108,150 L143.5,150',
-  ])
-  assert.equal(geometry.outerBandPaths.length, 2)
-  assert.equal(geometry.innerBandPaths.length, 2)
   assert.deepEqual(geometry.tracePaths, ['M0.5,150', 'M144,150'])
   assert.deepEqual(geometry.isolatedTracePoints, [
     { x: 0.5, y: 150 },
@@ -309,44 +235,33 @@ test('profile geometry leaves sensor gaps open', () => {
   ])
 })
 
-test('profile geometry keeps chronological order across midnight in the trailing window', () => {
-  const profile = {
-    bins: [
-      { minuteOfDay: 0, n: 14, percentiles: completePercentiles },
-      { minuteOfDay: 720, n: 14, percentiles: completePercentiles },
-    ],
-    binMinutes: 5,
-    percentiles: [5, 25, 50, 75, 95],
-    unit: 'mg/dL',
-    timeZone: 'America/New_York',
-    totalReadings: 28,
-    valid: true,
-  }
+test('trace geometry keeps chronological order across midnight in the trailing window', () => {
+  const readings = [
+    {
+      value: 90,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T04:55:00.000Z',
+    },
+    {
+      value: 100,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T05:00:00.000Z',
+    },
+    {
+      value: 110,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T05:15:00.000Z',
+    },
+    {
+      value: 120,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T17:00:00.000Z',
+    },
+  ]
 
-  const geometry = createGlucoseProfileGeometry({
-    profile,
-    readings: [
-      {
-        value: 90,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T04:55:00.000Z',
-      },
-      {
-        value: 100,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T05:00:00.000Z',
-      },
-      {
-        value: 110,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T05:15:00.000Z',
-      },
-      {
-        value: 120,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T17:00:00.000Z',
-      },
-    ],
+  const geometry = createGlucoseTraceGeometry({
+    readings,
+    timeZone: 'America/New_York',
     width: 144,
     height: 210,
     yMin: 40,
@@ -360,44 +275,33 @@ test('profile geometry keeps chronological order across midnight in the trailing
   assert.equal(geometry.latest.x, 144)
 })
 
-test('profile geometry smooths connected readings while preserving every point', () => {
-  const profile = {
-    bins: [
-      { minuteOfDay: 0, n: 14, percentiles: completePercentiles },
-      { minuteOfDay: 720, n: 14, percentiles: completePercentiles },
-    ],
-    binMinutes: 5,
-    percentiles: [5, 25, 50, 75, 95],
-    unit: 'mg/dL',
-    timeZone: 'UTC',
-    totalReadings: 28,
-    valid: true,
-  }
+test('trace geometry smooths connected readings while preserving every point', () => {
+  const readings = [
+    {
+      value: 100,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T11:45:00.000Z',
+    },
+    {
+      value: 140,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T11:50:00.000Z',
+    },
+    {
+      value: 120,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T11:55:00.000Z',
+    },
+    {
+      value: 130,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T12:00:00.000Z',
+    },
+  ]
 
-  const geometry = createGlucoseProfileGeometry({
-    profile,
-    readings: [
-      {
-        value: 100,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T11:45:00.000Z',
-      },
-      {
-        value: 140,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T11:50:00.000Z',
-      },
-      {
-        value: 120,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T11:55:00.000Z',
-      },
-      {
-        value: 130,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T12:00:00.000Z',
-      },
-    ],
+  const geometry = createGlucoseTraceGeometry({
+    readings,
+    timeZone: 'UTC',
     width: 144,
     height: 210,
     yMin: 40,
@@ -417,39 +321,28 @@ test('profile geometry smooths connected readings while preserving every point',
   })
 })
 
-test('profile geometry keeps a constant run flat', () => {
-  const profile = {
-    bins: [
-      { minuteOfDay: 0, n: 14, percentiles: completePercentiles },
-      { minuteOfDay: 720, n: 14, percentiles: completePercentiles },
-    ],
-    binMinutes: 5,
-    percentiles: [5, 25, 50, 75, 95],
-    unit: 'mg/dL',
-    timeZone: 'UTC',
-    totalReadings: 28,
-    valid: true,
-  }
+test('trace geometry keeps a constant run flat', () => {
+  const readings = [
+    {
+      value: 120,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T11:50:00.000Z',
+    },
+    {
+      value: 120,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T11:55:00.000Z',
+    },
+    {
+      value: 120,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T12:00:00.000Z',
+    },
+  ]
 
-  const geometry = createGlucoseProfileGeometry({
-    profile,
-    readings: [
-      {
-        value: 120,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T11:50:00.000Z',
-      },
-      {
-        value: 120,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T11:55:00.000Z',
-      },
-      {
-        value: 120,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T12:00:00.000Z',
-      },
-    ],
+  const geometry = createGlucoseTraceGeometry({
+    readings,
+    timeZone: 'UTC',
     width: 144,
     height: 210,
     yMin: 40,
@@ -461,50 +354,38 @@ test('profile geometry keeps a constant run flat', () => {
   ])
 })
 
-test('profile geometry keeps unequal-spacing controls inside each raw segment', () => {
-  const profile = {
-    bins: [
-      { minuteOfDay: 0, n: 14, percentiles: completePercentiles },
-      { minuteOfDay: 720, n: 14, percentiles: completePercentiles },
-    ],
-    binMinutes: 5,
-    percentiles: [5, 25, 50, 75, 95],
-    unit: 'mg/dL',
-    timeZone: 'UTC',
-    totalReadings: 28,
-    valid: true,
-  }
+test('trace geometry keeps unequal-spacing controls inside each raw segment', () => {
+  const readings = [
+    {
+      value: 90,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T11:36:00.000Z',
+    },
+    {
+      value: 150,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T11:41:00.000Z',
+    },
+    {
+      value: 110,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T11:49:00.000Z',
+    },
+    {
+      value: 180,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T12:00:00.000Z',
+    },
+  ]
 
-  const geometry = createGlucoseProfileGeometry({
-    profile,
-    readings: [
-      {
-        value: 90,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T11:36:00.000Z',
-      },
-      {
-        value: 150,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T11:41:00.000Z',
-      },
-      {
-        value: 110,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T11:49:00.000Z',
-      },
-      {
-        value: 180,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T12:00:00.000Z',
-      },
-    ],
+  const geometry = createGlucoseTraceGeometry({
+    readings,
+    timeZone: 'UTC',
     width: 144,
     height: 210,
     yMin: 40,
     yMax: 250,
   })
-
   const segments = cubicSegments(geometry.tracePaths[0])
   assert.equal(segments.length, 3)
 
@@ -521,91 +402,62 @@ test('profile geometry keeps unequal-spacing controls inside each raw segment', 
   }
 })
 
-test('profile geometry avoids invalid controls at subnormal widths', () => {
-  const profile = {
-    bins: [
-      { minuteOfDay: 0, n: 14, percentiles: completePercentiles },
-      { minuteOfDay: 720, n: 14, percentiles: completePercentiles },
-    ],
-    binMinutes: 5,
-    percentiles: [5, 25, 50, 75, 95],
-    unit: 'mg/dL',
+test('trace geometry avoids invalid controls at numeric extremes', () => {
+  const subnormalReadings = [
+    {
+      value: 100,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T11:50:00.000Z',
+    },
+    {
+      value: 120,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T11:55:00.000Z',
+    },
+    {
+      value: 130,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T12:00:00.000Z',
+    },
+  ]
+  const subnormalGeometry = createGlucoseTraceGeometry({
+    readings: subnormalReadings,
     timeZone: 'UTC',
-    totalReadings: 28,
-    valid: true,
-  }
-
-  const geometry = createGlucoseProfileGeometry({
-    profile,
-    readings: [
-      {
-        value: 100,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T11:50:00.000Z',
-      },
-      {
-        value: 120,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T11:55:00.000Z',
-      },
-      {
-        value: 130,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T12:00:00.000Z',
-      },
-    ],
     width: 1e-320,
     height: 210,
     yMin: 40,
     yMax: 250,
   })
+  assert.doesNotMatch(subnormalGeometry.tracePaths[0], /NaN|Infinity/u)
 
-  assert.doesNotMatch(geometry.tracePaths[0], /NaN|Infinity/u)
-
-  const nearFlatGeometry = createGlucoseProfileGeometry({
-    profile,
-    readings: [
-      {
-        value: 100,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T11:50:00.000Z',
-      },
-      {
-        value: 100.00000000000003,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T11:55:00.000Z',
-      },
-      {
-        value: 100.00000000000006,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T12:00:00.000Z',
-      },
-    ],
+  const nearFlatReadings = [
+    {
+      value: 100,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T11:50:00.000Z',
+    },
+    {
+      value: 100.00000000000003,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T11:55:00.000Z',
+    },
+    {
+      value: 100.00000000000006,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T12:00:00.000Z',
+    },
+  ]
+  const nearFlatGeometry = createGlucoseTraceGeometry({
+    readings: nearFlatReadings,
+    timeZone: 'UTC',
     width: 1e-319,
     height: 210,
     yMin: 40,
     yMax: 250,
   })
-
   assert.doesNotMatch(nearFlatGeometry.tracePaths[0], /NaN|Infinity/u)
-})
 
-test('profile geometry serializes the largest finite chart width', () => {
-  const profile = {
-    bins: [
-      { minuteOfDay: 0, n: 14, percentiles: completePercentiles },
-      { minuteOfDay: 720, n: 14, percentiles: completePercentiles },
-    ],
-    binMinutes: 5,
-    percentiles: [5, 25, 50, 75, 95],
-    unit: 'mg/dL',
-    timeZone: 'UTC',
-    totalReadings: 28,
-    valid: true,
-  }
-
-  const geometry = createGlucoseProfileGeometry({
-    profile,
+  const maximumWidthGeometry = createGlucoseTraceGeometry({
     readings: [
       {
         value: 100,
@@ -613,48 +465,37 @@ test('profile geometry serializes the largest finite chart width', () => {
         timestamp: '2024-01-14T12:00:00.000Z',
       },
     ],
+    timeZone: 'UTC',
     width: Number.MAX_VALUE,
     height: 210,
     yMin: 40,
     yMax: 250,
   })
-
-  assert.doesNotMatch(geometry.tracePaths[0], /NaN|Infinity/u)
+  assert.doesNotMatch(maximumWidthGeometry.tracePaths[0], /NaN|Infinity/u)
 })
 
-test('profile geometry keeps expected samples connected and opens longer outages', () => {
-  const profile = {
-    bins: [
-      { minuteOfDay: 0, n: 14, percentiles: completePercentiles },
-      { minuteOfDay: 720, n: 14, percentiles: completePercentiles },
-    ],
-    binMinutes: 5,
-    percentiles: [5, 25, 50, 75, 95],
-    unit: 'mg/dL',
-    timeZone: 'UTC',
-    totalReadings: 28,
-    valid: true,
-  }
+test('trace geometry keeps expected samples connected and opens longer outages', () => {
+  const readings = [
+    {
+      value: 100,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T00:00:00.000Z',
+    },
+    {
+      value: 105,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T00:15:00.000Z',
+    },
+    {
+      value: 110,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T00:31:00.000Z',
+    },
+  ]
 
-  const geometry = createGlucoseProfileGeometry({
-    profile,
-    readings: [
-      {
-        value: 100,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T00:00:00.000Z',
-      },
-      {
-        value: 105,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T00:15:00.000Z',
-      },
-      {
-        value: 110,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T00:31:00.000Z',
-      },
-    ],
+  const geometry = createGlucoseTraceGeometry({
+    readings,
+    timeZone: 'UTC',
     width: 144,
     height: 210,
     yMin: 40,
@@ -667,34 +508,23 @@ test('profile geometry keeps expected samples connected and opens longer outages
   ])
 })
 
-test('profile geometry ignores a newer implausible reading', () => {
-  const profile = {
-    bins: [
-      { minuteOfDay: 0, n: 14, percentiles: completePercentiles },
-      { minuteOfDay: 720, n: 14, percentiles: completePercentiles },
-    ],
-    binMinutes: 5,
-    percentiles: [5, 25, 50, 75, 95],
-    unit: 'mg/dL',
-    timeZone: 'UTC',
-    totalReadings: 28,
-    valid: true,
-  }
+test('trace geometry ignores a newer implausible reading', () => {
+  const readings = [
+    {
+      value: 100,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T12:00:00.000Z',
+    },
+    {
+      value: 601,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T23:55:00.000Z',
+    },
+  ]
 
-  const geometry = createGlucoseProfileGeometry({
-    profile,
-    readings: [
-      {
-        value: 100,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T12:00:00.000Z',
-      },
-      {
-        value: 601,
-        unit: 'mg/dL',
-        timestamp: '2024-01-14T23:55:00.000Z',
-      },
-    ],
+  const geometry = createGlucoseTraceGeometry({
+    readings,
+    timeZone: 'UTC',
     width: 144,
     height: 210,
     yMin: 40,
@@ -710,27 +540,15 @@ test('profile geometry ignores a newer implausible reading', () => {
   })
 })
 
-test('profile geometry reports the latest marker zone', () => {
-  const profile = {
-    bins: [
-      { minuteOfDay: 0, n: 14, percentiles: completePercentiles },
-      { minuteOfDay: 720, n: 14, percentiles: completePercentiles },
-    ],
-    binMinutes: 5,
-    percentiles: [5, 25, 50, 75, 95],
-    unit: 'mg/dL',
-    timeZone: 'UTC',
-    totalReadings: 28,
-    valid: true,
-  }
-
+test('trace geometry reports the latest marker zone at both endpoints', () => {
   for (const [value, zone] of [
     [60, 'low'],
+    [70, 'in-range'],
     [100, 'in-range'],
+    [180, 'in-range'],
     [200, 'high'],
   ]) {
-    const geometry = createGlucoseProfileGeometry({
-      profile,
+    const geometry = createGlucoseTraceGeometry({
       readings: [
         {
           value,
@@ -738,6 +556,7 @@ test('profile geometry reports the latest marker zone', () => {
           timestamp: '2024-01-14T12:00:00.000Z',
         },
       ],
+      timeZone: 'UTC',
       width: 144,
       height: 210,
       yMin: 40,
@@ -748,19 +567,7 @@ test('profile geometry reports the latest marker zone', () => {
   }
 })
 
-test('profile geometry rejects non-finite chart bounds', () => {
-  const profile = {
-    bins: [
-      { minuteOfDay: 0, n: 14, percentiles: completePercentiles },
-      { minuteOfDay: 720, n: 14, percentiles: completePercentiles },
-    ],
-    binMinutes: 5,
-    percentiles: [5, 25, 50, 75, 95],
-    unit: 'mg/dL',
-    timeZone: 'UTC',
-    totalReadings: 28,
-    valid: true,
-  }
+test('trace geometry rejects non-finite chart bounds', () => {
   const readings = [
     {
       value: 100,
@@ -777,9 +584,9 @@ test('profile geometry rejects non-finite chart bounds', () => {
   ]) {
     assert.throws(
       () =>
-        createGlucoseProfileGeometry({
-          profile,
+        createGlucoseTraceGeometry({
           readings,
+          timeZone: 'UTC',
           width: 144,
           height: 210,
           yMin: 40,
@@ -789,4 +596,79 @@ test('profile geometry rejects non-finite chart bounds', () => {
       RangeError,
     )
   }
+})
+
+test('trace geometry rounds the first four UTC display labels to whole local hours', () => {
+  const readings = [
+    {
+      value: 100,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T23:55:00.000Z',
+    },
+  ]
+
+  const geometry = createGlucoseTraceGeometry({
+    readings,
+    timeZone: 'UTC',
+    width: 144,
+    height: 210,
+    yMin: 40,
+    yMax: 250,
+  })
+
+  assert.deepEqual(
+    geometry.timeLabels.map((tick) => tick.label),
+    ['12 AM', '6 AM', '12 PM', '6 PM', 'Now'],
+  )
+  assert.deepEqual(geometry.tracePaths, ['M144,150'])
+})
+
+test('trace geometry rounds display labels in Kathmandu local wall-clock time', () => {
+  const readings = [
+    {
+      value: 100,
+      unit: 'mg/dL',
+      timestamp: '2024-01-14T23:55:00.000Z',
+    },
+  ]
+
+  const geometry = createGlucoseTraceGeometry({
+    readings,
+    timeZone: 'Asia/Kathmandu',
+    width: 144,
+    height: 210,
+    yMin: 40,
+    yMax: 250,
+  })
+
+  assert.deepEqual(
+    geometry.timeLabels.map((tick) => tick.label),
+    ['6 AM', '12 PM', '6 PM', '12 AM', 'Now'],
+  )
+  assert.deepEqual(geometry.tracePaths, ['M144,150'])
+})
+
+test('the fixed homepage fixture has three contiguous excursions above 180 mg/dL', () => {
+  const readings = generateCGMSeries({
+    days: 14,
+    seed: 7,
+    mealAmplitude: 95,
+    noise: 2,
+    nocturnalHypoDays: [3, 9],
+  })
+  const latestTimestamp = Date.parse(readings.at(-1).timestamp)
+  const windowStart = latestTimestamp - 86_400_000
+  const trailingReadings = readings.filter(
+    (reading) => Date.parse(reading.timestamp) >= windowStart,
+  )
+  let excursions = 0
+  let aboveTarget = false
+
+  for (const reading of trailingReadings) {
+    const above = reading.value > 180
+    if (above && !aboveTarget) excursions += 1
+    aboveTarget = above
+  }
+
+  assert.equal(excursions, 3)
 })

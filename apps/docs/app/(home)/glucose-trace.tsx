@@ -1,6 +1,5 @@
 import type { GlucoseReading } from '@glucoseiq/core'
-import type { AGPProfileResult } from '@glucoseiq/core/metrics'
-import { createGlucoseProfileGeometry } from '@/lib/glucose-profile'
+import { createGlucoseTraceGeometry } from '@/lib/glucose-profile'
 import { useId, type JSX } from 'react'
 import styles from './home.module.css'
 
@@ -20,8 +19,8 @@ const Y_AXIS_TICKS = [
 ] as const
 
 interface GlucoseTraceProps {
-  readonly profile: AGPProfileResult
-  readonly readings: GlucoseReading[]
+  readonly readings: readonly GlucoseReading[]
+  readonly timeZone: string
 }
 
 function yForValue(value: number): number {
@@ -29,8 +28,8 @@ function yForValue(value: number): number {
 }
 
 export function GlucoseTrace({
-  profile,
   readings,
+  timeZone,
 }: GlucoseTraceProps): JSX.Element {
   const id = useId().replaceAll(':', '')
   const titleId = `glucose-trace-title-${id}`
@@ -38,9 +37,9 @@ export function GlucoseTrace({
   const traceGradientId = `glucose-trace-gradient-${id}`
   const targetGradientId = `glucose-target-gradient-${id}`
   const traceGlowId = `glucose-trace-glow-${id}`
-  const geometry = createGlucoseProfileGeometry({
-    profile,
+  const geometry = createGlucoseTraceGeometry({
     readings,
+    timeZone,
     width: PLOT_WIDTH,
     height: PLOT_HEIGHT,
     yMin: Y_MIN,
