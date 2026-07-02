@@ -8,6 +8,7 @@ import { InstallCommand } from '@/components/install-command'
 import { LogoMark } from '@/lib/logo'
 import { GlucoseSignalFigure } from './glucose-signal-figure'
 import { HighlightedCode } from './highlighted-code'
+import { SignalStory } from './signal-story'
 import styles from './home.module.css'
 import type { JSX } from 'react'
 
@@ -132,17 +133,19 @@ export default function HomePage(): JSX.Element {
           </div>
         </header>
 
-        <GlucoseSignalFigure
-          currentReading={displayedReading}
-          currentTrend={displayedTrend}
-          cv={report.cv}
-          gmi={report.gmi}
-          meanGlucose={report.meanGlucose}
-          readings={readings}
-          timeInRange={timeInRange}
-          timeZone={completeProfile.timeZone}
-          totalReadings={report.dataSufficiency.totalReadings}
-        />
+        <SignalStory>
+          <GlucoseSignalFigure
+            currentReading={displayedReading}
+            currentTrend={displayedTrend}
+            cv={report.cv}
+            gmi={report.gmi}
+            meanGlucose={report.meanGlucose}
+            readings={readings}
+            timeInRange={timeInRange}
+            timeZone={completeProfile.timeZone}
+            totalReadings={report.dataSufficiency.totalReadings}
+          />
+        </SignalStory>
 
         <section
           aria-labelledby="report-heading"
