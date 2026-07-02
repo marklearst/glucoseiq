@@ -509,6 +509,119 @@
   }
 }
 
+.signalStory[data-motion-layout='flow'][data-motion-state='armed']
+  [data-motion-part='target-field'],
+.signalStory[data-motion-layout='flow'][data-motion-state='armed']
+  [data-motion-part='thresholds'] {
+  opacity: 0;
+}
+
+.signalStory[data-motion-layout='flow'][data-motion-state='armed']
+  [data-motion-part='target-field'],
+.signalStory[data-motion-layout='flow'][data-motion-state='armed']
+  [data-motion-part='trace-mask'] {
+  transform: scaleX(0);
+}
+
+.signalStory[data-motion-layout='flow'][data-motion-state='armed']
+  [data-motion-part='trace-mask'],
+.signalStory[data-motion-layout='flow'][data-motion-state='armed']
+  [data-motion-part='latest-reading'],
+.signalStory[data-motion-layout='flow'][data-motion-state='armed']
+  [data-motion-part='latest-point'],
+.signalStory[data-motion-layout='flow'][data-motion-state='armed']
+  [data-motion-part='metrics'] > div {
+  opacity: 0;
+}
+
+.signalStory[data-motion-layout='flow'][data-motion-state='armed']
+  [data-motion-part='latest-reading'] {
+  transform: translateY(6px);
+}
+
+.signalStory[data-motion-layout='flow'][data-motion-state='armed']
+  [data-motion-part='latest-point'] {
+  transform: scale(0.92);
+}
+
+.signalStory[data-motion-layout='flow'][data-motion-state='armed']
+  [data-motion-part='metrics'] > div {
+  transform: translateY(8px);
+}
+
+.signalStory[data-motion-layout='flow'][data-motion-state='armed']
+  [data-motion-part='caption'] {
+  opacity: 0.55;
+}
+
+.signalStory[data-motion-layout='flow'][data-motion-state='revealing']
+  [data-motion-part='target-field'] {
+  animation:
+    signalScaleXIn 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.signalStory[data-motion-layout='flow'][data-motion-state='revealing']
+  [data-motion-part='trace-mask'] {
+  animation:
+    signalScaleXIn 660ms cubic-bezier(0.65, 0, 0.35, 1)
+    100ms both;
+}
+
+.signalStory[data-motion-layout='flow'][data-motion-state='revealing']
+  [data-motion-part='latest-reading'] {
+  animation:
+    signalCurrentIn 280ms cubic-bezier(0.16, 1, 0.3, 1)
+    620ms both;
+}
+
+.signalStory[data-motion-layout='flow'][data-motion-state='revealing']
+  [data-motion-part='latest-point'] {
+  animation:
+    signalPointIn 280ms cubic-bezier(0.16, 1, 0.3, 1)
+    620ms both;
+}
+
+.signalStory[data-motion-layout='flow'][data-motion-state='revealing']
+  [data-motion-part='thresholds'] {
+  animation:
+    signalFadeIn 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.signalStory[data-motion-layout='flow'][data-motion-state='revealing']
+  [data-motion-part='metrics'] > div:nth-child(1) {
+  animation:
+    signalMetricIn 260ms cubic-bezier(0.16, 1, 0.3, 1)
+    780ms both;
+}
+
+.signalStory[data-motion-layout='flow'][data-motion-state='revealing']
+  [data-motion-part='metrics'] > div:nth-child(2) {
+  animation:
+    signalMetricIn 260ms cubic-bezier(0.16, 1, 0.3, 1)
+    800ms both;
+}
+
+.signalStory[data-motion-layout='flow'][data-motion-state='revealing']
+  [data-motion-part='metrics'] > div:nth-child(3) {
+  animation:
+    signalMetricIn 260ms cubic-bezier(0.16, 1, 0.3, 1)
+    820ms both;
+}
+
+.signalStory[data-motion-layout='flow'][data-motion-state='revealing']
+  [data-motion-part='metrics'] > div:nth-child(4) {
+  animation:
+    signalMetricIn 260ms cubic-bezier(0.16, 1, 0.3, 1)
+    840ms both;
+}
+
+.signalStory[data-motion-layout='flow'][data-motion-state='revealing']
+  [data-motion-part='caption'] {
+  animation:
+    signalCaptionIn 320ms cubic-bezier(0.16, 1, 0.3, 1)
+    780ms both;
+}
+
 @media (scripting: enabled)
   and (prefers-reduced-motion: no-preference)
   and (min-width: 900px)
@@ -693,5 +806,62 @@
     .signalStory[data-motion-state='latched'] .signalMetrics > div {
       transform: translateY(0);
     }
+  }
+}
+
+.signalStory[data-motion-layout='flow']:not(
+    [data-motion-state='idle']
+  ) {
+  min-height: auto;
+  view-timeline-name: none;
+}
+
+.signalStory[data-motion-sticky='disabled'] .signalSection {
+  position: relative;
+  top: auto;
+  min-height: auto;
+}
+
+.signalStory[data-motion-state='latched']
+  [data-motion-part] {
+  animation: none;
+  opacity: 1;
+}
+
+.signalStory[data-motion-state='latched']
+  [data-motion-part='instrument'],
+.signalStory[data-motion-state='latched']
+  [data-motion-part='target-field'],
+.signalStory[data-motion-state='latched']
+  [data-motion-part='trace-mask'],
+.signalStory[data-motion-state='latched']
+  [data-motion-part='latest-reading'],
+.signalStory[data-motion-state='latched']
+  [data-motion-part='latest-point'],
+.signalStory[data-motion-state='latched']
+  [data-motion-part='metrics'] > div {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signalStory[data-motion-layout='flow'] {
+    min-height: auto;
+    view-timeline-name: none;
+  }
+
+  .signalStory .signalSection {
+    position: relative;
+    top: auto;
+    min-height: auto;
+  }
+
+  .signalStory [data-motion-part] {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .signalStory [data-motion-part='trace-mask'] {
+    transform: scaleX(1);
   }
 }

@@ -642,6 +642,34 @@ function getLeafRules(source) {
   )
 }
 
+function findOnlyStyleRule(source, selector, message) {
+  const expectedSelector = normalizeSelector(selector)
+  const matches = getLeafRules(source).filter(
+    (rule) => normalizeSelector(rule.selector) === expectedSelector,
+  )
+
+  assert.equal(matches.length, 1, message)
+  return matches[0]
+}
+
+function findOnlyStyleRuleList(source, selectors, message) {
+  const expectedSelectors = selectors.map(normalizeSelector)
+  const matches = getLeafRules(source).filter((rule) => {
+    const actualSelectors = splitSelectorList(rule.selector).map(
+      normalizeSelector,
+    )
+    return (
+      actualSelectors.length === expectedSelectors.length &&
+      actualSelectors.every(
+        (selector, index) => selector === expectedSelectors[index],
+      )
+    )
+  })
+
+  assert.equal(matches.length, 1, message)
+  return matches[0]
+}
+
 function parseDeclarations(source) {
   return source
     .split(';')
@@ -832,6 +860,323 @@ function validateNativeMotionSource(source) {
       undefined,
       `${tuple.target} must not receive a later animation shorthand reset`,
     )
+  }
+}
+
+const fallbackArmedRoot =
+  ".signalStory[data-motion-layout='flow'][data-motion-state='armed']"
+const fallbackRevealingRoot =
+  ".signalStory[data-motion-layout='flow'][data-motion-state='revealing']"
+const fallbackAnimationTuples = [
+  {
+    target: "[data-motion-part='target-field']",
+    animation:
+      'signalScaleXIn 180ms cubic-bezier(0.16, 1, 0.3, 1) both',
+  },
+  {
+    target: "[data-motion-part='thresholds']",
+    animation:
+      'signalFadeIn 180ms cubic-bezier(0.16, 1, 0.3, 1) both',
+  },
+  {
+    target: "[data-motion-part='trace-mask']",
+    animation:
+      'signalScaleXIn 660ms cubic-bezier(0.65, 0, 0.35, 1) 100ms both',
+  },
+  {
+    target: "[data-motion-part='latest-reading']",
+    animation:
+      'signalCurrentIn 280ms cubic-bezier(0.16, 1, 0.3, 1) 620ms both',
+  },
+  {
+    target: "[data-motion-part='latest-point']",
+    animation:
+      'signalPointIn 280ms cubic-bezier(0.16, 1, 0.3, 1) 620ms both',
+  },
+  {
+    target: "[data-motion-part='metrics'] > div:nth-child(1)",
+    animation:
+      'signalMetricIn 260ms cubic-bezier(0.16, 1, 0.3, 1) 780ms both',
+  },
+  {
+    target: "[data-motion-part='metrics'] > div:nth-child(2)",
+    animation:
+      'signalMetricIn 260ms cubic-bezier(0.16, 1, 0.3, 1) 800ms both',
+  },
+  {
+    target: "[data-motion-part='metrics'] > div:nth-child(3)",
+    animation:
+      'signalMetricIn 260ms cubic-bezier(0.16, 1, 0.3, 1) 820ms both',
+  },
+  {
+    target: "[data-motion-part='metrics'] > div:nth-child(4)",
+    animation:
+      'signalMetricIn 260ms cubic-bezier(0.16, 1, 0.3, 1) 840ms both',
+  },
+  {
+    target: "[data-motion-part='caption']",
+    animation:
+      'signalCaptionIn 320ms cubic-bezier(0.16, 1, 0.3, 1) 780ms both',
+  },
+].map((tuple) => ({
+  ...tuple,
+  selector: `${fallbackRevealingRoot} ${tuple.target}`,
+}))
+
+function validateFallbackMotionSource(source) {
+  const armedOpacityRule = findOnlyStyleRuleList(
+    source,
+    [
+      `${fallbackArmedRoot} [data-motion-part='target-field']`,
+      `${fallbackArmedRoot} [data-motion-part='thresholds']`,
+    ],
+    'the field and thresholds must hide only for an armed flow fallback',
+  )
+  assertExactStructure(
+    parseDeclarations(armedOpacityRule.declarations),
+    [['opacity', '0']],
+    'the field and thresholds must begin transparent in the armed fallback state',
+  )
+
+  const armedScaleRule = findOnlyStyleRuleList(
+    source,
+    [
+      `${fallbackArmedRoot} [data-motion-part='target-field']`,
+      `${fallbackArmedRoot} [data-motion-part='trace-mask']`,
+    ],
+    'the field and trace mask must offset only for an armed flow fallback',
+  )
+  assertExactStructure(
+    parseDeclarations(armedScaleRule.declarations),
+    [['transform', 'scaleX(0)']],
+    'the field and trace mask must begin collapsed in the armed fallback state',
+  )
+
+  const armedHiddenRule = findOnlyStyleRuleList(
+    source,
+    [
+      `${fallbackArmedRoot} [data-motion-part='trace-mask']`,
+      `${fallbackArmedRoot} [data-motion-part='latest-reading']`,
+      `${fallbackArmedRoot} [data-motion-part='latest-point']`,
+      `${fallbackArmedRoot} [data-motion-part='metrics'] > div`,
+    ],
+    'the trace, endpoint, result, and metrics must hide only for an armed flow fallback',
+  )
+  assertExactStructure(
+    parseDeclarations(armedHiddenRule.declarations),
+    [['opacity', '0']],
+    'the trace, endpoint, result, and metrics must begin transparent in the armed fallback state',
+  )
+
+  for (const [target, transform] of [
+    ["[data-motion-part='latest-reading']", 'translateY(6px)'],
+    ["[data-motion-part='latest-point']", 'scale(0.92)'],
+    ["[data-motion-part='metrics'] > div", 'translateY(8px)'],
+  ]) {
+    const rule = findOnlyStyleRule(
+      source,
+      `${fallbackArmedRoot} ${target}`,
+      `${target} must have one armed fallback transform`,
+    )
+    assertExactStructure(
+      parseDeclarations(rule.declarations),
+      [['transform', transform]],
+      `${target} must use its approved armed fallback transform`,
+    )
+  }
+
+  const armedCaptionRule = findOnlyStyleRule(
+    source,
+    `${fallbackArmedRoot} [data-motion-part='caption']`,
+    'the caption must have one armed fallback state',
+  )
+  assertExactStructure(
+    parseDeclarations(armedCaptionRule.declarations),
+    [['opacity', '0.55']],
+    'the caption must begin at its approved armed fallback opacity',
+  )
+
+  for (const { selector, animation } of fallbackAnimationTuples) {
+    const rule = findOnlyStyleRule(
+      source,
+      selector,
+      `${selector} must have one revealing fallback animation`,
+    )
+    assertExactStructure(
+      parseDeclarations(rule.declarations),
+      [['animation', animation]],
+      `${selector} must preserve its approved revealing fallback timing`,
+    )
+  }
+
+  for (const { selector, declarations } of getLeafRules(source)) {
+    const parsedDeclarations = parseDeclarations(declarations)
+    const beginsHidden = parsedDeclarations.some(
+      ([property, value]) =>
+        (property === 'opacity' && value === '0') ||
+        (property === 'transform' &&
+          ['scaleX(0)', 'scale(0.92)', 'translateY(6px)', 'translateY(8px)'].includes(
+            value,
+          )),
+    )
+
+    if (!beginsHidden || !selector.includes('[data-motion-part')) {
+      continue
+    }
+
+    assert.match(
+      selector,
+      /\[data-motion-layout='flow'\]\[data-motion-state='armed'\]/u,
+      'meaningful fallback layers may hide or offset only for an armed flow visit',
+    )
+  }
+
+  const flowSafetyRule = findOnlyStyleRule(
+    source,
+    ".signalStory[data-motion-layout='flow']:not([data-motion-state='idle'])",
+    'post-hydration flow visits must release the prepaint chapter geometry',
+  )
+  assertExactStructure(
+    parseDeclarations(flowSafetyRule.declarations),
+    [
+      ['min-height', 'auto'],
+      ['view-timeline-name', 'none'],
+    ],
+    'post-hydration flow visits must cancel only the prepaint height and timeline',
+  )
+
+  const disabledStickyRule = findOnlyStyleRule(
+    source,
+    ".signalStory[data-motion-sticky='disabled'] .signalSection",
+    'disabled sticky state must release the signal section regardless of the safety latch',
+  )
+  assertExactStructure(
+    parseDeclarations(disabledStickyRule.declarations),
+    [
+      ['position', 'relative'],
+      ['top', 'auto'],
+      ['min-height', 'auto'],
+    ],
+    'disabled sticky state must restore ordinary section layout',
+  )
+
+  const latchedPartsRule = findOnlyStyleRule(
+    source,
+    ".signalStory[data-motion-state='latched'] [data-motion-part]",
+    'latched visits must settle every motion part',
+  )
+  assertExactStructure(
+    parseDeclarations(latchedPartsRule.declarations),
+    [
+      ['animation', 'none'],
+      ['opacity', '1'],
+    ],
+    'latched visits must stop every motion part at full opacity',
+  )
+
+  const latchedTransformsRule = findOnlyStyleRuleList(
+    source,
+    [
+      ".signalStory[data-motion-state='latched'] [data-motion-part='instrument']",
+      ".signalStory[data-motion-state='latched'] [data-motion-part='target-field']",
+      ".signalStory[data-motion-state='latched'] [data-motion-part='trace-mask']",
+      ".signalStory[data-motion-state='latched'] [data-motion-part='latest-reading']",
+      ".signalStory[data-motion-state='latched'] [data-motion-part='latest-point']",
+      ".signalStory[data-motion-state='latched'] [data-motion-part='metrics'] > div",
+    ],
+    'latched visits must settle every transformed motion part',
+  )
+  assertExactStructure(
+    parseDeclarations(latchedTransformsRule.declarations),
+    [['transform', 'none']],
+    'latched visits must remove every motion transform',
+  )
+
+  const reducedMotionBlock = findOnlyBlock(
+    getTopLevelBlocks(source),
+    '@media (prefers-reduced-motion: reduce)',
+    'reduced-motion visits must have one explicit final-frame reset',
+  )
+  const reducedMotionRules = collectStyleRules(
+    source,
+    reducedMotionBlock.bodyStart,
+    reducedMotionBlock.bodyEnd,
+  )
+  const findReducedMotionRule = (selector, message) => {
+    const expectedSelector = normalizeSelector(selector)
+    const matches = reducedMotionRules.filter(
+      (rule) => normalizeSelector(rule.selector) === expectedSelector,
+    )
+    assert.equal(matches.length, 1, message)
+    return matches[0]
+  }
+
+  assertExactStructure(
+    parseDeclarations(
+      findReducedMotionRule(
+        ".signalStory[data-motion-layout='flow']",
+        'an initially reduced-motion flow visit must retain ordinary chapter height',
+      ).declarations,
+    ),
+    [
+      ['min-height', 'auto'],
+      ['view-timeline-name', 'none'],
+    ],
+    'an initially reduced-motion flow visit must not reserve scroll passage height',
+  )
+  assertExactStructure(
+    parseDeclarations(
+      findReducedMotionRule(
+        '.signalStory .signalSection',
+        'reduced-motion must remove native sticky positioning',
+      ).declarations,
+    ),
+    [
+      ['position', 'relative'],
+      ['top', 'auto'],
+      ['min-height', 'auto'],
+    ],
+    'reduced-motion must restore ordinary section layout',
+  )
+  assertExactStructure(
+    parseDeclarations(
+      findReducedMotionRule(
+        '.signalStory [data-motion-part]',
+        'reduced-motion must settle every motion part',
+      ).declarations,
+    ),
+    [
+      ['animation', 'none'],
+      ['opacity', '1'],
+      ['transform', 'none'],
+    ],
+    'reduced-motion must settle every motion part at its final frame',
+  )
+  assertExactStructure(
+    parseDeclarations(
+      findReducedMotionRule(
+        ".signalStory [data-motion-part='trace-mask']",
+        'reduced-motion must leave the trace mask fully revealed',
+      ).declarations,
+    ),
+    [['transform', 'scaleX(1)']],
+    'reduced-motion must reveal the full trace mask',
+  )
+
+  for (const rule of reducedMotionRules) {
+    const declarations = parseDeclarations(rule.declarations)
+    if (
+      declarations.some(
+        ([property, value]) =>
+          property === 'min-height' && value === 'auto',
+      )
+    ) {
+      assert.doesNotMatch(
+        rule.selector,
+        /\[data-motion-layout='scroll'\]/u,
+        'reduced-motion must preserve the saved outer chapter height of a scroll visit',
+      )
+    }
   }
 }
 
@@ -1460,4 +1805,10 @@ test('every native animation preserves its named timeline with ordered longhands
       `${selector} must not reset its timeline with animation shorthand`,
     )
   }
+})
+
+test('flow fallback timing and reduced-motion safety preserve a complete final frame', () => {
+  assert.doesNotThrow(() =>
+    validateFallbackMotionSource(signalStyles),
+  )
 })
