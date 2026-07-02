@@ -484,6 +484,39 @@ test('homepage metrics reflow into labeled rows at extreme zoom widths', () => {
   )
 })
 
+test('homepage keeps scale-sensitive trace annotations outside the stretched geometry layer', () => {
+  const geometrySvg = /<svg\s+aria-labelledby=\{`\$\{titleId\} \$\{descriptionId\}`\}[\s\S]*?<\/svg>/u.exec(
+    glucoseTrace,
+  )?.[0]
+  assert.notEqual(geometrySvg, undefined, 'stretched geometry SVG must exist')
+  assert.doesNotMatch(geometrySvg, /<text\b/u)
+  assert.doesNotMatch(
+    geometrySvg,
+    /data-motion-part="(?:thresholds|latest-point)"/u,
+  )
+
+  assert.match(
+    glucoseTrace,
+    /<div\s+aria-hidden="true"\s+className=\{styles\.traceThresholdOverlay\}\s+data-motion-part="thresholds"\s*>[\s\S]*?THRESHOLDS\.map[\s\S]*?<line\s+className=\{styles\.traceThreshold\}[\s\S]*?<span className=\{styles\.traceThresholdLabel\}>\s*\{threshold\}\s*<\/span>[\s\S]*?<\/div>/u,
+  )
+  assert.match(
+    glucoseTrace,
+    /<svg\s+aria-hidden="true"\s+className=\{styles\.traceLatestMarker\}\s+height="12"\s+style=\{\{[\s\S]*?left: `\$\{\(geometry\.latest\.x \/ geometry\.width\) \* 100\}%`,[\s\S]*?top: `\$\{\(geometry\.latest\.y \/ geometry\.height\) \* 100\}%`,[\s\S]*?\}\}\s+viewBox=\{`\$\{geometry\.latest\.x - 6\} \$\{geometry\.latest\.y - 6\} 12 12`\}\s+width="12"\s*>/u,
+  )
+  assert.match(
+    signalStyles,
+    /\.traceThresholdOverlay\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;[^}]*pointer-events:\s*none;/u,
+  )
+  assert.match(
+    signalStyles,
+    /\.traceThresholdLabel\s*\{[^}]*position:\s*absolute;[^}]*right:\s*8px;[^}]*font-size:\s*0\.625rem;[^}]*white-space:\s*nowrap;/u,
+  )
+  assert.match(
+    signalStyles,
+    /\.traceLatestMarker\s*\{[^}]*position:\s*absolute;[^}]*width:\s*12px;[^}]*height:\s*12px;[^}]*transform:\s*translate\(-50%, -50%\);/u,
+  )
+})
+
 test('homepage sample reproduces the displayed report', () => {
   const snippetMarker = 'const HOME_REPORT_SNIPPET = `'
   const snippetStart = page.indexOf(snippetMarker)

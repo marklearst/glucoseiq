@@ -105,37 +105,6 @@ export function GlucoseTrace({
             y={geometry.target.highY}
           />
 
-          <g data-motion-part="thresholds">
-            {THRESHOLDS.map((threshold) => {
-              const y =
-                threshold === 180
-                  ? geometry.target.highY
-                  : geometry.target.lowY
-
-              return (
-                <g key={threshold}>
-                  <line
-                    className={styles.traceThreshold}
-                    vectorEffect="non-scaling-stroke"
-                    x1="0"
-                    x2={geometry.width}
-                    y1={y}
-                    y2={y}
-                  />
-                  <text
-                    className={styles.traceThresholdLabel}
-                    dominantBaseline="central"
-                    textAnchor="end"
-                    x={geometry.width - 8}
-                    y={y - 10}
-                  >
-                    {threshold}
-                  </text>
-                </g>
-              )
-            })}
-          </g>
-
           <g mask={`url(#${traceMaskId})`}>
             {geometry.tracePaths.map((path, index) => (
               <path
@@ -159,7 +128,59 @@ export function GlucoseTrace({
               />
             ))}
           </g>
+        </svg>
 
+        <div
+          aria-hidden="true"
+          className={styles.traceThresholdOverlay}
+          data-motion-part="thresholds"
+        >
+          {THRESHOLDS.map((threshold) => {
+            const y =
+              threshold === 180
+                ? geometry.target.highY
+                : geometry.target.lowY
+
+            return (
+              <div
+                className={styles.traceThresholdRow}
+                key={threshold}
+                style={{ top: `${(y / geometry.height) * 100}%` }}
+              >
+                <svg
+                  aria-hidden="true"
+                  className={styles.traceThresholdRule}
+                  height="1"
+                  preserveAspectRatio="none"
+                  viewBox={`0 0 ${geometry.width} 1`}
+                  width={geometry.width}
+                >
+                  <line
+                    className={styles.traceThreshold}
+                    vectorEffect="non-scaling-stroke"
+                    x1="0"
+                    x2={geometry.width}
+                    y1="0.5"
+                    y2="0.5"
+                  />
+                </svg>
+                <span className={styles.traceThresholdLabel}>{threshold}</span>
+              </div>
+            )
+          })}
+        </div>
+
+        <svg
+          aria-hidden="true"
+          className={styles.traceLatestMarker}
+          height="12"
+          style={{
+            left: `${(geometry.latest.x / geometry.width) * 100}%`,
+            top: `${(geometry.latest.y / geometry.height) * 100}%`,
+          }}
+          viewBox={`${geometry.latest.x - 6} ${geometry.latest.y - 6} 12 12`}
+          width="12"
+        >
           <g transform={`translate(${geometry.latest.x} ${geometry.latest.y})`}>
             <g
               className={styles.traceLatestPoint}
