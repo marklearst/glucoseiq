@@ -843,6 +843,11 @@
   transform: none;
 }
 
+.signalStory[data-motion-state='latched']
+  [data-motion-part='trace-mask'] {
+  transform: scaleX(1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .signalStory[data-motion-layout='flow'] {
     min-height: auto;

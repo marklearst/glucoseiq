@@ -14,6 +14,10 @@ const signalStoryPath = join(
   docsRoot,
   'app/(home)/signal-story.tsx',
 )
+const signalFigurePath = join(
+  docsRoot,
+  'app/(home)/glucose-signal-figure.tsx',
+)
 const signalStylesPath = join(
   docsRoot,
   'app/(home)/glucose-signal.module.css',
@@ -24,6 +28,9 @@ const signalMotion = existsSync(signalMotionPath)
   : ''
 const signalStory = existsSync(signalStoryPath)
   ? readFileSync(signalStoryPath, 'utf8')
+  : ''
+const signalFigure = existsSync(signalFigurePath)
+  ? readFileSync(signalFigurePath, 'utf8')
   : ''
 const signalStyles = existsSync(signalStylesPath)
   ? readFileSync(signalStylesPath, 'utf8')
@@ -633,8 +640,19 @@ function collectKeyframeBlocks(
   return keyframes
 }
 
-function getLeafRules(source) {
+function getStyleRules(source) {
   return collectStyleRules(source).map(
+    ({ selector, declarations, start, end }) => ({
+      selector,
+      declarations,
+      start,
+      end,
+    }),
+  )
+}
+
+function getLeafRules(source) {
+  return getStyleRules(source).map(
     ({ selector, declarations }) => ({
       selector,
       declarations,
@@ -644,7 +662,7 @@ function getLeafRules(source) {
 
 function findOnlyStyleRule(source, selector, message) {
   const expectedSelector = normalizeSelector(selector)
-  const matches = getLeafRules(source).filter(
+  const matches = getStyleRules(source).filter(
     (rule) => normalizeSelector(rule.selector) === expectedSelector,
   )
 
@@ -654,7 +672,7 @@ function findOnlyStyleRule(source, selector, message) {
 
 function findOnlyStyleRuleList(source, selectors, message) {
   const expectedSelectors = selectors.map(normalizeSelector)
-  const matches = getLeafRules(source).filter((rule) => {
+  const matches = getStyleRules(source).filter((rule) => {
     const actualSelectors = splitSelectorList(rule.selector).map(
       normalizeSelector,
     )
@@ -923,7 +941,207 @@ const fallbackAnimationTuples = [
   selector: `${fallbackRevealingRoot} ${tuple.target}`,
 }))
 
-function validateFallbackMotionSource(source) {
+const semanticMotionParts = [
+  'instrument',
+  'latest-reading',
+  'metrics',
+  'caption',
+]
+const motionPartClassNames = new Map([
+  ['instrument', 'signalInstrument'],
+  ['target-field', 'traceTarget'],
+  ['thresholds', 'traceThresholdOverlay'],
+  ['trace-mask', 'traceMask'],
+  ['latest-reading', 'latestReading'],
+  ['latest-point', 'traceLatestPoint'],
+  ['metrics', 'signalMetrics'],
+  ['caption', 'signalCaption'],
+])
+const approvedArmedConcealment = new Set(
+  [
+    ["[data-motion-part='target-field']", 'opacity', '0'],
+    ["[data-motion-part='target-field']", 'transform', 'scaleX(0)'],
+    ["[data-motion-part='thresholds']", 'opacity', '0'],
+    ["[data-motion-part='trace-mask']", 'opacity', '0'],
+    ["[data-motion-part='trace-mask']", 'transform', 'scaleX(0)'],
+    ["[data-motion-part='latest-reading']", 'opacity', '0'],
+    ["[data-motion-part='latest-reading']", 'transform', 'translateY(6px)'],
+    ["[data-motion-part='latest-point']", 'opacity', '0'],
+    ["[data-motion-part='latest-point']", 'transform', 'scale(0.92)'],
+    ["[data-motion-part='metrics'] > div", 'opacity', '0'],
+    ["[data-motion-part='metrics'] > div", 'transform', 'translateY(8px)'],
+    ["[data-motion-part='caption']", 'opacity', '0.55'],
+  ].map(([target, property, value]) =>
+    `${normalizeSelector(`${fallbackArmedRoot} ${target}`)}|${property}|${value}`,
+  ),
+)
+
+function getSelectorSpecificity(selector) {
+  return (
+    (selector.match(/\.[\w-]+/gu) ?? []).length +
+    (selector.match(/\[[^\]]+\]/gu) ?? []).length
+  )
+}
+
+function selectorTargetsTraceMask(selector) {
+  return (
+    (selector.includes('.traceMask') ||
+      /\[\s*data-motion-part\s*=\s*(?:"trace-mask"|'trace-mask'|trace-mask)\s*\]/u.test(
+        selector,
+      ) || /\[\s*data-motion-part\s*\]/u.test(selector)) &&
+    !/\[\s*data-motion-state\s*=\s*(?:"(?:armed|revealing|idle)"|'(?:armed|revealing|idle)'|(?:armed|revealing|idle))\s*\]/u.test(
+      selector,
+    ) &&
+    !/:not\([^)]*\[\s*data-motion-state\s*=\s*(?:"latched"|'latched'|latched)\s*\]/u.test(
+      selector,
+    )
+  )
+}
+
+function validateTraceMaskFinalTransform(
+  source,
+  latchedTransformsRule,
+  reducedGenericRule,
+  reducedMaskRule,
+) {
+  const finalMaskRule = findOnlyStyleRule(
+    source,
+    ".signalStory[data-motion-state='latched'] [data-motion-part='trace-mask']",
+    'latched trace masks must have one final transform rule',
+  )
+  assertExactStructure(
+    parseDeclarations(finalMaskRule.declarations),
+    [['transform', 'scaleX(1)']],
+    'latched trace masks must finish at scaleX(1)',
+  )
+  assert.ok(
+    finalMaskRule.start > latchedTransformsRule.start,
+    'the explicit latched trace-mask final transform must follow the broad reset',
+  )
+  const broadMaskSelector = splitSelectorList(
+    latchedTransformsRule.selector,
+  ).find((selector) =>
+    selector.includes("[data-motion-part='trace-mask']"),
+  )
+  assert.notEqual(
+    broadMaskSelector,
+    undefined,
+    'the broad latched transform reset must include the trace mask',
+  )
+  assert.equal(
+    getSelectorSpecificity(finalMaskRule.selector),
+    getSelectorSpecificity(broadMaskSelector),
+    'the explicit latched trace-mask final transform must win the equal-specificity reset by order',
+  )
+  assert.ok(
+    reducedMaskRule.start > reducedGenericRule.start,
+    'the reduced-motion trace mask must follow the generic final-frame reset',
+  )
+  assert.equal(
+    getSelectorSpecificity(reducedMaskRule.selector),
+    getSelectorSpecificity(reducedGenericRule.selector),
+    'the reduced-motion trace mask must win the equal-specificity reset by order',
+  )
+
+  for (const rule of getStyleRules(source)) {
+    if (rule.start <= finalMaskRule.start) {
+      continue
+    }
+
+    const transform = parseDeclarations(rule.declarations).find(
+      ([property]) => property === 'transform',
+    )?.[1]
+    if (transform === undefined) {
+      continue
+    }
+
+    for (const selector of splitSelectorList(rule.selector)) {
+      if (
+        selectorTargetsTraceMask(selector) &&
+        getSelectorSpecificity(selector) >=
+          getSelectorSpecificity(finalMaskRule.selector)
+      ) {
+        assert.equal(
+          transform,
+          'scaleX(1)',
+          'a later equal or higher-specificity trace-mask rule must retain scaleX(1)',
+        )
+      }
+    }
+  }
+}
+
+function selectorMotionPart(selector) {
+  const exactMotionPart = /\[\s*data-motion-part\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\]\s]+))\s*\]/u.exec(
+    selector,
+  )
+  if (exactMotionPart !== null) {
+    return exactMotionPart[1] ?? exactMotionPart[2] ?? exactMotionPart[3]
+  }
+  if (/\[\s*data-motion-part\s*\]/u.test(selector)) {
+    return 'every-motion-part'
+  }
+
+  for (const [motionPart, className] of motionPartClassNames) {
+    if (selector.includes(`.${className}`)) {
+      return motionPart
+    }
+  }
+
+  return null
+}
+
+function validateMeaningfulMotionVisibility(source, markup) {
+  for (const { selector, declarations } of getLeafRules(source)) {
+    for (const selectorPart of splitSelectorList(selector)) {
+      const motionPart = selectorMotionPart(selectorPart)
+      if (motionPart === null) {
+        continue
+      }
+
+      for (const [property, value] of parseDeclarations(declarations)) {
+        const concealsMotionPart =
+          (property === 'display' && value === 'none') ||
+          (property === 'visibility' && value === 'hidden') ||
+          (property === 'opacity' && value !== '1') ||
+          (property === 'transform' &&
+            !['none', 'scale(1)', 'scaleX(1)', 'translateY(0)'].includes(
+              value,
+            ))
+        if (!concealsMotionPart) {
+          continue
+        }
+
+        assert.equal(
+          approvedArmedConcealment.has(
+            `${normalizeSelector(selectorPart)}|${property}|${value}`,
+          ),
+          true,
+          `${motionPart} must not hide outside its exact armed flow start`,
+        )
+      }
+    }
+  }
+
+  for (const motionPart of semanticMotionParts) {
+    const openingTag = new RegExp(
+      `<[^>]*data-motion-part=["']${motionPart}["'][^>]*>`,
+      'u',
+    ).exec(markup)
+    assert.notEqual(
+      openingTag,
+      null,
+      `${motionPart} must remain a semantic motion part`,
+    )
+    assert.doesNotMatch(
+      openingTag[0],
+      /aria-hidden\s*=\s*["']true["']/u,
+      `${motionPart} must not become aria hidden`,
+    )
+  }
+}
+
+function validateFallbackMotionSource(source, markup = signalFigure) {
   const armedOpacityRule = findOnlyStyleRuleList(
     source,
     [
@@ -1138,13 +1356,12 @@ function validateFallbackMotionSource(source) {
     ],
     'reduced-motion must restore ordinary section layout',
   )
+  const reducedGenericRule = findReducedMotionRule(
+    '.signalStory [data-motion-part]',
+    'reduced-motion must settle every motion part',
+  )
   assertExactStructure(
-    parseDeclarations(
-      findReducedMotionRule(
-        '.signalStory [data-motion-part]',
-        'reduced-motion must settle every motion part',
-      ).declarations,
-    ),
+    parseDeclarations(reducedGenericRule.declarations),
     [
       ['animation', 'none'],
       ['opacity', '1'],
@@ -1152,15 +1369,20 @@ function validateFallbackMotionSource(source) {
     ],
     'reduced-motion must settle every motion part at its final frame',
   )
+  const reducedMaskRule = findReducedMotionRule(
+    ".signalStory [data-motion-part='trace-mask']",
+    'reduced-motion must leave the trace mask fully revealed',
+  )
   assertExactStructure(
-    parseDeclarations(
-      findReducedMotionRule(
-        ".signalStory [data-motion-part='trace-mask']",
-        'reduced-motion must leave the trace mask fully revealed',
-      ).declarations,
-    ),
+    parseDeclarations(reducedMaskRule.declarations),
     [['transform', 'scaleX(1)']],
     'reduced-motion must reveal the full trace mask',
+  )
+  validateTraceMaskFinalTransform(
+    source,
+    latchedTransformsRule,
+    reducedGenericRule,
+    reducedMaskRule,
   )
 
   for (const rule of reducedMotionRules) {
@@ -1178,6 +1400,8 @@ function validateFallbackMotionSource(source) {
       )
     }
   }
+
+  validateMeaningfulMotionVisibility(source, markup)
 }
 
 function moveNativeRuleOutsideGate(source, target) {
@@ -1810,5 +2034,62 @@ test('every native animation preserves its named timeline with ordered longhands
 test('flow fallback timing and reduced-motion safety preserve a complete final frame', () => {
   assert.doesNotThrow(() =>
     validateFallbackMotionSource(signalStyles),
+  )
+})
+
+test('the fallback contract rejects later equal or higher trace-mask resets', () => {
+  for (const selector of [
+    ".signalStory[data-motion-state='latched'] [data-motion-part='trace-mask']",
+    ".signalStory[data-motion-layout='flow'][data-motion-state='latched'] [data-motion-part='trace-mask']",
+  ]) {
+    const laterMaskReset = `${signalStyles}
+${selector} {
+  transform: none;
+}
+`
+
+    assert.throws(
+      () => validateFallbackMotionSource(laterMaskReset),
+      /latched trace masks must have one|later equal or higher-specificity trace-mask rule/u,
+    )
+  }
+})
+
+test('the fallback contract rejects meaningful motion-part concealment mutations', () => {
+  for (const declaration of [
+    'display: none;',
+    'visibility: hidden;',
+    'opacity: 0;',
+    'transform: scaleX(0);',
+  ]) {
+    const concealedCaption = `${signalStyles}
+.signalStory[data-motion-state='idle']
+  [data-motion-part='caption'] {
+  ${declaration}
+}
+`
+
+    assert.throws(
+      () =>
+        validateMeaningfulMotionVisibility(
+          concealedCaption,
+          signalFigure,
+        ),
+      /caption must not hide outside its exact armed flow start/u,
+    )
+  }
+
+  const ariaHiddenCaption = signalFigure.replace(
+    'data-motion-part="caption"',
+    'aria-hidden="true" data-motion-part="caption"',
+  )
+  assert.notEqual(ariaHiddenCaption, signalFigure)
+  assert.throws(
+    () =>
+      validateMeaningfulMotionVisibility(
+        signalStyles,
+        ariaHiddenCaption,
+      ),
+    /caption must not become aria hidden/u,
   )
 })
