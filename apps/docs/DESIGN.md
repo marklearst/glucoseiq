@@ -117,7 +117,7 @@ Use sentence case. Uppercase remains limited to established terms such as CGM, A
 
 The docs build runs `latestReading`, `computeGlucoseTrend`, and `analyzeGlucose` against the repeatable 14-day homepage fixture. The settled frame uses one `#0e0e10` plane with a `24px` radius. Its header identifies latest, observed, and target values. A 2.15-pixel monotone trace covers the latest 24 hours. White marks in-range segments, yellow marks high segments, and red marks low segments.
 
-A 5-percent target field spans the report. Only 70 and 180 mg/dL hairlines mark the target boundaries. This is the 70/180-only chart treatment. Four support metrics and one caption complete the frame. The report uses no glow, graph-paper grid, five-part legend, or repeated values. Sensor gaps stay open, isolated readings remain visible as points, and the caption states the time span, unit, and synthetic-data limitation.
+A 5-percent target field spans the report. The chart uses only 70 and 180 mg/dL hairlines for target boundaries. Four support metrics and one caption complete the frame. The report uses no glow, graph-paper grid, five-part legend, or repeated values. Sensor gaps stay open, isolated readings remain visible as points, and the caption states the time span, unit, and synthetic-data limitation.
 
 ### Code and Output
 
@@ -151,7 +151,7 @@ The package index uses a full-width list. Every row has a top or bottom hairline
 
 Signal Passage is limited to the homepage report. The complete report remains visible without JavaScript. Reduced motion shows the completed report. Other homepage sections do not gain reveal effects. Native page scrolling is never captured, replaced, snapped, or slowed.
 
-Signal Passage is the only homepage exception to the broad scroll-effects prohibition. The named CSS view-timeline path runs inside a component-local CSS module after a 900-by-720 gate confirms a suitable viewport. The one-shot observer fallback reveals the same completed report. Mobile uses normal flow. The report has no runtime animation dependency.
+Signal Passage is the only homepage exception to the broad scroll-effects prohibition. The CSS module `glucose-signal.module.css` defines the `--signal-passage` view timeline after a 900-by-720 gate confirms a suitable viewport. An observer fallback runs once and reveals the completed report. Mobile uses normal flow. The report has no runtime animation dependency.
 
 ## 7. Use and Avoid
 
