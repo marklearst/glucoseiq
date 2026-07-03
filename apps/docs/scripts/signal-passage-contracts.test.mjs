@@ -18,6 +18,7 @@ const signalFigurePath = join(
   docsRoot,
   'app/(home)/glucose-signal-figure.tsx',
 )
+const signalTracePath = join(docsRoot, 'app/(home)/glucose-trace.tsx')
 const signalStylesPath = join(
   docsRoot,
   'app/(home)/glucose-signal.module.css',
@@ -32,10 +33,13 @@ const signalStory = existsSync(signalStoryPath)
 const signalFigure = existsSync(signalFigurePath)
   ? readFileSync(signalFigurePath, 'utf8')
   : ''
+const signalTrace = existsSync(signalTracePath)
+  ? readFileSync(signalTracePath, 'utf8')
+  : ''
 const signalStyles = existsSync(signalStylesPath)
   ? readFileSync(signalStylesPath, 'utf8')
   : ''
-const signalMarkup = `${signalStory}\n${signalFigure}`
+const signalMarkup = `${signalStory}\n${signalFigure}\n${signalTrace}`
 
 const nativeMediaHeader =
   '@media (scripting: enabled) and (prefers-reduced-motion: no-preference) and (min-width: 900px) and (min-height: 720px)'
@@ -2165,6 +2169,32 @@ ${selector} {
     ['signal-section', 'signalSection'],
     ['instrument', 'signalInstrument'],
   ]) {
+    const ariaHiddenAncestor = signalMarkup.replace(
+      `className={styles.${className}}`,
+      `aria-hidden="true" className={styles.${className}}`,
+    )
+    assert.notEqual(ariaHiddenAncestor, signalMarkup)
+    assert.throws(
+      () =>
+        validateMeaningfulMotionVisibility(
+          signalStyles,
+          ariaHiddenAncestor,
+        ),
+      new RegExp(`${ancestor} must not become aria hidden`, 'u'),
+    )
+  }
+})
+
+test('the fallback contract rejects trace wrapper aria-hidden mutations', () => {
+  for (const [ancestor, className] of [
+    ['signal-trace', 'trace'],
+    ['signal-trace-plot', 'tracePlot'],
+  ]) {
+    assert.match(
+      signalMarkup,
+      new RegExp(`className=\\{styles\\.${className}\\}`, 'u'),
+      `${ancestor} must be included in inspected signal markup`,
+    )
     const ariaHiddenAncestor = signalMarkup.replace(
       `className={styles.${className}}`,
       `aria-hidden="true" className={styles.${className}}`,
