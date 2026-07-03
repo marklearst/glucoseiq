@@ -5,10 +5,13 @@ import {
   FALLBACK_DURATION_MS,
   FALLBACK_ROOT_MARGIN,
   FALLBACK_THRESHOLD,
+  getSignalFallbackThreshold,
+  hasReachedSignalIntersection,
   MAX_NATIVE_INSTRUMENT_HEIGHT,
   REDUCED_MOTION_QUERY,
   SCROLL_MEDIA_QUERY,
   selectSignalMotion,
+  shouldLatchSignalAfterScrollEnd,
   shouldLatchScrollLayout,
 } from '../app/(home)/signal-motion.ts'
 
@@ -189,6 +192,104 @@ test('a selected scroll layout latches when its viewport or fit gate later fails
       layout: 'flow',
       viewportEligible: false,
       instrumentHeight: 617,
+    }),
+    false,
+  )
+})
+
+test('fallback reveal starts only at the complete intersection threshold', () => {
+  assert.equal(
+    hasReachedSignalIntersection(
+      [{ isIntersecting: true, intersectionRatio: 0.249 }],
+      FALLBACK_THRESHOLD,
+    ),
+    false,
+  )
+  assert.equal(
+    hasReachedSignalIntersection(
+      [{ isIntersecting: true, intersectionRatio: 0.25 }],
+      FALLBACK_THRESHOLD,
+    ),
+    true,
+  )
+  assert.equal(
+    hasReachedSignalIntersection(
+      [{ isIntersecting: false, intersectionRatio: 0.25 }],
+      FALLBACK_THRESHOLD,
+    ),
+    false,
+  )
+  assert.equal(
+    hasReachedSignalIntersection(
+      [
+        { isIntersecting: true, intersectionRatio: 0.1 },
+        { isIntersecting: true, intersectionRatio: 0.5 },
+      ],
+      FALLBACK_THRESHOLD,
+    ),
+    true,
+  )
+})
+
+test('fallback threshold stays at 25 percent unless the instrument is taller than twice the viewport', () => {
+  assert.equal(getSignalFallbackThreshold(616, 900), 0.25)
+  assert.equal(getSignalFallbackThreshold(720, 720), 0.25)
+  assert.equal(
+    getSignalFallbackThreshold(813, 180),
+    90 / 813,
+  )
+  assert.ok(
+    getSignalFallbackThreshold(813, 180) < 180 / 813,
+    'the 400-percent zoom threshold must remain reachable',
+  )
+  assert.equal(getSignalFallbackThreshold(0, 180), 0.25)
+  assert.equal(getSignalFallbackThreshold(813, 0), 0)
+})
+
+test('scroll completion latches after the chapter reaches or passes the viewport end', () => {
+  assert.equal(
+    shouldLatchSignalAfterScrollEnd({
+      layout: 'scroll',
+      state: 'revealing',
+      chapterBottom: 721,
+      viewportHeight: 720,
+    }),
+    false,
+  )
+  assert.equal(
+    shouldLatchSignalAfterScrollEnd({
+      layout: 'scroll',
+      state: 'revealing',
+      chapterBottom: 720,
+      viewportHeight: 720,
+    }),
+    true,
+  )
+  assert.equal(
+    shouldLatchSignalAfterScrollEnd({
+      layout: 'scroll',
+      state: 'revealing',
+      chapterBottom: -400,
+      viewportHeight: 720,
+    }),
+    true,
+    'a jump from before to after the chapter must latch even when the sentinel is skipped',
+  )
+  assert.equal(
+    shouldLatchSignalAfterScrollEnd({
+      layout: 'flow',
+      state: 'revealing',
+      chapterBottom: -400,
+      viewportHeight: 720,
+    }),
+    false,
+  )
+  assert.equal(
+    shouldLatchSignalAfterScrollEnd({
+      layout: 'scroll',
+      state: 'latched',
+      chapterBottom: -400,
+      viewportHeight: 720,
     }),
     false,
   )

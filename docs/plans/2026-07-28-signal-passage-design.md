@@ -124,16 +124,27 @@ The outer chapter declares `view-timeline-name: --signal-passage` and
 
 Scroll controls the sequence while the stage remains active. Reversing within
 the chapter reverses the current progress without restarting any beat. Once
-the completion sentinel passes, the controller latches the final state for the
-rest of that page load.
+the completion sentinel enters the viewport, the controller latches the final
+state for the rest of that page load. A document `scrollend` check compares
+the chapter end with the viewport after each completed scroll. It catches a
+fast jump that moves the one-pixel sentinel from below to above the viewport
+between observer updates.
 
 ## Small-screen and fallback reveal
 
 Screens below 900 pixels remain in normal document flow. Browsers without CSS
 scroll timelines use the same path.
 
-An `IntersectionObserver` with `threshold: 0.25` and `rootMargin: "0px"` starts
-the sequence once. The controller disconnects after the trigger.
+An `IntersectionObserver` with `rootMargin: "0px"` starts the sequence once.
+Its threshold stays at `0.25` while the instrument is no more than twice the
+viewport height. For a taller instrument, the threshold becomes half the
+viewport divided by the instrument height. That conservative margin keeps the
+trigger below the maximum visible ratio, leaving room for browser chrome and
+rounding without changing the normal reveal. The observer and callback share
+the same value. The controller disconnects after the trigger. While the
+fallback remains armed, viewport changes replace the observer with one
+measured from the new viewport and instrument heights. Once the reveal starts,
+later changes do not restart it.
 
 | Time | Beat |
 | ---: | --- |
@@ -213,15 +224,15 @@ timeline, fallback keyframes, breakpoints, and reduced-motion reset.
 7. Scroll mode remains reversible until a second observer sees the bottom
    sentinel enter the viewport. It then selects `latched`.
 8. A persisted `pageshow` event, or first hydration while any part of the
-   chapter is visible, selects `latched`.
+   instrument is visible, selects `latched`.
 9. Layout mode stays fixed for the page visit. Latching never removes the
    chapter height.
 10. A reduced-motion change while the chapter is active selects `latched` but
     preserves layout geometry. Resize or orientation changes that would clip
     the instrument do the same. The new layout mode takes effect on the next
     page load.
-11. Cleanup removes both observers and all media-query, `pageshow`, resize, and
-    orientation listeners on navigation and unmount.
+11. Cleanup removes both observers and all media-query, `pageshow`, resize,
+    orientation, and document `scrollend` listeners on navigation and unmount.
 
 Setup must tolerate React Strict Mode running an effect more than once.
 

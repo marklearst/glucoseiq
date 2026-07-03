@@ -10,11 +10,13 @@ import {
   classifySignalPosition,
   FALLBACK_DURATION_MS,
   FALLBACK_ROOT_MARGIN,
-  FALLBACK_THRESHOLD,
+  getSignalFallbackThreshold,
+  hasReachedSignalIntersection,
   MAX_NATIVE_INSTRUMENT_HEIGHT,
   REDUCED_MOTION_QUERY,
   SCROLL_MEDIA_QUERY,
   selectSignalMotion,
+  shouldLatchSignalAfterScrollEnd,
   shouldLatchScrollLayout,
   type SignalMotionLayout,
   type SignalMotionState,
@@ -37,6 +39,7 @@ export function SignalStory({
     if (root === null) {
       return
     }
+    const storyRoot = root
 
     const instrument = root.querySelector<HTMLElement>(
       '[data-motion-part="instrument"]',
@@ -44,6 +47,7 @@ export function SignalStory({
     if (instrument === null) {
       return
     }
+    const signalInstrument = instrument
 
     const completionSentinel = root.querySelector<HTMLElement>(
       '[data-motion-part="completion-sentinel"]',
@@ -118,7 +122,46 @@ export function SignalStory({
 
       disconnectObservers()
       clearFallbackTimer()
+      document.removeEventListener('scrollend', onScrollEnd)
       writeState('latched')
+    }
+
+    function observeFallback(): void {
+      if (!active || layout !== 'flow' || state !== 'armed') {
+        return
+      }
+
+      const fallbackThreshold = getSignalFallbackThreshold(
+        signalInstrument.offsetHeight,
+        window.innerHeight,
+      )
+      triggerObserver?.disconnect()
+      triggerObserver = new IntersectionObserver(
+        (entries) => {
+          if (
+            !active ||
+            state !== 'armed' ||
+            !hasReachedSignalIntersection(
+              entries,
+              fallbackThreshold,
+            )
+          ) {
+            return
+          }
+
+          writeState('revealing')
+          triggerObserver?.disconnect()
+          fallbackTimer = window.setTimeout(() => {
+            fallbackTimer = null
+            latch()
+          }, FALLBACK_DURATION_MS)
+        },
+        {
+          threshold: fallbackThreshold,
+          rootMargin: FALLBACK_ROOT_MARGIN,
+        },
+      )
+      triggerObserver.observe(signalInstrument)
     }
 
     root.dataset.motionLayout = layout
@@ -132,29 +175,7 @@ export function SignalStory({
     )
 
     if (layout === 'flow' && state === 'armed') {
-      triggerObserver = new IntersectionObserver(
-        (entries) => {
-          if (
-            !active ||
-            state !== 'armed' ||
-            !entries.some((entry) => entry.isIntersecting)
-          ) {
-            return
-          }
-
-          writeState('revealing')
-          triggerObserver?.disconnect()
-          fallbackTimer = window.setTimeout(() => {
-            fallbackTimer = null
-            latch()
-          }, FALLBACK_DURATION_MS)
-        },
-        {
-          threshold: FALLBACK_THRESHOLD,
-          rootMargin: FALLBACK_ROOT_MARGIN,
-        },
-      )
-      triggerObserver.observe(instrument)
+      observeFallback()
     }
 
     if (
@@ -210,6 +231,11 @@ export function SignalStory({
         return
       }
 
+      if (layout === 'flow' && state === 'armed') {
+        observeFallback()
+        return
+      }
+
       if (
         shouldLatchScrollLayout({
           layout,
@@ -222,6 +248,22 @@ export function SignalStory({
       }
     }
 
+    function onScrollEnd(): void {
+      if (
+        !active ||
+        !shouldLatchSignalAfterScrollEnd({
+          layout,
+          state,
+          chapterBottom: storyRoot.getBoundingClientRect().bottom,
+          viewportHeight: window.innerHeight,
+        })
+      ) {
+        return
+      }
+
+      latch()
+    }
+
     reducedMotionQuery.addEventListener(
       'change',
       onReducedMotionChange,
@@ -230,6 +272,9 @@ export function SignalStory({
     window.addEventListener('pageshow', onPageShow)
     window.addEventListener('resize', onViewportChange)
     window.addEventListener('orientationchange', onViewportChange)
+    if (layout === 'scroll' && state !== 'latched') {
+      document.addEventListener('scrollend', onScrollEnd)
+    }
 
     return () => {
       active = false
@@ -244,6 +289,7 @@ export function SignalStory({
         'orientationchange',
         onViewportChange,
       )
+      document.removeEventListener('scrollend', onScrollEnd)
       triggerObserver?.disconnect()
       completionObserver?.disconnect()
       clearFallbackTimer()
