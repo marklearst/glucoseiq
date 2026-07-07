@@ -23,12 +23,6 @@ The first coordinated publication is:
 | `@glucoseiq/tokens` | `1.0.0` | `latest` |
 | `@glucoseiq/testing` | `1.0.0` | `latest` |
 | `@glucoseiq/cli` | `1.0.0` | `latest` |
-| `diabetic-utils` | `2.0.0` | `latest` |
-| `diabetic-utils` | `1.5.0` | `legacy` |
-
-Do not deprecate `diabetic-utils@1.5.0`. The 2.0 package is the compatibility
-bridge and must retain all 107 legacy exports.
-
 ## Part A: Machine-checked commands
 
 Run this section against the exact transition or release-candidate commit being
@@ -147,9 +141,8 @@ pnpm changeset status
 pnpm test:launch
 ```
 
-The status must predict exactly five scoped `1.0.0` releases and
-`diabetic-utils@2.0.0`, each from a major launch entry. Versioning remains
-independent after this coordinated release.
+The status must predict exactly five scoped `1.0.0` releases, each from a
+major launch entry. Versioning remains independent after this coordinated release.
 
 #### Generated release pull request
 
@@ -168,8 +161,6 @@ for package in core react tokens testing cli; do
   rg -n '^## 1\.0\.0$' "packages/$package/CHANGELOG.md"
 done
 
-test "$(jq -r .version packages/diabetic-utils/package.json)" = "2.0.0"
-rg -n '^## 2\.0\.0$' packages/diabetic-utils/CHANGELOG.md
 pnpm test:packages:candidate
 ```
 
@@ -205,9 +196,8 @@ Required evidence:
   the 20,000-byte gzip budget;
 - package coverage remains 100 percent;
 - the core intentional-error contract passes;
-- six tarballs and ten public entrypoints pass clean-consumer tests;
-- ESM, CommonJS, NodeNext, Bundler, React 18, React 19, CLI, and the 107-export
-  compatibility checks pass; and
+- five tarballs and nine public entrypoints pass clean-consumer tests;
+- ESM, CommonJS, NodeNext, Bundler, React 18, React 19, and CLI checks pass; and
 - documentation contracts, compiled examples, API generator tests, generated
   API drift, and the production documentation build pass.
 
@@ -244,7 +234,7 @@ tarball inventory before approving the release pull request:
 ```bash
 set -euo pipefail
 
-for manifest in packages/{core,react,tokens,testing,cli,diabetic-utils}/package.json; do
+for manifest in packages/{core,react,tokens,testing,cli}/package.json; do
   jq '{name,version,engines,exports,bin,peerDependencies,dependencies,publishConfig}' "$manifest"
 done
 ```
@@ -264,7 +254,7 @@ tests cannot mark them complete.
       `feat: launch the GlucoseIQ 1.0 monorepo`.
 - [ ] Its title, body, commits, trailers, branch name, and changed files are
       project-focused and contain no internal workflow references.
-- [ ] The pull request contains the intended Fumadocs, compatibility, package,
+- [ ] The pull request contains the intended Fumadocs, package,
       CI, and release infrastructure and no protected legacy-worktree content.
 - [ ] GitHub Actions is allowed to create and update pull requests.
 - [ ] An active `main` ruleset requires the uniquely named
@@ -290,7 +280,7 @@ Do not merge the transition pull request until its Vercel preview also passes.
       `cd ../.. && turbo run build --filter=docs`.
 - [ ] Leave installation on automatic pnpm workspace detection.
 - [ ] Open the transition pull-request preview and verify navigation, search,
-      API pages, migration, safety, runtime, deployment, HTTPS, direct routes,
+      API pages, safety, runtime, deployment, HTTPS, direct routes,
       canonical metadata, preview `noindex`, robots, and sitemap behavior.
 - [ ] Merge the transition pull request only after the preview and required
       GitHub check pass.
@@ -328,7 +318,6 @@ curl -fsSIL https://glucoseiq.dev/
 curl -fsSIL https://www.glucoseiq.dev/
 curl -fsS https://glucoseiq.dev/robots.txt
 curl -fsS https://glucoseiq.dev/sitemap.xml
-curl -fsS https://glucoseiq.dev/docs/migration >/dev/null
 curl -fsS https://glucoseiq.dev/docs/api/core >/dev/null
 ```
 
@@ -375,13 +364,13 @@ describes the public discovery metadata.
 - [ ] The release branch is `release/glucoseiq-packages`.
 - [ ] The release branch is current with `main`, its required check belongs to
       that current head, and no newer Changesets remain outside the candidate.
-- [ ] The pull request contains five `1.0.0` manifests and one `2.0.0`
-      compatibility manifest, correct changelogs, and the updated lockfile.
+- [ ] The pull request contains five `1.0.0` manifests, correct changelogs, and the
+      updated lockfile.
 - [ ] The release body and commits remain project-focused and contain no
       internal workflow references.
 - [ ] Re-run Part A against the exact versioned release head SHA.
-- [ ] Inspect the packed manifests, package contents, documentation, and
-      migration text from that SHA.
+- [ ] Inspect the packed manifests, package contents, and documentation from
+      that SHA.
 - [ ] Confirm `glucoseiq.dev` is still healthy and canonical.
 
 Do not merge the release pull request until the bootstrap credential in B6 is
@@ -392,8 +381,7 @@ ready and every box above is complete.
 Immediately before merging the release pull request:
 
 - [ ] On npmjs.com, create a new granular access token with a one-day expiry.
-- [ ] Grant read/write package access only to the `@glucoseiq` scope and
-      `diabetic-utils`.
+- [ ] Grant read/write package access only to the `@glucoseiq` scope.
 - [ ] Enable bypass 2FA for this short-lived bootstrap publish.
 - [ ] Grant no unrelated package or organization access.
 - [ ] Copy the token once and replace the stale GitHub Actions `NPM_TOKEN`
@@ -417,7 +405,6 @@ still use the public contract described in
       provenance.
 - [ ] Do not start a separate manual publication while the workflow is running.
 - [ ] If any package fails, stop and use Partial-publication recovery below.
-- [ ] Confirm `diabetic-utils` tags are `latest=2.0.0` and `legacy=1.5.0`.
 
 ## Part C: Registry, provenance, tag, and consumer verification
 
@@ -445,16 +432,14 @@ wrong commit.
 
 In the hosted workflow, the Changesets action output remains diagnostic. The
 exact version plan from the validated commit is the complete inventory that
-controls whether the compatibility-tag check applies and binds every
-versioned package to the checked-out release commit. Unchanged packages remain
+binds every versioned package to the checked-out release commit. Unchanged packages remain
 bound to their own attested commit and matching tag.
 
 If the Changesets action fails after npm accepts a package but before the
 action records outputs, tags, or GitHub releases, the hosted workflow uses the
 package set from the exact validated generated-version commit as a fallback
 inventory. The hosted fallback does not republish packages or create Git
-artifacts. It preserves the legacy tag when the compatibility package is in
-the inventory, removes npm authentication from the runner's user
+artifacts, removes npm authentication from the runner's user
 configuration before starting the verifier, and blocks the verifier if that
 cleanup fails. The original publication failure remains failed even when the
 inventory produces useful recovery evidence. If npm accepted every expected
@@ -474,7 +459,6 @@ expected=(
   '@glucoseiq/tokens@1.0.0'
   '@glucoseiq/testing@1.0.0'
   '@glucoseiq/cli@1.0.0'
-  'diabetic-utils@2.0.0'
 )
 
 for spec in "${expected[@]}"; do
@@ -482,7 +466,6 @@ for spec in "${expected[@]}"; do
   npm view "$spec" version engines exports bin peerDependencies dependencies dist --json
 done
 
-npm view diabetic-utils dist-tags --json
 ```
 
 Verify that no registry dependency contains `workspace:`, every scoped package
@@ -491,7 +474,7 @@ peer remains `>=18`.
 
 ### C2. Verify provenance and signatures
 
-- [ ] Each of the six npm package pages shows provenance for the intended
+- [ ] Each of the five npm package pages shows provenance for the intended
       source commit and `.github/workflows/release.yml` run.
 - [ ] The repository, commit, workflow, and transparency-log links resolve.
 - [ ] A clean install passes npm's signature and provenance audit.
@@ -508,7 +491,6 @@ npm --prefix "$tmp" install --ignore-scripts \
   @glucoseiq/tokens@1.0.0 \
   @glucoseiq/testing@1.0.0 \
   @glucoseiq/cli@1.0.0 \
-  diabetic-utils@2.0.0 \
   react@19 \
   react-dom@19
 npm --prefix "$tmp" audit signatures
@@ -527,7 +509,7 @@ gh release list --repo marklearst/glucoseiq --limit 20
 npm exec --yes --package=@glucoseiq/cli@1.0.0 -- glucoseiq --help
 ```
 
-- [ ] Git tags and GitHub releases exist for all six versions.
+- [ ] Git tags and GitHub releases exist for all five versions.
 - [ ] Registry tarballs contain the expected READMEs, licenses, manifests,
       runtime files, declarations, executable, and source maps.
 - [ ] Source maps contain no local absolute paths or prohibited attribution.
@@ -536,19 +518,17 @@ npm exec --yes --package=@glucoseiq/cli@1.0.0 -- glucoseiq --help
 - [ ] React 18 and React 19 consumers install without peer errors.
 - [ ] The CLI succeeds for valid input and exits 1 with one safe diagnostic for
       invalid input.
-- [ ] The compatibility package exposes all 107 legacy exports.
 
 ## Part D: Migrate each package to npm trusted publishing
 
 Trusted publishing can be configured only after each package page exists. Do
-this separately for all six packages:
+this separately for all five packages:
 
 - [ ] `@glucoseiq/core`
 - [ ] `@glucoseiq/react`
 - [ ] `@glucoseiq/tokens`
 - [ ] `@glucoseiq/testing`
 - [ ] `@glucoseiq/cli`
-- [ ] `diabetic-utils`
 
 Use the same trusted-publisher fields on each npm package:
 
@@ -569,7 +549,7 @@ npm's [trusted-publisher guide](https://docs.npmjs.com/trusted-publishers/)
 documents the GitHub fields, allowed action, OIDC requirements, and automatic
 provenance for public packages from public repositories.
 
-After all six publishers are configured:
+After all five publishers are configured:
 
 - [ ] Remove every workflow reference to `NPM_TOKEN` in a reviewed change,
       including any `NODE_AUTH_TOKEN` value sourced from that secret. Confirm
@@ -618,7 +598,6 @@ expected=(
   '@glucoseiq/tokens@1.0.0'
   '@glucoseiq/testing@1.0.0'
   '@glucoseiq/cli@1.0.0'
-  'diabetic-utils@2.0.0'
 )
 
 npm ping --registry "$registry" >/dev/null
@@ -647,8 +626,7 @@ for spec in "${expected[@]}"; do
     sleep 10
   done
 done
-
-npm view diabetic-utils dist-tags --json --registry "$registry"
+ --registry "$registry"
 gh run view RUN_ID --repo marklearst/glucoseiq --log-failed
 ```
 
@@ -687,7 +665,7 @@ exist; do not broaden credentials.
 Use this procedure only when every expected npm version exists and its
 registry artifact is correct, but the failed workflow did not create one or
 more Git tags or GitHub releases. If any registry version is missing or bad,
-return to step 3 or step 6 instead.
+return to step 3 or patch the source instead.
 
 Never overwrite, move, delete, or force-update an existing release tag. Never
 edit, replace, or recreate an existing GitHub release during recovery.
@@ -715,7 +693,7 @@ test "$(git rev-parse --verify HEAD^{commit})" = "$release_sha"
 Run the strict registry-only verifier from that checkout before creating
 anything. It derives the complete package plan from the replay-validated
 release commit; verifies registry metadata, tarballs, signatures, provenance,
-and exact-version consumers; and binds all six artifacts to `release_sha`. It
+and exact-version consumers; and binds all five artifacts to `release_sha`. It
 deliberately skips Git tag and GitHub release checks. Do not set
 `CHANGESETS_VERIFICATION_PACKAGES`: the command rejects that variable so a
 stale or partial workflow inventory cannot narrow recovery evidence.
@@ -743,7 +721,6 @@ tags=(
   '@glucoseiq/tokens@1.0.0'
   '@glucoseiq/testing@1.0.0'
   '@glucoseiq/cli@1.0.0'
-  'diabetic-utils@2.0.0'
 )
 temporary_directory=$(mktemp -d)
 trap 'rm -rf "$temporary_directory"' EXIT
@@ -808,7 +785,6 @@ records=(
   '@glucoseiq/tokens@1.0.0|packages/tokens/CHANGELOG.md|1.0.0'
   '@glucoseiq/testing@1.0.0|packages/testing/CHANGELOG.md|1.0.0'
   '@glucoseiq/cli@1.0.0|packages/cli/CHANGELOG.md|1.0.0'
-  'diabetic-utils@2.0.0|packages/diabetic-utils/CHANGELOG.md|2.0.0'
 )
 temporary_directory=$(mktemp -d)
 trap 'rm -rf "$temporary_directory"' EXIT
@@ -872,20 +848,6 @@ Rerun the normal published-package verifier and complete Parts C and D. If any
 create call reports that a tag or release already exists, stop and re-run the
 read-only checks; do not delete or replace the existing object.
 
-### 5. Correct npm dist-tags without republishing artifacts
-
-If all artifacts are correct and only a dist-tag is wrong, update that tag with
-maintainer 2FA or the still-authorized release path, then verify it:
-
-```bash
-set -euo pipefail
-
-npm dist-tag add diabetic-utils@1.5.0 legacy
-npm dist-tag add diabetic-utils@2.0.0 latest
-npm view diabetic-utils dist-tags --json
-```
-
-Do not use a dist-tag change to hide a bad tarball.
 
 ### 6. Patch a bad immutable artifact
 
@@ -896,8 +858,7 @@ If a published tarball, manifest, declaration, executable, or runtime is bad:
 3. add a patch Changeset for every package whose own artifact or dependency
    contract changes;
 4. run the complete candidate suite and inspect new tarballs;
-5. publish the corrective patch, such as `1.0.1` or `2.0.1`, through the
-   approved workflow; and
+5. publish the corrective patch through the approved workflow; and
 6. move `latest` only after the patch verifies.
 
 If the bad version needs a warning, deprecate that version only after the
@@ -907,62 +868,3 @@ verified patch.
 
 Finish recovery by rerunning Parts C and D and recording the incident, root
 cause, affected versions, corrective release, and final registry state.
-
-## Rename the local folder last
-
-Do not rename the original checkout until the worktree is clean and the domain,
-documentation, packages, dist-tags, provenance, tags, releases, and clean
-consumer installs are verified.
-
-From the existing checkout:
-
-```bash
-set -euo pipefail
-
-legacy_checkout=${GLUCOSEIQ_LEGACY_CHECKOUT:?Set this to the existing diabetic-utils checkout}
-oss_root=$(dirname "$legacy_checkout")
-test "$(basename "$legacy_checkout")" = diabetic-utils
-
-cd "$legacy_checkout"
-test -z "$(git status --porcelain)"
-test "$(git worktree list --porcelain | rg -c '^worktree ')" -eq 1
-cd "$oss_root"
-test -d diabetic-utils
-test ! -e glucoseiq
-mv -- diabetic-utils glucoseiq
-cd glucoseiq
-
-git status --short
-git remote -v
-git branch -vv
-```
-
-Inspect the remote names before removing anything. Remove only the redundant
-legacy remote, retain `origin` for `marklearst/glucoseiq`, and track
-`origin/main`:
-
-```bash
-set -euo pipefail
-
-git remote remove LEGACY_REMOTE_NAME
-git fetch --prune --tags origin
-git switch main
-test "$(git branch --show-current)" = "main"
-git branch --set-upstream-to=origin/main main
-git merge --ff-only origin/main
-pnpm install --force
-pnpm build
-pnpm typecheck
-pnpm lint
-pnpm test:size
-pnpm test:coverage
-pnpm test:errors
-pnpm test:packages
-pnpm test:docs
-pnpm test:launch
-pnpm --filter docs build
-test -z "$(git status --porcelain)"
-```
-
-The final `git status --short` must be empty. If an editor or workspace still
-points at the old path, update it only after these commands pass.

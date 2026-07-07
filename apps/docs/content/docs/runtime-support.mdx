@@ -35,9 +35,9 @@ compiler versions are unsupported.
 | `@glucoseiq/core/interop` | Interoperability helpers |
 | `@glucoseiq/core/render` | SVG-string renderers |
 
-React, tokens, testing, CLI, and the compatibility bridge each publish one
-root entrypoint. Import only documented entrypoints; internal source paths and
-private build chunks are not public contracts.
+React, tokens, testing, and the CLI each publish one root entrypoint. Import
+only documented entrypoints; internal source paths and private build chunks are
+not public contracts.
 
 ## Server and browser boundaries
 
@@ -90,11 +90,6 @@ and declaration routing.
 
 ## Upgrade boundaries
 
-- Node versions below 24 can remain on `diabetic-utils@legacy`; the GlucoseIQ
-  1.0 family and `diabetic-utils` 2 require Node 24 or newer.
-- New applications should use scoped packages instead of depending on the
-  compatibility bridge.
-- Review the [migration guide](/docs/migration) before changing package names,
-  units, or numeric expectations.
+- GlucoseIQ requires Node 24 or newer.
 - Run the [integration matrix](/docs/integration-testing) in the same module,
   React, and deployment modes used by the consuming application.

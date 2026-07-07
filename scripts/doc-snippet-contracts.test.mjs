@@ -39,11 +39,12 @@ function gitTrackedFiles() {
   })
     .split('\0')
     .filter(Boolean)
+    .filter((path) => existsSync(join(repoRoot, path)))
     .sort()
 }
 
 function expectedInventoryFromTracked(trackedFiles) {
-  const packageRoot = 'packages/(?:core|react|tokens|testing|cli|diabetic-utils)'
+  const packageRoot = 'packages/(?:core|react|tokens|testing|cli)'
   const packageSource = new RegExp(`^${packageRoot}/src/.+\\.(?:ts|tsx)$`, 'u')
   const packageReadme = new RegExp(`^${packageRoot}/README\\.md$`, 'u')
   const archive = /^(?:CHANGELOG\.md|docs\/(?:globals|LAUNCH_RUNBOOK)\.md|docs\/(?:functions|interfaces|type-aliases|variables)\/.+\.md)$/u
@@ -84,7 +85,7 @@ test('public contract inventory is complete and protected sources are absent', (
   const inventory = createPublicInventory({ repoRoot })
 
   assert.deepEqual(inventory, expected)
-  assert.equal(inventory.readmes.length, 7)
+  assert.equal(inventory.readmes.length, 6)
   assert.ok(inventory.sourceFiles.length > 0)
   assert.ok(inventory.linkOnlyFiles.length > 0)
   assert.ok(
@@ -103,8 +104,8 @@ test('public contract inventory is complete and protected sources are absent', (
   }
 })
 
-test('the six real manifests derive exactly ten public ESM declarations', () => {
-  const packageRoots = ['core', 'react', 'tokens', 'testing', 'cli', 'diabetic-utils']
+test('the five real manifests derive exactly nine public ESM declarations', () => {
+  const packageRoots = ['core', 'react', 'tokens', 'testing', 'cli']
   const entries = deriveDeclarationManifest({
     repoRoot,
     packages: packageRoots.map((name) => ({
@@ -124,7 +125,6 @@ test('the six real manifests derive exactly ten public ESM declarations', () => 
       '@glucoseiq/react',
       '@glucoseiq/testing',
       '@glucoseiq/tokens',
-      'diabetic-utils',
     ]
   )
 })
@@ -138,7 +138,6 @@ test('current public prose and package descriptions contain no prohibited claims
     'packages/tokens/package.json',
     'packages/testing/package.json',
     'packages/cli/package.json',
-    'packages/diabetic-utils/package.json',
   ]
   const paths = [
     ...inventory.readmes,
@@ -201,7 +200,7 @@ test('all public and historical links resolve under their distribution rules', (
   assert.equal(diagnostics.length, 0, formatContractDiagnostics(diagnostics))
 })
 
-test('all six source READMEs provide the complete packed-package contract', () => {
+test('all five source READMEs provide the complete packed-package contract', () => {
   const diagnostics = PACKAGE_README_CONTRACTS.flatMap((contract) =>
     validateReadmeContract({
       ...contract,
@@ -444,23 +443,8 @@ test('the launch runbook preserves phase, artifact, and OIDC safety gates', () =
   )
 
   assert.match(runbook, /trap 'rm -rf -- "\$tmp"' EXIT/u)
-  assert.match(runbook, /mv -- diabetic-utils glucoseiq/u)
   assert.match(runbook, /confirmed E404 after the propagation window/u)
   assert.match(runbook, /Unexpected registry failure/u)
-
-  const oneWorktree = runbook.indexOf(
-    'test "$(git worktree list --porcelain | rg -c \'^worktree \')" -eq 1'
-  )
-  const emptyTarget = runbook.indexOf('test ! -e glucoseiq')
-  const moveCheckout = runbook.indexOf('mv -- diabetic-utils glucoseiq')
-  const switchMain = runbook.indexOf('git switch main')
-  const assertMain = runbook.indexOf('test "$(git branch --show-current)" = "main"')
-  const fastForward = runbook.indexOf('git merge --ff-only origin/main')
-  const finalClean = runbook.lastIndexOf('test -z "$(git status --porcelain)"')
-  assert.ok(oneWorktree >= 0 && oneWorktree < moveCheckout)
-  assert.ok(emptyTarget >= 0 && emptyTarget < moveCheckout)
-  assert.ok(switchMain > moveCheckout && assertMain > switchMain)
-  assert.ok(fastForward > assertMain && finalClean > fastForward)
 
   const removeToken = runbook.indexOf('Remove every workflow reference to `NPM_TOKEN`')
   const deleteToken = runbook.indexOf('Delete the GitHub repository secret')
@@ -476,7 +460,7 @@ test('every classified public program enters the compiler job set', () => {
   const inventory = createPublicInventory({ repoRoot })
   const declarations = deriveDeclarationManifest({
     repoRoot,
-    packages: ['core', 'react', 'tokens', 'testing', 'cli', 'diabetic-utils'].map(
+    packages: ['core', 'react', 'tokens', 'testing', 'cli'].map(
       (name) => ({
         root: `packages/${name}`,
         manifest: JSON.parse(readTracked(`packages/${name}/package.json`)),

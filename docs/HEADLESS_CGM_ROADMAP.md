@@ -15,7 +15,6 @@ The first scoped release contains five packages:
 - `@glucoseiq/testing`
 - `@glucoseiq/cli`
 
-`diabetic-utils@2` is the compatibility bridge for existing imports.
 
 No package will be added to the 1.0 launch. A larger package list would add
 more versioning and support work without improving the initial contract.
@@ -56,12 +55,6 @@ turning those interfaces into framework requirements.
 Examples belong under `examples/` until they need their own release or support
 policy.
 
-### Compatibility
-
-- Keep the 107 exports from `diabetic-utils@1.5.0` covered by contract tests.
-- Publish migration notes with every intentional behavior change.
-- Keep scoped package versions independent after the coordinated launch.
-- Remove compatibility code only through a documented major release.
 
 ## When a new package is justified
 
@@ -92,4 +85,3 @@ use cases, then decide whether a package earns the maintenance cost.
 - Core stays below its 20 KB compressed bundle budget and has no runtime
   dependencies.
 - Connector docs match the fields used by the implementation.
-- Migration tests keep existing `diabetic-utils` imports working.

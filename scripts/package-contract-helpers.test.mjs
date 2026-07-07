@@ -141,7 +141,6 @@ const baselineVersions = new Map([
   ['@glucoseiq/tokens', '0.0.0'],
   ['@glucoseiq/testing', '0.0.0'],
   ['@glucoseiq/cli', '0.0.0'],
-  ['diabetic-utils', '1.5.0'],
 ])
 const launchVersions = new Map([
   ['@glucoseiq/core', '1.0.0'],
@@ -149,7 +148,6 @@ const launchVersions = new Map([
   ['@glucoseiq/tokens', '1.0.0'],
   ['@glucoseiq/testing', '1.0.0'],
   ['@glucoseiq/cli', '1.0.0'],
-  ['diabetic-utils', '2.0.0'],
 ])
 
 assert.deepEqual(createLaunchPackageVersions(), launchVersions)
@@ -214,7 +212,6 @@ assert.doesNotThrow(() =>
       ['@glucoseiq/tokens', { version: '1.0.4' }],
       ['@glucoseiq/testing', { version: '3.0.0-beta.2' }],
       ['@glucoseiq/cli', { version: '1.8.1+build.7' }],
-      ['diabetic-utils', { version: '2.2.0' }],
     ]),
   ),
   'independently versioned packages should be valid',
@@ -258,7 +255,6 @@ const independentVersions = new Map([
   ['@glucoseiq/tokens', '1.0.3'],
   ['@glucoseiq/testing', '3.0.0'],
   ['@glucoseiq/cli', '1.8.1+build.7'],
-  ['diabetic-utils', '2.2.0'],
 ])
 assert.equal(
   assertLaunchVersionPolicy({
@@ -295,7 +291,7 @@ assert.throws(
 assert.throws(
   () =>
     assertLaunchVersionPolicy({
-      currentVersions: new Map(independentVersions).set('diabetic-utils', '2.3.0-rc.1'),
+      currentVersions: new Map(independentVersions).set('@glucoseiq/cli', '1.8.2-rc.1'),
       baselineVersions,
       launchVersions,
       hasLaunchChangeset: false,

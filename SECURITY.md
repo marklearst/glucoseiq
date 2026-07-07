@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-Security fixes target the current `@glucoseiq/*` release line and
-`diabetic-utils@2`. Maintainers may decline fixes for older releases.
+Security fixes target the current `@glucoseiq/*` release line. Maintainers may
+decline fixes for older releases.
 
 ## Report a vulnerability
 
