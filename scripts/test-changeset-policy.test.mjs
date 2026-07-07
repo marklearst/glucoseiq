@@ -317,7 +317,7 @@ function createCommandFixture({
   return { calls, execFile }
 }
 
-test('defines exactly the six public package directories', () => {
+test('defines exactly the five public package directories', () => {
   assert.deepEqual(PUBLIC_PACKAGE_DIRECTORIES, [
     'packages/cli',
     'packages/core',
