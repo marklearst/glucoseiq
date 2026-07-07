@@ -3,15 +3,13 @@ import {
   MGDL_MMOLL_CONVERSION,
   type GlucoseReading,
 } from '@glucoseiq/core'
-import type { AGPProfileBin, AGPProfileResult } from '@glucoseiq/core/metrics'
 
-const MINUTES_PER_DAY = 1440
 const MILLISECONDS_PER_DAY = 86_400_000
 const MAX_TRACE_GAP_MS = 15 * 60_000
 
-interface GeometryOptions {
-  readonly profile: AGPProfileResult
-  readonly readings: GlucoseReading[]
+interface GlucoseTraceGeometryOptions {
+  readonly readings: readonly GlucoseReading[]
+  readonly timeZone: string
   readonly width: number
   readonly height: number
   readonly yMin: number
@@ -23,17 +21,16 @@ interface Point {
   readonly y: number
 }
 
-type GlucoseProfileZone = 'low' | 'in-range' | 'high'
+export type GlucoseTraceZone = 'low' | 'in-range' | 'high'
 
-export interface GlucoseProfileGeometry {
-  readonly outerBandPaths: string[]
-  readonly innerBandPaths: string[]
-  readonly medianPaths: string[]
-  readonly tracePaths: string[]
-  readonly isolatedTracePoints: Point[]
+export interface GlucoseTraceGeometry {
+  readonly width: number
+  readonly height: number
+  readonly tracePaths: readonly string[]
+  readonly isolatedTracePoints: readonly Point[]
   readonly latest: Point & {
     readonly value: number
-    readonly zone: GlucoseProfileZone
+    readonly zone: GlucoseTraceZone
   }
   readonly observedRange: {
     readonly min: number
@@ -43,7 +40,7 @@ export interface GlucoseProfileGeometry {
     readonly lowY: number
     readonly highY: number
   }
-  readonly timeLabels: {
+  readonly timeLabels: readonly {
     readonly label: string
     readonly minor: boolean
   }[]
@@ -61,7 +58,7 @@ function toMgDl(value: number, unit: GlucoseReading['unit']): number {
   return unit === 'mg/dL' ? value : value * MGDL_MMOLL_CONVERSION
 }
 
-function zoneForMgDl(value: number): GlucoseProfileZone {
+function zoneForMgDl(value: number): GlucoseTraceZone {
   if (value < 70) return 'low'
   if (value > 180) return 'high'
   return 'in-range'
@@ -71,35 +68,25 @@ function roundToTenth(value: number): number {
   return Math.round(value * 10) / 10
 }
 
-function hourFormatter(timeZone: string): Intl.DateTimeFormat {
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone,
+function roundedHourLabel(milliseconds: number, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
     hour: 'numeric',
-  })
-}
+    minute: '2-digit',
+    hourCycle: 'h23',
+    numberingSystem: 'latn',
+    timeZone,
+  }).formatToParts(new Date(milliseconds))
+  const hour = Number(parts.find(({ type }) => type === 'hour')?.value)
+  const minute = Number(parts.find(({ type }) => type === 'minute')?.value)
 
-function splitProfileRuns(bins: readonly AGPProfileBin[]): AGPProfileBin[][] {
-  const runs: AGPProfileBin[][] = []
-  let current: AGPProfileBin[] = []
-
-  for (const bin of bins) {
-    const hasProfile =
-      bin.n > 0 &&
-      [5, 25, 50, 75, 95].every(
-        (percentile) => typeof bin.percentiles[percentile] === 'number',
-      )
-
-    if (hasProfile) {
-      current.push(bin)
-      continue
-    }
-
-    if (current.length >= 2) runs.push(current)
-    current = []
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) {
+    throw new TypeError('Unable to format glucose trace time label')
   }
 
-  if (current.length >= 2) runs.push(current)
-  return runs
+  const roundedHour = (hour + (minute >= 30 ? 1 : 0)) % 24
+  const displayHour = roundedHour % 12 || 12
+  const period = roundedHour < 12 ? 'AM' : 'PM'
+  return `${displayHour} ${period}`
 }
 
 function endpointTangent(
@@ -230,73 +217,29 @@ function smoothTracePath(
   return commands.join(' ')
 }
 
-export function createGlucoseProfileGeometry({
-  profile,
+export function createGlucoseTraceGeometry({
   readings,
+  timeZone,
   width,
   height,
   yMin,
   yMax,
-}: GeometryOptions): GlucoseProfileGeometry {
+}: GlucoseTraceGeometryOptions): GlucoseTraceGeometry {
   if (
     ![width, height, yMin, yMax].every(Number.isFinite) ||
     width <= 0 ||
     height <= 0 ||
     yMax <= yMin
   ) {
-    throw new RangeError('Glucose profile geometry requires positive dimensions and yMax > yMin')
+    throw new RangeError('Glucose trace geometry requires positive dimensions and yMax > yMin')
   }
 
-  const xForMinute = (minute: number): number =>
-    (minute / MINUTES_PER_DAY) * width
   const yForMgDl = (value: number): number => {
     const clamped = Math.min(yMax, Math.max(yMin, value))
     return ((yMax - clamped) / (yMax - yMin)) * height
   }
-  const profileValue = (bin: AGPProfileBin, percentile: number): number => {
-    const value = bin.percentiles[percentile]
-    if (value === null || value === undefined) {
-      throw new TypeError(`Missing p${percentile} profile value`)
-    }
-    return profile.unit === 'mg/dL' ? value : value * MGDL_MMOLL_CONVERSION
-  }
   const point = (x: number, y: number): string =>
     `${formatCoordinate(x)},${formatCoordinate(y)}`
-  const linePath = (
-    run: readonly AGPProfileBin[],
-    percentile: number,
-  ): string =>
-    run
-      .map((bin, index) => {
-        const command = index === 0 ? 'M' : 'L'
-        return `${command}${point(
-          xForMinute(bin.minuteOfDay),
-          yForMgDl(profileValue(bin, percentile)),
-        )}`
-      })
-      .join(' ')
-  const bandPath = (
-    run: readonly AGPProfileBin[],
-    upper: number,
-    lower: number,
-  ): string => {
-    const top = run.map((bin, index) => {
-      const command = index === 0 ? 'M' : 'L'
-      return `${command}${point(
-        xForMinute(bin.minuteOfDay),
-        yForMgDl(profileValue(bin, upper)),
-      )}`
-    })
-    const bottom = [...run].reverse().map((bin) =>
-      `L${point(
-        xForMinute(bin.minuteOfDay),
-        yForMgDl(profileValue(bin, lower)),
-      )}`,
-    )
-    return `${[...top, ...bottom].join(' ')} Z`
-  }
-
-  const runs = splitProfileRuns(profile.bins)
   const sortedReadings = readings
     .filter((reading) => latestReading([reading]) !== null)
     .map((reading) => ({
@@ -314,7 +257,7 @@ export function createGlucoseProfileGeometry({
   )
 
   if (validReadings.length === 0) {
-    throw new TypeError('Glucose profile geometry requires at least one valid reading')
+    throw new TypeError('Glucose trace geometry requires at least one valid reading')
   }
 
   const latestPoint = validReadings.at(-1)!
@@ -354,21 +297,20 @@ export function createGlucoseProfileGeometry({
   const isolatedTracePoints = tracePointRuns
     .filter((run) => run.length === 1)
     .map(([reading]) => reading!)
-  const tickFormatter = hourFormatter(profile.timeZone)
   const timeLabels = [0, 0.25, 0.5, 0.75, 1].map((position, index) => ({
     label:
       index === 4
         ? 'Now'
-        : tickFormatter.format(
-            new Date(windowStartMs + position * MILLISECONDS_PER_DAY),
+        : roundedHourLabel(
+            windowStartMs + position * MILLISECONDS_PER_DAY,
+            timeZone,
           ),
     minor: index === 1 || index === 3,
   }))
 
   return {
-    outerBandPaths: runs.map((run) => bandPath(run, 95, 5)),
-    innerBandPaths: runs.map((run) => bandPath(run, 75, 25)),
-    medianPaths: runs.map((run) => linePath(run, 50)),
+    width,
+    height,
     tracePaths,
     isolatedTracePoints,
     latest: {

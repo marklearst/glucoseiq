@@ -331,26 +331,42 @@ test('the visible homepage sample is explicitly marked and standalone', () => {
 
 test('homepage signal and UI examples pair visual shorthand with semantic text', () => {
   const homepage = readTracked('apps/docs/app/(home)/page.tsx')
+  const signalFigure = readTracked(
+    'apps/docs/app/(home)/glucose-signal-figure.tsx'
+  )
   const glucoseTrace = readTracked(
     'apps/docs/app/(home)/glucose-trace.tsx'
   )
-  assert.match(homepage, /<figure className=\{styles\.signalInstrument\}>/u)
-  assert.match(homepage, /<figcaption className=\{styles\.signalCaption\}>/u)
-  assert.match(homepage, /14-day distribution/u)
+  assert.match(homepage, /<GlucoseSignalFigure/u)
   assert.match(
-    homepage,
-    /<GlucoseTrace profile=\{completeProfile\} readings=\{readings\} \/>/u
+    signalFigure,
+    /<figure\s+className=\{styles\.signalInstrument\}\s+data-motion-part="instrument"\s*>/u
+  )
+  assert.match(
+    signalFigure,
+    /<figcaption\s+className=\{styles\.signalCaption\}\s+data-motion-part="caption"\s*>/u
+  )
+  assert.match(
+    signalFigure,
+    /Synthetic\s+14-day report with its latest 24-hour trace\./u
+  )
+  assert.match(
+    signalFigure,
+    /<GlucoseTrace geometry=\{geometry\} \/>/u
   )
   assert.match(
     glucoseTrace,
     /Last 24 hours of synthetic glucose readings/u
   )
-  assert.match(glucoseTrace, /The trace ends at \{geometry\.latest\.value\}/u)
   assert.match(
     glucoseTrace,
-    /70 to 180 milligrams per deciliter\s+range/u
+    /The latest reading is\{' '\}\s+\{geometry\.latest\.value\} milligrams per deciliter/u
   )
-  assert.match(homepage, /mg\/dL/u)
+  assert.match(
+    glucoseTrace,
+    /target\s+range is 70 to 180 milligrams per deciliter/u
+  )
+  assert.match(signalFigure, /mg\/dL/u)
   assert.match(homepage, /aria-label="Package documentation"/u)
   assert.doesNotMatch(homepage, /className=\{styles\.chartPanel\}/u)
   assert.doesNotMatch(homepage, /className=\{styles\.recentReadings\}/u)
