@@ -48,7 +48,7 @@ export interface EstimateGMIOptions {
 
 /**
  * Result of glucose unit conversion.
- * Provides converted value and new unit for interoperability.
+ * Contains the converted value and its new unit for interoperability.
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  */
 export interface ConversionResult {
@@ -114,8 +114,8 @@ export type TIRPopulation = 'standard' | 'older-adults' | 'high-risk'
 export type TIRAssessment = 'excellent' | 'good' | 'needs improvement' | 'concerning'
 
 /**
- * Detailed metrics for a single glucose range.
- * Provides percentage, duration, count, and average value for analytics.
+ * Metrics for a single glucose range: percentage, duration, count, and average
+ * value for analytics.
  */
 export interface RangeMetrics {
   /** Percentage of readings in this range (0-100) */
@@ -166,8 +166,7 @@ export interface TIRSummary {
 }
 
 /**
- * Complete Enhanced Time-in-Range result.
- * Provides a five-range glucose breakdown using the 2019 consensus thresholds.
+ * Five-range Enhanced Time-in-Range result using the 2019 consensus thresholds.
  * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
  */
 export interface EnhancedTIRResult {

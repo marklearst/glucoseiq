@@ -270,8 +270,8 @@ const valuesMgDl: number[] = [100, 120, 140]
 const coefficientOfVariation = glucoseCoefficientOfVariation(valuesMgDl)
 ```
 
-**Remarks:** - If readings contains &lt;2 values or mean is 0, returns NaN.
-- Handles NaN/Infinity values by propagating them in the result.
+**Remarks:** Returns NaN when readings contain fewer than 2 values or their mean is 0.
+NaN and Infinity propagate into the result.
 
 | Parameter | Description |
 | --- | --- |
@@ -463,7 +463,7 @@ Calculates specified percentiles from an array of glucose values using the neare
 
 **Returns:** Object mapping percentile to value, or &#123;&#125; if input is empty
 
-**Throws:** If readings or percentiles is not an array (`INVALID_OPTION`)
+**Throws:** If either readings or percentiles is not an array (`INVALID_OPTION`)
 
 **See:**
 
@@ -478,9 +478,8 @@ const requestedPercentiles: number[] = [10, 50, 90]
 const percentiles = glucosePercentiles(valuesMgDl, requestedPercentiles)
 ```
 
-**Remarks:** - Returns the value at the nearest-rank for each percentile.
-- If readings is empty, returns an empty object.
-- Percentiles outside \[0, 100] are ignored.
+**Remarks:** Returns the nearest-rank value for each percentile. Empty readings return an
+empty object. Percentiles outside \[0, 100] are ignored.
 
 | Parameter | Description |
 | --- | --- |
@@ -515,8 +514,8 @@ const valuesMgDl: number[] = [100, 120, 140]
 const standardDeviation = glucoseStandardDeviation(valuesMgDl)
 ```
 
-**Remarks:** - If readings contains &lt;2 values, returns NaN (not enough data for SD).
-- Handles NaN/Infinity values by propagating them in the result.
+**Remarks:** Returns NaN when readings contain fewer than 2 values. NaN and Infinity
+propagate into the result.
 
 | Parameter | Description |
 | --- | --- |

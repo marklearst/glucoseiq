@@ -13,14 +13,14 @@ calculateEnhancedTIR(readings: GlucoseReading[], options?: EnhancedTIROptions): 
 
 Calculates Enhanced Time-in-Range metrics per International Consensus 2019.
 
-Provides detailed breakdown of glucose readings across five clinical ranges:
+Breaks glucose readings into five clinical ranges:
 - Very Low (&lt;54 mg/dL / 3.0 mmol/L): Level 2 Hypoglycemia
 - Low (54-69 mg/dL / 3.0-3.8 mmol/L): Level 1 Hypoglycemia
 - In Range (70-180 mg/dL / 3.9-10.0 mmol/L): Target Range
 - High (181-250 mg/dL / 10.1-13.9 mmol/L): Level 1 Hyperglycemia
 - Very High (&gt;250 mg/dL / &gt;13.9 mmol/L): Level 2 Hyperglycemia
 
-**Returns:** Enhanced TIR result with detailed metrics and target assessment
+**Returns:** Enhanced TIR result with range metrics and target assessment
 
 ```ts typecheck
 import { calculateEnhancedTIR, type GlucoseReading } from '@glucoseiq/core'
@@ -75,7 +75,7 @@ calculatePregnancyTIR(readings: GlucoseReading[], options?: PregnancyTIROptions)
 
 Calculates pregnancy-specific Time-in-Range metrics per ADA 2024 guidelines.
 
-Uses tighter target range for pregnancy: 63-140 mg/dL (3.5-7.8 mmol/L).
+Uses the tighter pregnancy target range: 63-140 mg/dL (3.5-7.8 mmol/L).
 The quantified type 1 diabetes pregnancy targets are TIR &gt;70%, total TBR
 &lt;4%, Level 2 TBR &lt;1%, and TAR &lt;25%.
 

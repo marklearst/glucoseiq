@@ -34,8 +34,8 @@ computeGlucoseTrend(readings: GlucoseReading[], options?: GlucoseTrendOptions): 
 Computes glucose rate-of-change and derives a trend from recent readings.
 
 Fits a least-squares slope over readings in the trailing window, normalizing
-mixed units to mg/dL. Useful for feeding a live trend arrow, and for
-back-filling a trend when a feed (e.g. Nightscout) does not provide one.
+mixed units to mg/dL. Hosts can use the result for a live trend arrow or to
+back-fill a trend when a feed (e.g. Nightscout) does not provide one.
 
 **Returns:** Rate-of-change (mg/dL/min) and derived trend
 

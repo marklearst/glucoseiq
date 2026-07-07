@@ -90,7 +90,7 @@ const DEFAULT_CGM_INTERVAL_MINUTES = 5
 /**
  * Calculates Enhanced Time-in-Range metrics per International Consensus 2019.
  *
- * Provides detailed breakdown of glucose readings across five clinical ranges:
+ * Breaks glucose readings into five clinical ranges:
  * - Very Low (<54 mg/dL / 3.0 mmol/L): Level 2 Hypoglycemia
  * - Low (54-69 mg/dL / 3.0-3.8 mmol/L): Level 1 Hypoglycemia
  * - In Range (70-180 mg/dL / 3.9-10.0 mmol/L): Target Range
@@ -99,7 +99,7 @@ const DEFAULT_CGM_INTERVAL_MINUTES = 5
  *
  * @param readings - Array of glucose readings with timestamp, value, and unit
  * @param options - Optional configuration for thresholds and population type
- * @returns Enhanced TIR result with detailed metrics and target assessment
+ * @returns Enhanced TIR result with range metrics and target assessment
  *
  * @example
  * ```ts typecheck
@@ -277,7 +277,7 @@ export function calculateEnhancedTIR(
 /**
  * Calculates pregnancy-specific Time-in-Range metrics per ADA 2024 guidelines.
  *
- * Uses tighter target range for pregnancy: 63-140 mg/dL (3.5-7.8 mmol/L).
+ * Uses the tighter pregnancy target range: 63-140 mg/dL (3.5-7.8 mmol/L).
  * The quantified type 1 diabetes pregnancy targets are TIR >70%, total TBR
  * <4%, Level 2 TBR <1%, and TAR <25%.
  *
