@@ -149,14 +149,17 @@ Glucose zone color mapping for different statuses and trends.
 ### GMI_COEFFICIENTS
 
 ```ts fragment="generated API declaration or signature"
-const GMI_COEFFICIENTS: { readonly A1C_INTERCEPT: 3.31; readonly A1C_SLOPE: 0.02392; readonly MG_DL_INTERCEPT: 2.4; readonly MG_DL_SLOPE: 0.03; readonly MMOL_L_INTERCEPT: 3.5; readonly MMOL_L_SLOPE: 1.57 }
+const GMI_COEFFICIENTS: { readonly A1C_INTERCEPT: 3.31; readonly A1C_SLOPE: 0.02392; readonly MG_DL_INTERCEPT: 3.31; readonly MG_DL_SLOPE: 0.02392; readonly MMOL_L_INTERCEPT: 3.31; readonly MMOL_L_SLOPE: 0.430995344 }
 ```
 
 **Import:** `@glucoseiq/core`
 
 GMI (Glucose Management Indicator) calculation coefficients.
 
-**See:** [https://diatribe.org/glucose-management-indicator-gmi](https://diatribe.org/glucose-management-indicator-gmi)
+`A1C_SLOPE` and `A1C_INTERCEPT` are deprecated names retained as aliases
+for the mg/dL coefficients. They do not define an A1C-to-GMI conversion.
+
+**See:** [https://doi.org/10.2337/dc18-1581](https://doi.org/10.2337/dc18-1581)
 
 
 ---

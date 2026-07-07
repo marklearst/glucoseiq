@@ -21,7 +21,7 @@
   --giq-lime: #a3e635;
   --giq-link-underline: color-mix(
     in srgb,
-    var(--color-fd-primary) 58%,
+    var(--color-fd-primary) 52%,
     transparent
   );
   --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
@@ -44,7 +44,7 @@
   color: var(--color-fd-foreground);
   opacity: 1;
   text-decoration-color: var(--giq-link-underline);
-  text-decoration-thickness: 1px;
+  text-decoration-thickness: 2px;
   text-underline-offset: 0.18em;
   transition:
     text-decoration-color 160ms ease,

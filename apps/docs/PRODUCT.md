@@ -31,7 +31,7 @@ GlucoseIQ handles CGM normalization, analytics, and render-ready output. The pro
 - The primary action is **Read the quickstart**.
 - The fallback is **Browse the API**. GitHub remains available in the main navigation and closing section.
 - The shortest useful description is: **CGM readings become typed metrics, chart-ready data, or SVG.**
-- The homepage proof is a synthetic 14-day report with a latest 24-hour trace, produced from fixed readings and the typed report returned from the same data.
+- The homepage proof uses one synthetic 14-day reading set four ways: the latest 24-hour trace, a GMI scale, the five glucose ranges, and a daily percentile profile. The trace reads the fixture directly; the analytical views use the typed report.
 - Before acting, a visitor should see that the output comes from the published API, understand where GlucoseIQ stops, and find the package that fits their application.
 - Proof comes from the generated homepage report, cited implementation references, package tests, and the source. There are no testimonials or customer logos to claim.
 
@@ -43,9 +43,9 @@ The page should feel made by people who care about data, type, and interaction. 
 
 ## Anti-references
 
-Avoid the familiar generated landing-page look: centered gradient headlines, walls of identical cards, fake terminals, glass panels, tiny uppercase labels, and decorative product metrics disconnected from the library.
+Avoid the familiar generated landing-page look: centered gradient headlines, walls of identical cards, fake terminals, persistent glass, tiny uppercase labels, and decorative product metrics disconnected from the library. Material and blur are allowed inside the report when they improve depth, but they cannot become the page's visual gimmick.
 
-Do not imitate an awards portfolio, a brokerage dashboard, or a patient-facing health app. Signal Passage is limited to the homepage report. The complete report remains visible without JavaScript. Reduced motion shows the completed report. Other homepage sections do not gain reveal effects. Native page scrolling is never captured, replaced, snapped, or slowed. Use working output instead of inflated claims.
+Do not imitate an awards portfolio, a brokerage dashboard, or a patient-facing health app. The report gets one short entrance and remains in normal document flow. On phones, only the shell and trace move; the lower views arrive complete. The full report remains visible without JavaScript and with reduced motion. Other homepage sections stay still. Use working output instead of inflated claims.
 
 ## Design Principles
 

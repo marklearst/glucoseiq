@@ -3,21 +3,22 @@ import {
   computeGlucoseTrend,
   latestReading,
 } from '@glucoseiq/core'
+import { buildAGPProfile } from '@glucoseiq/core/metrics'
 import { generateCGMSeries } from '@glucoseiq/testing'
 import { InstallCommand } from '@/components/install-command'
 import { LogoMark } from '@/lib/logo'
-import { GlucoseSignalFigure } from './glucose-signal-figure'
+import { GlucoseReportSuite } from './glucose-report-suite'
 import { HighlightedCode } from './highlighted-code'
-import { SignalStory } from './signal-story'
+import { ReportEntrance } from './report-entrance'
 import styles from './home.module.css'
 import type { JSX } from 'react'
 
 const readings = generateCGMSeries({
   days: 14,
   seed: 7,
-  mealAmplitude: 95,
+  mealAmplitude: 55,
   noise: 2,
-  nocturnalHypoDays: [3, 9],
+  nocturnalHypoDays: [],
 })
 
 const report = analyzeGlucose(readings)
@@ -35,7 +36,19 @@ if (
   throw new Error('Homepage fixture did not produce a complete report')
 }
 
-const completeProfile = profile
+const dailyProfile = buildAGPProfile(readings, {
+  binMinutes: 120,
+  method: 'linear',
+  percentiles: [5, 25, 50, 75, 95],
+  timeZone: profile.timeZone,
+})
+
+if (!dailyProfile.valid) {
+  throw new Error('Homepage fixture did not produce a daily profile')
+}
+
+const completeProfile = dailyProfile
+const completeTimeInRange = report.timeInRange
 const displayedReading = currentReading
 const displayedTrend = currentTrend.trend
 const timeInRange = report.timeInRange.inRange.percentage
@@ -56,9 +69,9 @@ import { generateCGMSeries } from '@glucoseiq/testing'
 const readings = generateCGMSeries({
   days: 14,
   seed: 7,
-  mealAmplitude: 95,
+  mealAmplitude: 55,
   noise: 2,
-  nocturnalHypoDays: [3, 9],
+  nocturnalHypoDays: [],
 })
 
 const report = analyzeGlucose(readings)
@@ -133,19 +146,20 @@ export default function HomePage(): JSX.Element {
           </div>
         </header>
 
-        <SignalStory>
-          <GlucoseSignalFigure
+        <ReportEntrance>
+          <GlucoseReportSuite
             currentReading={displayedReading}
             currentTrend={displayedTrend}
             cv={report.cv}
+            days={14}
             gmi={report.gmi}
             meanGlucose={report.meanGlucose}
+            profile={completeProfile}
             readings={readings}
-            timeInRange={timeInRange}
-            timeZone={completeProfile.timeZone}
+            timeInRange={completeTimeInRange}
             totalReadings={report.dataSufficiency.totalReadings}
           />
-        </SignalStory>
+        </ReportEntrance>
 
         <section
           aria-labelledby="report-heading"

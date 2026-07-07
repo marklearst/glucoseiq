@@ -1,5 +1,10 @@
 # Signal Passage Implementation Plan
 
+> **Status: Superseded.** This plan records an earlier prototype. The homepage
+> now uses `glucose-report-suite.tsx`, `glucose-report.module.css`,
+> `report-entrance.tsx`, and `report-motion.ts` to present four report views
+> without a sticky scroll chapter.
+
 > Execute this plan task by task and review each test-backed commit before continuing. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the current homepage glucose dashboard with the approved Signal Passage: one restrained, server-rendered glucose instrument with a native scroll-led reveal on capable wide screens and a one-shot fallback everywhere else.

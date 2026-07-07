@@ -35,7 +35,7 @@ if (!report.valid || !report.timeInRange || !report.tightRange ||
   throw new Error('The input did not contain enough valid CGM data')
 }
 
-report.gmi                            // 6.2: Glucose Management Indicator
+report.gmi                            // 6.4: Glucose Management Indicator
 report.timeInRange.inRange.percentage // 100: % in 70–180 mg/dL
 report.tightRange.inRange             // 100: % in 70–140 mg/dL
 report.risk.gri.zone                  // 'A': Glycemia Risk Index zone

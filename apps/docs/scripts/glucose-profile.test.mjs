@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { buildAGPProfile } from '@glucoseiq/core/metrics'
 import { generateCGMSeries } from '@glucoseiq/testing'
-import { createGlucoseTraceGeometry } from '../lib/glucose-profile.ts'
+import {
+  createDailyProfileGeometry,
+  createGMIDialGeometry,
+  createGlucoseTraceGeometry,
+  GMI_DIAL_SWEEP_DEGREES,
+} from '../lib/glucose-profile.ts'
 
 function cubicSegments(path) {
   const tokens = path.match(/[MC]|-?\d+(?:\.\d+)?/gu) ?? []
@@ -33,6 +39,87 @@ function cubicSegments(path) {
 
   return segments
 }
+
+test('GMI dial maps an estimate onto a clean open five-to-ten scale', () => {
+  assert.equal(GMI_DIAL_SWEEP_DEGREES, 260)
+  assert.deepEqual(
+    createGMIDialGeometry({
+      value: 6.2,
+      min: 5,
+      max: 10,
+    }),
+    {
+      arcPercent: 24,
+      ratio: 0.24,
+    },
+  )
+
+  assert.equal(
+    createGMIDialGeometry({
+      value: 12,
+      min: 5,
+      max: 10,
+    }).ratio,
+    1,
+  )
+})
+
+test('daily profile geometry renders twelve two-hour percentile capsules', () => {
+  const readings = generateCGMSeries({
+    days: 14,
+    seed: 7,
+    mealAmplitude: 95,
+    noise: 2,
+    nocturnalHypoDays: [3, 9],
+  })
+  const profile = buildAGPProfile(readings, {
+    binMinutes: 120,
+    method: 'linear',
+    percentiles: [5, 25, 50, 75, 95],
+    timeZone: 'UTC',
+  })
+  const geometry = createDailyProfileGeometry({
+    profile,
+    width: 640,
+    height: 180,
+    yMin: 40,
+    yMax: 250,
+  })
+
+  assert.equal(geometry.columns.length, 12)
+  assert.deepEqual(
+    geometry.columns.map((column) => column.minuteOfDay),
+    [0, 120, 240, 360, 480, 600, 720, 840, 960, 1080, 1200, 1320],
+  )
+  assert.deepEqual(geometry.target, {
+    lowY: 154.2857,
+    highY: 60,
+  })
+  assert.deepEqual(geometry.timeLabels, [
+    { label: '12 AM', x: 0 },
+    { label: '6 AM', x: 160 },
+    { label: '12 PM', x: 320 },
+    { label: '6 PM', x: 480 },
+    { label: '12 AM', x: 640 },
+  ])
+
+  for (const column of geometry.columns) {
+    assert.ok(column.stemTop <= column.capsuleTop)
+    assert.ok(column.capsuleTop <= column.medianY)
+    assert.ok(column.medianY <= column.capsuleBottom)
+    assert.ok(column.capsuleBottom <= column.stemBottom)
+    assert.ok(
+      [
+        column.x,
+        column.stemTop,
+        column.capsuleTop,
+        column.medianY,
+        column.capsuleBottom,
+        column.stemBottom,
+      ].every(Number.isFinite),
+    )
+  }
+})
 
 test('trace geometry maps the fixed glucose domain to literal SVG paths', () => {
   const readings = [
