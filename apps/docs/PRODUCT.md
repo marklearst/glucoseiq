@@ -14,8 +14,6 @@ The primary audience is a TypeScript developer building a product that works wit
 
 Designers, researchers, creative directors, and technical leads are a secondary audience. They may not install the package themselves, but they need to see that GlucoseIQ can support a thoughtful product before they recommend it to a team.
 
-Teams moving from `diabetic-utils` are also supported. Migration matters, but it should not define the first impression.
-
 ## Product Purpose
 
 GlucoseIQ analyzes CGM readings and returns typed metrics, chart-ready data, and optional SVG. Product teams own credentials, storage, workflows, and interface design.

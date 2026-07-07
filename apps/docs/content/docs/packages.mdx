@@ -47,12 +47,6 @@ GlucoseIQ splits analytics from framework adapters. Start with
       <td>You need a terminal workflow or an injectable command runner</td>
       <td>Depends on core; exposes the <code>glucoseiq</code> executable</td>
     </tr>
-    <tr>
-      <th scope="row"><code>diabetic-utils</code></th>
-      <td>The 107-export compatibility bridge</td>
-      <td>You are migrating an existing <code>diabetic-utils</code> application</td>
-      <td>Version 2 re-exports core; 1.5 remains on the <code>legacy</code> tag</td>
-    </tr>
   </tbody>
 </table>
 
@@ -87,10 +81,3 @@ fixtures, and the [CLI](/docs/cli) for file-oriented terminal workflows. The
 
 Install only the packages your application uses. The package boundaries show
 which code belongs in browser bundles and which dependencies affect upgrades.
-
-## Migrate existing applications
-
-New applications should import `@glucoseiq/core` directly. Existing
-`diabetic-utils` applications can move through the compatibility package
-without losing the 1.5 public export surface. Follow the
-[migration guide](/docs/migration) for version, runtime, and import changes.

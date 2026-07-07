@@ -64,12 +64,6 @@ const launchDefinitions = [
     minimumVersion: '1.0.0',
     coreDependency: true,
   },
-  {
-    name: 'diabetic-utils',
-    directory: 'packages/diabetic-utils',
-    minimumVersion: '2.0.0',
-    coreDependency: true,
-  },
 ]
 
 export const LAUNCH_PACKAGES = Object.freeze(
@@ -757,25 +751,12 @@ function registryReadinessIssue(spec, packument) {
   if (packument['dist-tags']?.latest !== spec.version) {
     return `${spec.name} latest must be ${spec.version}; received ${packument['dist-tags']?.latest ?? 'missing'}`
   }
-  if (
-    spec.name === 'diabetic-utils' &&
-    packument['dist-tags']?.legacy !== '1.5.0'
-  ) {
-    return `diabetic-utils legacy must remain 1.5.0; received ${packument['dist-tags']?.legacy ?? 'missing'}`
-  }
-
   if (packument.versions !== undefined) {
     assertPlainObject(packument.versions, `${spec.name} version inventory`)
   }
   const metadata = packument.versions?.[spec.version]
   if (!metadata) return `${spec.name}@${spec.version} is missing from its version inventory`
   assertPlainObject(metadata, `${spec.name}@${spec.version} registry version`)
-
-  if (spec.name === 'diabetic-utils') {
-    const legacy = packument.versions?.['1.5.0']
-    if (!legacy) return 'diabetic-utils must retain diabetic-utils@1.5.0 in its version inventory'
-    assertPlainObject(legacy, 'diabetic-utils@1.5.0 registry version')
-  }
 
   if (metadata.dist === undefined) {
     return `${spec.name} distribution metadata is not visible yet`
@@ -947,28 +928,9 @@ function validateRegistryRecord(spec, packument, registry) {
       `${spec.name} latest must be ${spec.version}; received ${packument['dist-tags'].latest ?? 'missing'}`,
     )
   }
-  if (
-    spec.name === 'diabetic-utils' &&
-    packument['dist-tags'].legacy !== '1.5.0'
-  ) {
-    throw new Error(
-      `diabetic-utils legacy must remain 1.5.0; received ${packument['dist-tags'].legacy ?? 'missing'}`,
-    )
-  }
-
   assertPlainObject(packument.versions, `${spec.name} version inventory`)
   const metadata = packument.versions[spec.version]
   if (!metadata) throw new Error(`${spec.name}@${spec.version} is missing from its version inventory`)
-  if (spec.name === 'diabetic-utils') {
-    const legacy = packument.versions['1.5.0']
-    if (!legacy) {
-      throw new Error('diabetic-utils must retain diabetic-utils@1.5.0 in its version inventory')
-    }
-    assertPlainObject(legacy, 'diabetic-utils@1.5.0 registry version')
-    if (Object.hasOwn(legacy, 'deprecated')) {
-      throw new Error('diabetic-utils@1.5.0 must not be deprecated')
-    }
-  }
   assertManifestContract(spec, metadata, {
     registry,
     requireDistribution: true,

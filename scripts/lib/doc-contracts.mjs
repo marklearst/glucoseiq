@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { posix } from 'node:path'
 
@@ -15,10 +16,7 @@ const PUBLIC_PACKAGE_ROOTS = new Set([
   'tokens',
   'testing',
   'cli',
-  'diabetic-utils',
 ])
-
-const MIGRATION_URL = 'https://glucoseiq.dev/docs/migration'
 
 export const PACKAGE_README_CONTRACTS = Object.freeze(
   [
@@ -27,42 +25,30 @@ export const PACKAGE_README_CONTRACTS = Object.freeze(
       packageName: '@glucoseiq/core',
       guideUrl: 'https://glucoseiq.dev/docs/core-concepts',
       apiUrl: 'https://glucoseiq.dev/docs/api/core',
-      migrationUrl: MIGRATION_URL,
     },
     {
       path: 'packages/react/README.md',
       packageName: '@glucoseiq/react',
       guideUrl: 'https://glucoseiq.dev/docs/react',
       apiUrl: 'https://glucoseiq.dev/docs/api',
-      migrationUrl: MIGRATION_URL,
     },
     {
       path: 'packages/tokens/README.md',
       packageName: '@glucoseiq/tokens',
       guideUrl: 'https://glucoseiq.dev/docs/tokens',
       apiUrl: 'https://glucoseiq.dev/docs/api',
-      migrationUrl: MIGRATION_URL,
     },
     {
       path: 'packages/testing/README.md',
       packageName: '@glucoseiq/testing',
       guideUrl: 'https://glucoseiq.dev/docs/testing',
       apiUrl: 'https://glucoseiq.dev/docs/api',
-      migrationUrl: MIGRATION_URL,
     },
     {
       path: 'packages/cli/README.md',
       packageName: '@glucoseiq/cli',
       guideUrl: 'https://glucoseiq.dev/docs/cli',
       apiUrl: 'https://glucoseiq.dev/docs/api',
-      migrationUrl: MIGRATION_URL,
-    },
-    {
-      path: 'packages/diabetic-utils/README.md',
-      packageName: 'diabetic-utils',
-      guideUrl: MIGRATION_URL,
-      apiUrl: 'https://glucoseiq.dev/docs/api/core',
-      migrationUrl: MIGRATION_URL,
     },
   ].map((contract) => Object.freeze(contract))
 )
@@ -199,11 +185,6 @@ const GENERIC_README_RULES = [
     code: 'readme-api-link',
     message: 'Link to the public API with its canonical absolute URL.',
     test: ({ destinations, apiUrl }) => destinations.has(apiUrl),
-  },
-  {
-    code: 'readme-migration-link',
-    message: 'Link to the migration guide with its canonical absolute URL.',
-    test: ({ destinations, migrationUrl }) => destinations.has(migrationUrl),
   },
   {
     code: 'readme-license-link',
@@ -464,24 +445,6 @@ const PACKAGE_README_RULES = new Map([
         'Document JSON plus SVG stdout behavior.',
         (text) =>
           /\bsuppresses\s+the\s+SVG\s+success\s+line\b/iu.test(text)
-      ),
-    ],
-  ],
-  [
-    'diabetic-utils',
-    [
-      packageRule(
-        'readme-compat-legacy',
-        'Explain the legacy dist-tag for version 1.5.',
-        (text) =>
-          /\b1\.5\b/u.test(text) && /\blegacy\s+dist-tag\b/iu.test(text)
-      ),
-      packageRule(
-        'readme-compat-scoped',
-        'Direct new projects to the scoped @glucoseiq/core package.',
-        (text) =>
-          text.includes('@glucoseiq/core') &&
-          /\bscoped(?:-package)?\s+migration\s+guide\b/iu.test(text)
       ),
     ],
   ],
@@ -886,14 +849,12 @@ export function validateReadmeContract({
   packageName,
   guideUrl,
   apiUrl,
-  migrationUrl,
 }) {
   assertDocumentInput(path, text)
   for (const [field, value] of Object.entries({
     packageName,
     guideUrl,
     apiUrl,
-    migrationUrl,
   })) {
     if (typeof value !== 'string' || value.length === 0) {
       throw new TypeError(`${field} must be a nonempty string`)
@@ -911,7 +872,6 @@ export function validateReadmeContract({
     packageName,
     guideUrl,
     apiUrl,
-    migrationUrl,
     destinations,
   }
   const diagnostics = []
@@ -1680,6 +1640,7 @@ function listTrackedFiles(repoRoot) {
   })
     .split('\0')
     .filter(Boolean)
+    .filter((path) => existsSync(posix.join(repoRoot, path)))
 }
 
 function cachedTrackedFiles(repoRoot) {

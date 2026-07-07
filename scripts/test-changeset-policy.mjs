@@ -22,7 +22,6 @@ const parseChangeset = require('@changesets/parse').default
 export const PUBLIC_PACKAGE_DIRECTORIES = Object.freeze([
   'packages/cli',
   'packages/core',
-  'packages/diabetic-utils',
   'packages/react',
   'packages/testing',
   'packages/tokens',
@@ -30,7 +29,6 @@ export const PUBLIC_PACKAGE_DIRECTORIES = Object.freeze([
 const PUBLIC_PACKAGE_NAMES = Object.freeze([
   ['@glucoseiq/cli', 'packages/cli'],
   ['@glucoseiq/core', 'packages/core'],
-  ['diabetic-utils', 'packages/diabetic-utils'],
   ['@glucoseiq/react', 'packages/react'],
   ['@glucoseiq/testing', 'packages/testing'],
   ['@glucoseiq/tokens', 'packages/tokens'],
@@ -134,7 +132,7 @@ function publicPackageArtifact(path, artifact) {
   return undefined
 }
 
-/** Returns whether a changed path can alter one of the six public packages. */
+/** Returns whether a changed path can alter one of the five public packages. */
 export function isReleaseAffectingPath(path) {
   if (typeof path !== 'string') throw new TypeError('path must be a string')
   const relativePath = packageRelativePath(path)

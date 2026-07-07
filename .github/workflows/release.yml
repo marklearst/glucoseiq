@@ -373,29 +373,10 @@ jobs:
           )
           appendFileSync(
             process.env.GITHUB_OUTPUT,
-            `reported_packages=${JSON.stringify(reportedPackages)}\nverification_packages=${JSON.stringify(verificationPackages)}\nincludes_compatibility=${verificationPackages.some(({ name }) => name === 'diabetic-utils')}\nsource=${inventory.source}\n`,
+            `reported_packages=${JSON.stringify(reportedPackages)}\nverification_packages=${JSON.stringify(verificationPackages)}\nsource=${inventory.source}\n`,
           )
           NODE
 
-      - name: Preserve legacy npm release
-        if: ${{ !cancelled() && steps.publication-inventory.outputs.includes_compatibility == 'true' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          set -euo pipefail
-          if ! CURRENT_LEGACY=$(npm view diabetic-utils dist-tags.legacy \
-            --registry=https://registry.npmjs.org); then
-            echo "::error::Unable to read the diabetic-utils legacy dist-tag from npm."
-            exit 1
-          fi
-          if [ "$CURRENT_LEGACY" != "1.5.0" ]; then
-            if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-              echo "::error::The legacy dist-tag is missing and no bootstrap npm credential is available."
-              exit 1
-            fi
-            npm dist-tag add diabetic-utils@1.5.0 legacy \
-              --registry=https://registry.npmjs.org
-          fi
 
       - name: Remove npm authentication
         id: npm-auth-cleanup

@@ -14,7 +14,7 @@ pnpm changeset
 Commit the generated Markdown file with the package change. CI compares pull
 requests with `origin/main` and main-branch pushes with the trusted pre-push
 commit. It requires a non-README Changeset for release-affecting changes under
-the six public package directories. Package README and documentation-only
+the five public package directories. Package README and documentation-only
 changes are exempt. The generated `release/glucoseiq-packages` branch is also
 exempt. When that branch is merged, the deleted Changeset is accepted only if
 the push contains the exact generated manifest and matching changelog shape,
@@ -37,12 +37,12 @@ Merging the reviewed release pull request starts publication only after the
 same quality suite, the versioned-tarball matrix, and the live
 `glucoseiq.dev` preflight pass. Registry verification runs after a real
 publication and checks the published packages, metadata, tags, provenance,
-entrypoints, declarations, React peers, CLI, and compatibility exports.
+entrypoints, declarations, React peers, and CLI.
 
 ## npm authentication
 
 The first public release uses a one-day, package-scoped npm credential stored
-temporarily in the repository npm secret. After all six package pages exist,
+temporarily in the repository npm secret. After all five package pages exist,
 configure each package's trusted publisher for this repository and
 `release.yml`. In a reviewed change, remove token references from the workflow
 and delete the repository npm secret before the OIDC verification release.

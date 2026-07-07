@@ -7,7 +7,6 @@ const LAUNCH_PACKAGE_VERSION_ENTRIES = Object.freeze([
   Object.freeze(['@glucoseiq/tokens', '1.0.0']),
   Object.freeze(['@glucoseiq/testing', '1.0.0']),
   Object.freeze(['@glucoseiq/cli', '1.0.0']),
-  Object.freeze(['diabetic-utils', '2.0.0']),
 ])
 const PACKAGE_CONTRACT_SOURCES = new Set(['local', 'candidate', 'registry'])
 

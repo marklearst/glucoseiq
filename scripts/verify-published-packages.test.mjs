@@ -202,12 +202,8 @@ function createPackument(spec) {
     name: spec.name,
     'dist-tags': {
       latest: spec.version,
-      ...(spec.name === 'diabetic-utils' ? { legacy: '1.5.0' } : {}),
     },
     versions: {
-      ...(spec.name === 'diabetic-utils'
-        ? { '1.5.0': { name: 'diabetic-utils', version: '1.5.0' } }
-        : {}),
       [spec.version]: metadata,
     },
   }
@@ -344,7 +340,7 @@ function createHappyHarness({
   return { commands, events, fetchCalls, fetchImpl, releaseSha, runCommand }
 }
 
-test('locks the six coordinated launch package versions and tags', () => {
+test('locks the five coordinated launch package versions and tags', () => {
   assert.deepEqual(
     LAUNCH_PACKAGES.map(({ name, version, tag }) => ({ name, version, tag })),
     [
@@ -353,7 +349,6 @@ test('locks the six coordinated launch package versions and tags', () => {
       { name: '@glucoseiq/tokens', version: '1.0.0', tag: '@glucoseiq/tokens@1.0.0' },
       { name: '@glucoseiq/testing', version: '1.0.0', tag: '@glucoseiq/testing@1.0.0' },
       { name: '@glucoseiq/cli', version: '1.0.0', tag: '@glucoseiq/cli@1.0.0' },
-      { name: 'diabetic-utils', version: '2.0.0', tag: 'diabetic-utils@2.0.0' },
     ],
   )
 })
@@ -361,14 +356,12 @@ test('locks the six coordinated launch package versions and tags', () => {
 test('parses the Changesets published-package subset and fails closed on invalid output', () => {
   const selected = parsePublishedPackages(JSON.stringify([
     { name: '@glucoseiq/core', version: '1.0.0' },
-    { name: 'diabetic-utils', version: '2.0.0' },
   ]))
   assert.deepEqual(
     selected.map(({ name, version }) => ({ name, version })),
     [
       { name: '@glucoseiq/core', version: '1.0.0' },
-      { name: 'diabetic-utils', version: '2.0.0' },
-    ],
+      ],
   )
 
   for (const fixture of [
@@ -403,13 +396,11 @@ test('parses the Changesets published-package subset and fails closed on invalid
 test('maps exact generated-version package directories to a deterministic plan', () => {
   assert.deepEqual(
     createExpectedPublicationPlan([
-      'packages/diabetic-utils',
       'packages/core',
     ]),
     [
       { name: '@glucoseiq/core', version: '1.0.0' },
-      { name: 'diabetic-utils', version: '2.0.0' },
-    ],
+      ],
   )
   assert.throws(
     () => createExpectedPublicationPlan([]),
@@ -564,8 +555,7 @@ test('prefers a non-empty Changesets inventory after a partial publish failure',
     ]),
     expectedPackages: JSON.stringify([
       { name: '@glucoseiq/core', version: '1.0.0' },
-      { name: 'diabetic-utils', version: '2.0.0' },
-    ]),
+      ]),
   })
 
   assert.equal(inventory.source, 'changesets')
@@ -577,23 +567,13 @@ test('prefers a non-empty Changesets inventory after a partial publish failure',
     inventory.verificationPackages.map(({ name, version }) => ({ name, version })),
     [
       { name: '@glucoseiq/core', version: '1.0.0' },
-      { name: 'diabetic-utils', version: '2.0.0' },
-    ],
-  )
-  assert.equal(
-    inventory.reportedPackages.some(({ name }) => name === 'diabetic-utils'),
-    false,
-  )
-  assert.equal(
-    inventory.verificationPackages.some(({ name }) => name === 'diabetic-utils'),
-    true,
+      ],
   )
 })
 
 test('falls back to the validated version-commit plan when action inventory is unset', () => {
   const expectedPackages = JSON.stringify([
     { name: '@glucoseiq/core', version: '1.0.0' },
-    { name: 'diabetic-utils', version: '2.0.0' },
   ])
 
   for (const fixture of [
@@ -609,8 +589,7 @@ test('falls back to the validated version-commit plan when action inventory is u
       inventory.reportedPackages.map(({ name, version }) => ({ name, version })),
       [
         { name: '@glucoseiq/core', version: '1.0.0' },
-        { name: 'diabetic-utils', version: '2.0.0' },
-      ],
+          ],
     )
     assert.deepEqual(inventory.verificationPackages, inventory.reportedPackages)
   }
@@ -731,7 +710,7 @@ test('derives independently versioned expectations from source manifests above l
       spec.name,
       {
         name: spec.name,
-        version: spec.name === 'diabetic-utils' ? '2.4.0' : `1.${index + 1}.0`,
+        version: `1.${index + 1}.0`,
         ...(spec.coreDependency
           ? { dependencies: { '@glucoseiq/core': 'workspace:^' } }
           : {}),
@@ -743,12 +722,12 @@ test('derives independently versioned expectations from source manifests above l
     specs
       .filter(({ coreDependency }) => coreDependency)
       .map(({ coreVersion }) => coreVersion),
-    Array.from({ length: 4 }, () => '1.1.0'),
+    Array.from({ length: 3 }, () => '1.1.0'),
   )
   assert.deepEqual(
     specs.map(({ name, version, tag }) => ({ name, version, tag })),
     LAUNCH_PACKAGES.map((spec, index) => {
-      const version = spec.name === 'diabetic-utils' ? '2.4.0' : `1.${index + 1}.0`
+      const version = `1.${index + 1}.0`
       return { name: spec.name, version, tag: `${spec.name}@${version}` }
     }),
   )
@@ -765,7 +744,7 @@ test('accepts only launch-floor caret ranges that include the checked-out core',
     spec.name,
     {
       name: spec.name,
-      version: spec.name === 'diabetic-utils' ? '3.0.0' : '2.0.0',
+      version: '2.0.0',
       ...(spec.coreDependency
         ? { dependencies: { '@glucoseiq/core': 'workspace:^' } }
         : {}),
@@ -800,7 +779,7 @@ test('uses the shared semantic registry policy for an explicit checked-out range
     spec.name,
     {
       name: spec.name,
-      version: spec.name === 'diabetic-utils' ? '2.2.0' : '1.1.0',
+      version: '1.1.0',
       ...(spec.coreDependency
         ? {
             dependencies: {
@@ -822,7 +801,7 @@ test('uses the shared semantic registry policy for an explicit checked-out range
   )
 })
 
-test('polls only 404 records until all six exact versions are visible', async () => {
+test('polls only 404 records until all five exact versions are visible', async () => {
   const sleeps = []
   const harness = createHappyHarness({
     missingAttempts: new Map(LAUNCH_PACKAGES.map(({ name }) => [name, 1])),
@@ -837,7 +816,7 @@ test('polls only 404 records until all six exact versions are visible', async ()
 
   assert.deepEqual([...snapshot.keys()], LAUNCH_PACKAGES.map(({ name }) => name))
   assert.deepEqual(sleeps, [37])
-  assert.equal(harness.fetchCalls.length, 12)
+  assert.equal(harness.fetchCalls.length, 10)
 })
 
 test('bounds each polling attempt to one request window by fetching pending records concurrently', async () => {
@@ -934,9 +913,6 @@ test('refreshes exact versions until all distribution metadata and tags are read
     if (name === '@glucoseiq/core' && count === 1) {
       packument['dist-tags'].latest = '0.9.0'
     }
-    if (name === 'diabetic-utils' && count === 1) {
-      delete packument.versions['1.5.0']
-    }
     return response({ json: packument })
   }
 
@@ -948,9 +924,7 @@ test('refreshes exact versions until all distribution metadata and tags are read
   })
 
   assert.equal(snapshot.get('@glucoseiq/core')['dist-tags'].latest, '1.0.0')
-  assert.ok(snapshot.get('diabetic-utils').versions['1.5.0'])
   assert.equal(requests.get('@glucoseiq/core'), 2)
-  assert.equal(requests.get('diabetic-utils'), 2)
   assert.equal(requests.get('@glucoseiq/react'), 1)
   assert.deepEqual(sleeps, [23])
 })
@@ -1003,7 +977,7 @@ test('distinguishes confirmed 404 absence from transient registry exhaustion', a
 })
 
 test('reports partial publication with separate present and missing inventories', async () => {
-  const missingNames = new Set(['@glucoseiq/testing', '@glucoseiq/cli', 'diabetic-utils'])
+  const missingNames = new Set(['@glucoseiq/testing', '@glucoseiq/cli'])
   const harness = createHappyHarness({
     missingAttempts: new Map([...missingNames].map((name) => [name, 2])),
   })
@@ -1019,7 +993,6 @@ test('reports partial publication with separate present and missing inventories'
       assert.match(error.message, /Partial publication readiness detected/u)
       assert.match(error.message, /Present: @glucoseiq\/core@1\.0\.0/u)
       assert.match(error.message, /Missing: @glucoseiq\/testing@1\.0\.0/u)
-      assert.match(error.message, /diabetic-utils@2\.0\.0/u)
       return true
     },
   )
@@ -1097,7 +1070,7 @@ test('retries transient network, timeout, 408, 429, and server failures', async 
         pollIntervalMs: 17,
         sleep: async (milliseconds) => sleeps.push(milliseconds),
       })
-      assert.equal(snapshot.size, 6)
+      assert.equal(snapshot.size, 5)
       assert.equal(requests.get('@glucoseiq/core'), 2)
       assert.deepEqual(sleeps, [17])
     })
@@ -1167,24 +1140,6 @@ test('rejects wrong tags, engines, access, internal ranges, peers, signatures, a
       name: 'latest tag',
       mutate(packument) { packument['dist-tags'].latest = '0.9.0' },
       expected: /latest must be 1\.0\.0/u,
-    },
-    {
-      name: 'legacy tag',
-      packageName: 'diabetic-utils',
-      mutate(packument) { packument['dist-tags'].legacy = '2.0.0' },
-      expected: /legacy must remain 1\.5\.0/u,
-    },
-    {
-      name: 'legacy version inventory',
-      packageName: 'diabetic-utils',
-      mutate(packument) { delete packument.versions['1.5.0'] },
-      expected: /must retain diabetic-utils@1\.5\.0/u,
-    },
-    {
-      name: 'legacy deprecation',
-      packageName: 'diabetic-utils',
-      mutate(packument) { packument.versions['1.5.0'].deprecated = 'Use something else' },
-      expected: /diabetic-utils@1\.5\.0 must not be deprecated/u,
     },
     {
       name: 'Node engine',
@@ -1283,7 +1238,7 @@ test('validates tarball digests, required contents, changelog, and packed depend
   })
 })
 
-test('parses npm 11.17 provenance bundles and binds all six packages to the release SHA', async (t) => {
+test('parses npm 11.17 provenance bundles and binds all five packages to the release SHA', async (t) => {
   const result = signatureAuditResult()
   const commits = verifySignatureAudit(
     JSON.stringify(result),
@@ -1380,7 +1335,7 @@ test('parses npm 11.17 provenance bundles and binds all six packages to the rele
   missingPackage.verified.pop()
   assert.throws(
     () => verifySignatureAudit(JSON.stringify(missingPackage), LAUNCH_PACKAGES, auditOptions()),
-    /did not verify diabetic-utils@2\.0\.0/u,
+    /did not verify @glucoseiq\/cli@1\.0\.0/u,
   )
   assert.throws(
     () => verifySignatureAudit('{', LAUNCH_PACKAGES, auditOptions()),
@@ -1595,12 +1550,12 @@ test('runs tarball, signature, release, and registry consumer checks in a safe d
   assert.deepEqual(result.packages, LAUNCH_PACKAGES.map(({ name, version }) => `${name}@${version}`))
   assert.equal(result.releaseSha, releaseSha)
   assert.deepEqual(output, [
-    'Verified registry metadata for 6 launch packages.',
-    'Verified tarball integrity and contents for 6 launch packages.',
-    'Verified registry signatures and provenance for 6 launch packages.',
-    'Verified 6 Git tags and 6 GitHub releases.',
+    'Verified registry metadata for 5 launch packages.',
+    'Verified tarball integrity and contents for 5 launch packages.',
+    'Verified registry signatures and provenance for 5 launch packages.',
+    'Verified 5 Git tags and 5 GitHub releases.',
     'Verified the exact-version registry consumer matrix.',
-    'GlucoseIQ post-publication verification passed for 6 packages.',
+    'GlucoseIQ post-publication verification passed for 5 packages.',
   ])
 
   const auditIndex = harness.events.findIndex((entry) => entry.startsWith('command:npm:audit'))
@@ -1635,11 +1590,11 @@ test('registry-evidence-only mode verifies immutable npm evidence without requir
   assert.deepEqual(result.packages, LAUNCH_PACKAGES.map(({ name, version }) => `${name}@${version}`))
   assert.equal(result.releaseSha, releaseSha)
   assert.deepEqual(output, [
-    'Verified registry metadata for 6 launch packages.',
-    'Verified tarball integrity and contents for 6 launch packages.',
-    'Verified registry signatures and provenance for 6 launch packages.',
+    'Verified registry metadata for 5 launch packages.',
+    'Verified tarball integrity and contents for 5 launch packages.',
+    'Verified registry signatures and provenance for 5 launch packages.',
     'Verified the exact-version registry consumer matrix.',
-    'GlucoseIQ registry-evidence verification passed for 6 packages.',
+    'GlucoseIQ registry-evidence verification passed for 5 packages.',
   ])
 
   assert.deepEqual(

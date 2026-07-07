@@ -140,16 +140,6 @@ assert.match(
   publish,
   /verification_packages=\$\{JSON\.stringify\(verificationPackages\)\}/u,
 )
-assert.match(
-  publish,
-  /includes_compatibility=\$\{verificationPackages\.some\(\(\{ name \}\) => name === 'diabetic-utils'\)\}/u,
-  'legacy tagging must follow the full verification plan when Changesets reports only a partial publication inventory',
-)
-assert.doesNotMatch(
-  publish,
-  /includes_compatibility=\$\{reportedPackages\.some/u,
-  'a partial Changesets report must not suppress compatibility-package legacy tagging',
-)
 assert.match(publish, /inventory\.reportedPackages/u)
 assert.match(publish, /inventory\.verificationPackages/u)
 assert.doesNotMatch(publish, /continue-on-error:/u)
@@ -158,20 +148,6 @@ assert.doesNotMatch(
   publish.slice(publish.indexOf('name: Resolve publication inventory')),
   /(?:changeset|npm) publish/u,
   'post-attempt recovery must inventory existing state rather than republish',
-)
-assert.match(
-  publish,
-  /if: \$\{\{ !cancelled\(\) && steps\.publication-inventory\.outputs\.includes_compatibility == 'true' \}\}/u,
-)
-assert.match(publish, /CURRENT_LEGACY=\$\(npm view diabetic-utils dist-tags\.legacy/u)
-assert.match(publish, /if ! CURRENT_LEGACY=\$\(npm view diabetic-utils dist-tags\.legacy/u)
-assert.doesNotMatch(publish, /dist-tags\.legacy[\s\S]{0,120}\|\| true/u)
-assert.match(publish, /if \[ "\$CURRENT_LEGACY" != "1\.5\.0" \]; then/u)
-assert.match(publish, /if \[ -z "\$\{NODE_AUTH_TOKEN:-\}" \]; then/u)
-assert.ok(
-  publish.indexOf('npm view diabetic-utils dist-tags.legacy') <
-    publish.indexOf('npm dist-tag add diabetic-utils@1.5.0 legacy'),
-  'legacy tagging must be idempotent after the bootstrap credential is removed',
 )
 assert.match(publish, /name: Remove npm authentication/u)
 assert.match(publish, /scrubUserNpmAuth/u)
@@ -190,11 +166,6 @@ assert.match(
   publish,
   /steps\.npm-auth-cleanup\.outcome == 'success'/u,
   'registry verification must not run unless npm authentication cleanup succeeds',
-)
-assert.ok(
-  publish.indexOf('name: Preserve legacy npm release') <
-    publish.indexOf('name: Remove npm authentication'),
-  'npm authentication cleanup must run after the legacy-tag attempt',
 )
 assert.ok(
   publish.indexOf('name: Remove npm authentication') <
@@ -274,7 +245,7 @@ for (const checklistItem of [
   'one-day npm credential',
   'public metadata scan',
   'final publication approval',
-  'trusted publisher configured for all six packages',
+  'trusted publisher configured for all five packages',
   'repository npm secret removed',
 ]) {
   assert.match(

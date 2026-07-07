@@ -162,19 +162,6 @@ importers:
         specifier: ^3.2.7
         version: 3.2.7(@types/debug@4.1.13)(@types/node@24.13.3)(@vitest/ui@3.2.7)(jiti@2.7.0)(jsdom@26.1.0(supports-color@7.2.0))(lightningcss@1.32.0)(supports-color@7.2.0)(yaml@2.8.3)
 
-  packages/diabetic-utils:
-    dependencies:
-      '@glucoseiq/core':
-        specifier: workspace:^
-        version: link:../core
-    devDependencies:
-      tsup:
-        specifier: ^8.4.0
-        version: 8.4.0(jiti@2.7.0)(postcss@8.5.18)(supports-color@7.2.0)(typescript@5.8.3)(yaml@2.8.3)
-      typescript:
-        specifier: ^5.8.3
-        version: 5.8.3
-
   packages/react:
     dependencies:
       '@glucoseiq/core':
