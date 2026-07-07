@@ -1,0 +1,1114 @@
+.reportEntrance,
+.reportSection,
+.reportFigure,
+.reportGrid,
+.supportDeck,
+.reportPanel {
+  min-width: 0;
+}
+
+.reportEntrance {
+  width: 100%;
+}
+
+.reportSection {
+  width: min(calc(100% - clamp(32px, 5vw, 72px)), 1400px);
+  margin: clamp(96px, 13vw, 172px) auto 0;
+}
+
+.reportIntro {
+  width: min(100%, 1120px);
+  margin: 0 auto clamp(46px, 6vw, 72px);
+}
+
+.reportIntro h2 {
+  max-width: 12ch;
+  margin: 0;
+  color: var(--home-ink);
+  font-size: clamp(2.75rem, 6vw, 5.5rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+.reportIntro p {
+  max-width: 43rem;
+  margin: 20px 0 0;
+  color: rgb(174 174 178 / 88%);
+  font-size: clamp(1rem, 1.5vw, 1.1875rem);
+  letter-spacing: -0.008em;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.reportFigure {
+  position: relative;
+  isolation: isolate;
+  margin: 0;
+  overflow: clip;
+  border: 1px solid rgb(255 255 255 / 11%);
+  border-radius: 32px;
+  color: var(--home-ink);
+  background:
+    radial-gradient(
+      72% 85% at 48% -44%,
+      rgb(255 69 58 / 8%),
+      transparent 62%
+    ),
+    radial-gradient(
+      58% 78% at 104% 98%,
+      rgb(255 159 10 / 3%),
+      transparent 68%
+    ),
+    linear-gradient(180deg, #111113 0%, #0d0d0f 100%);
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 3%),
+    0 30px 100px rgb(0 0 0 / 20%);
+  font-variant-numeric: tabular-nums;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  margin: -1px;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.reportGrid {
+  display: grid;
+  overflow: visible;
+}
+
+.reportPanel {
+  position: relative;
+  overflow: clip;
+}
+
+.tracePanel {
+  min-height: 518px;
+  background: transparent;
+}
+
+.supportDeck {
+  position: relative;
+  display: grid;
+  grid-template-columns:
+    minmax(0, 3fr)
+    minmax(0, 4fr)
+    minmax(0, 5fr);
+  overflow: clip;
+  border-top: 1px solid rgb(255 255 255 / 9%);
+  background:
+    linear-gradient(
+      145deg,
+      rgb(255 255 255 / 2.5%),
+      transparent 34%
+    ),
+    rgb(255 255 255 / 1%);
+}
+
+.supportDeck > .reportPanel + .reportPanel {
+  border-left: 1px solid rgb(255 255 255 / 9%);
+}
+
+.gmiPanel,
+.tirPanel,
+.agpPanel {
+  min-height: 448px;
+  padding: 28px 26px;
+  background: transparent;
+}
+
+.panelHeader,
+.traceHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.panelHeader {
+  gap: 18px;
+}
+
+.panelEyebrow {
+  margin: 0;
+  color: rgb(174 174 178 / 84%);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.4;
+}
+
+.panelHeader h3 {
+  margin: 0;
+  color: var(--home-ink);
+  font-size: clamp(1.45rem, 2.3vw, 1.9rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.panelSubhead {
+  margin: 8px 0 0;
+  color: rgb(174 174 178 / 80%);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.panelMetric {
+  display: flex;
+  flex: none;
+  gap: 18px;
+  margin: 0;
+  text-align: right;
+}
+
+.panelMetric div {
+  min-width: 0;
+}
+
+.panelMetric dt {
+  color: rgb(174 174 178 / 78%);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.panelMetric dd {
+  margin: 4px 0 0;
+  color: var(--home-ink);
+  font-size: 0.875rem;
+  font-weight: 550;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.traceHeader {
+  gap: clamp(42px, 8vw, 112px);
+  align-items: flex-end;
+  padding: 32px 38px 20px;
+}
+
+.currentReading {
+  min-width: 210px;
+}
+
+.readingValue {
+  display: flex;
+  gap: 11px;
+  align-items: baseline;
+  margin-top: 12px;
+}
+
+.readingValue strong {
+  font-size: clamp(4rem, 7vw, 5.75rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 0.88;
+}
+
+.readingValue span {
+  color: rgb(174 174 178 / 84%);
+  font-size: 0.8125rem;
+}
+
+.readingStatus {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  margin: 21px 0 0;
+  color: rgb(174 174 178 / 84%);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.trendArrow {
+  color: var(--home-ink);
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.statusCheck {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  margin-left: 3px;
+  color: var(--home-green);
+}
+
+.traceContext {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(150px, 0.65fr);
+  gap: clamp(28px, 5vw, 62px);
+  width: min(100%, 560px);
+}
+
+.traceRange,
+.traceContext strong {
+  display: block;
+  margin: 8px 0 0;
+  color: var(--home-ink);
+  font-size: clamp(0.9375rem, 1.8vw, 1.125rem);
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.traceChart {
+  min-width: 0;
+  padding: 4px 38px 22px;
+}
+
+.tracePlot {
+  position: relative;
+  height: 290px;
+  overflow: visible;
+}
+
+.traceSvg {
+  display: block;
+  width: 100%;
+  height: 290px;
+  overflow: visible;
+}
+
+.traceTarget,
+.traceMask {
+  transform-box: fill-box;
+  transform-origin: left center;
+}
+
+.traceTarget {
+  fill: rgb(48 209 88 / 5%);
+}
+
+.traceThreshold {
+  stroke: rgb(48 209 88 / 22%);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.traceThresholdOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.traceThresholdRow {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 1px;
+}
+
+.traceThresholdRule {
+  display: block;
+  width: 100%;
+  height: 1px;
+  overflow: visible;
+}
+
+.traceThresholdLabel {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  color: rgb(174 174 178 / 80%);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.traceLatestMarker {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  overflow: visible;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.traceLatestLabel {
+  position: absolute;
+  right: 12px;
+  padding: 0;
+  background: transparent;
+  color: var(--home-ink);
+  font-size: 0.8125rem;
+  font-weight: 550;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateY(calc(-100% - 12px));
+}
+
+.traceMask {
+  transform: scaleX(1);
+}
+
+.traceLine {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.25;
+  vector-effect: non-scaling-stroke;
+}
+
+.traceIsolatedPoint {
+  stroke: #0d0d0f;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.traceLatestPoint {
+  color: var(--home-green);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.traceLatestPoint[data-zone='low'] {
+  color: var(--home-red-low);
+}
+
+.traceLatestPoint[data-zone='high'] {
+  color: var(--home-yellow);
+}
+
+.traceLatestRing {
+  fill: #0d0d0f;
+  stroke: currentcolor;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.traceLatestCore {
+  fill: currentcolor;
+}
+
+.traceTimeAxis {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  color: rgb(174 174 178 / 80%);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.gmiDial {
+  position: relative;
+  width: min(100%, 232px);
+  margin: 14px auto 0;
+}
+
+.gmiSvg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.gmiTrack,
+.gmiProgress {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 16;
+}
+
+.gmiTrack {
+  stroke: rgb(255 255 255 / 8%);
+}
+
+.gmiProgress {
+  stroke: #fff;
+  stroke-dasharray:
+    var(--gmi-progress-length)
+    var(--gmi-arc-length);
+  stroke-linecap: butt;
+}
+
+.gmiRoundCap {
+  stroke: #fff;
+  stroke-linecap: round;
+  stroke-width: 16;
+}
+
+.gmiEndCap {
+  opacity: 1;
+}
+
+.gmiSweep {
+  width: 100%;
+  height: 100%;
+  background: conic-gradient(
+    from 230deg,
+    #30d158 0deg,
+    #30d158 26deg,
+    #ffd60a 52deg,
+    #ffd60a 78deg,
+    #ff9f0a 156deg,
+    #ff453a 260deg,
+    #ff453a 267deg,
+    transparent 268deg,
+    transparent 352deg,
+    #30d158 353deg,
+    #30d158 360deg
+  );
+}
+
+.gmiValue {
+  position: absolute;
+  top: 49%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  transform: translate(-50%, -40%);
+}
+
+.gmiValue strong,
+.gmiValue span {
+  display: block;
+}
+
+.gmiValue strong {
+  color: var(--home-ink);
+  font-size: clamp(2.25rem, 4vw, 3rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 0.96;
+}
+
+.gmiValue span {
+  margin-top: 7px;
+  color: rgb(174 174 178 / 80%);
+  font-size: 0.8125rem;
+  line-height: 1;
+}
+
+.gmiScaleLabels {
+  position: absolute;
+  right: 22%;
+  bottom: 3%;
+  left: 22%;
+  display: flex;
+  justify-content: space-between;
+  color: rgb(174 174 178 / 80%);
+  font-size: 0.8125rem;
+}
+
+.panelSummary {
+  margin: 8px 0 0;
+  color: rgb(174 174 178 / 80%);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.gmiPanel .panelSummary {
+  margin-top: -2px;
+}
+
+.tirHeadlineValue {
+  color: var(--home-ink);
+  font-size: clamp(2rem, 4vw, 2.65rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 0.96;
+}
+
+.tirRail {
+  display: flex;
+  width: 100%;
+  height: 18px;
+  margin-top: 27px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 5%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 4%);
+}
+
+.tirSegment {
+  min-width: 0;
+  transform-origin: left center;
+}
+
+.tirVeryLow {
+  background: #b91c1c;
+}
+
+.tirLow {
+  background: #ff6961;
+}
+
+.tirInRange {
+  background: #30d158;
+}
+
+.tirHigh {
+  background: #ffd60a;
+}
+
+.tirVeryHigh {
+  background: #ff9f0a;
+}
+
+.tirLegend {
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tirLegend li {
+  display: grid;
+  min-width: 0;
+  min-height: 44px;
+  grid-template-columns: 3px minmax(76px, 0.85fr) minmax(84px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border-top: 1px solid rgb(255 255 255 / 6%);
+}
+
+.tirSwatch {
+  width: 3px;
+  height: 20px;
+  border-radius: 999px;
+}
+
+.tirZone {
+  color: var(--home-ink);
+  font-size: 0.8125rem;
+  font-weight: 550;
+  line-height: 1.3;
+}
+
+.tirRange,
+.tirPercent {
+  color: rgb(174 174 178 / 80%);
+  font-size: 0.8125rem;
+  line-height: 1.3;
+}
+
+.tirPercent {
+  text-align: right;
+}
+
+.agpChart {
+  position: relative;
+  margin-top: 20px;
+}
+
+.agpSvg {
+  display: block;
+  width: 100%;
+  height: clamp(252px, 19vw, 272px);
+  overflow: visible;
+}
+
+.agpTarget {
+  fill: rgb(48 209 88 / 5%);
+}
+
+.agpThreshold {
+  stroke: rgb(48 209 88 / 22%);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.profileColumn {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+
+.profileStem {
+  stroke: rgb(255 255 255 / 38%);
+  stroke-linecap: round;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.profileCapsule {
+  stroke: rgb(255 255 255 / 66%);
+  stroke-linecap: round;
+  stroke-width: 11;
+  vector-effect: non-scaling-stroke;
+}
+
+.profileMedian {
+  stroke: #f5f5f7;
+  stroke-linecap: round;
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.agpTargetLabel {
+  display: block;
+  margin: 0 0 9px;
+  color: rgb(174 174 178 / 82%);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: right;
+}
+
+.agpAxis {
+  position: relative;
+  height: 1.4em;
+  margin-top: 8px;
+  color: rgb(174 174 178 / 80%);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.agpAxis span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.agpAxis span:first-child {
+  transform: none;
+}
+
+.agpAxis span:last-child {
+  transform: translateX(-100%);
+}
+
+.agpLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  margin-top: 15px;
+  color: rgb(174 174 178 / 80%);
+  font-size: 0.8125rem;
+  line-height: 1.3;
+}
+
+.agpLegend span {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.agpLegend i {
+  display: block;
+}
+
+.profileMedianKey {
+  width: 13px;
+  height: 2px;
+  border-radius: 999px;
+  background: #f5f5f7;
+}
+
+.profileCapsuleKey {
+  width: 7px;
+  height: 12px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 30%);
+}
+
+.profileStemKey {
+  width: 3px;
+  height: 15px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 18%);
+}
+
+.reportCaption {
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  border-top: 1px solid rgb(255 255 255 / 9%);
+  margin: 0;
+  padding: 16px 32px 18px;
+  color: rgb(174 174 178 / 78%);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+@keyframes reportShellIn {
+  0% {
+    opacity: 0.001;
+    filter: blur(1.5px);
+    transform: translate3d(0, 14px, 0) scale(0.985);
+  }
+
+  58% {
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes reportShellInNoBlur {
+  from {
+    opacity: 0.001;
+    transform: translate3d(0, 14px, 0) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes reportRevealX {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes reportRevealClip {
+  from {
+    clip-path: inset(0 100% 0 0 round 999px);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0 round 999px);
+  }
+}
+
+@keyframes reportFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes reportAnalyticsIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes reportPointIn {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes reportLabelIn {
+  from {
+    opacity: 0;
+    transform: translate(8px, calc(-100% - 12px));
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(0, calc(-100% - 12px));
+  }
+}
+
+@keyframes gmiReveal {
+  from {
+    stroke-dasharray: 0 var(--gmi-arc-length);
+  }
+
+  to {
+    stroke-dasharray:
+      var(--gmi-progress-length)
+      var(--gmi-arc-length);
+  }
+}
+
+@keyframes profileColumnIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scaleY(0.82);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+.reportEntrance[data-entrance-state='armed'] .reportFigure {
+  opacity: 0.001;
+  filter: blur(1.5px);
+  transform: translate3d(0, 14px, 0) scale(0.985);
+}
+
+.reportEntrance[data-entrance-state='armed'] .traceTarget,
+.reportEntrance[data-entrance-state='armed'] .traceLatestPoint,
+.reportEntrance[data-entrance-state='armed'] .traceLatestLabel {
+  opacity: 0;
+}
+
+.reportEntrance[data-entrance-state='armed'] .traceMask {
+  transform: scaleX(0);
+}
+
+.reportEntrance[data-entrance-state='armed'] .supportDeck > .reportPanel {
+  opacity: 0;
+  transform: translate3d(0, 8px, 0);
+}
+
+.reportEntrance[data-entrance-state='armed'] .gmiProgress {
+  stroke-dasharray: 0 var(--gmi-arc-length);
+}
+
+.reportEntrance[data-entrance-state='armed'] .gmiEndCap {
+  opacity: 0;
+}
+
+.reportEntrance[data-entrance-state='armed'] .tirRail {
+  clip-path: inset(0 100% 0 0 round 999px);
+}
+
+.reportEntrance[data-entrance-state='armed'] .profileColumn {
+  opacity: 0;
+  transform: translateY(6px) scaleY(0.82);
+}
+
+.reportEntrance[data-entrance-state='revealing'] .reportFigure {
+  animation: reportShellIn 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, transform;
+}
+
+.reportEntrance[data-entrance-state='revealing'] .traceTarget {
+  animation: reportFadeIn 280ms 80ms ease-out both;
+}
+
+.reportEntrance[data-entrance-state='revealing'] .traceMask {
+  animation: reportRevealX 850ms 240ms cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+
+.reportEntrance[data-entrance-state='revealing'] .traceLatestPoint {
+  animation: reportPointIn 220ms 980ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.reportEntrance[data-entrance-state='revealing'] .traceLatestLabel {
+  animation: reportLabelIn 220ms 980ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.reportEntrance[data-entrance-state='revealing'] .supportDeck > .reportPanel {
+  animation: reportAnalyticsIn 420ms 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.reportEntrance[data-entrance-state='revealing'] .gmiProgress {
+  animation: gmiReveal 700ms 720ms cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+
+.reportEntrance[data-entrance-state='revealing'] .gmiEndCap {
+  animation: reportFadeIn 80ms 1360ms ease-out both;
+}
+
+.reportEntrance[data-entrance-state='revealing'] .tirRail {
+  animation: reportRevealClip 460ms 720ms cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+
+.reportEntrance[data-entrance-state='revealing'] .profileColumn {
+  animation: profileColumnIn 420ms var(--profile-delay)
+    cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (hover: none), (pointer: coarse), (max-width: 960px) {
+  .reportEntrance[data-entrance-state='armed'] .reportFigure {
+    filter: none;
+  }
+
+  .reportEntrance[data-entrance-state='revealing'] .reportFigure {
+    animation-name: reportShellInNoBlur;
+  }
+}
+
+@media (max-width: 1100px) {
+  .supportDeck {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 4fr);
+  }
+
+  .agpPanel {
+    grid-column: 1 / -1;
+    min-height: 390px;
+    border-top: 1px solid rgb(255 255 255 / 9%);
+    border-left: 0 !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .reportSection {
+    width: min(100% - 32px, 1200px);
+  }
+
+  .traceHeader {
+    display: grid;
+    gap: 30px;
+  }
+
+  .traceContext {
+    width: 100%;
+  }
+
+  .traceChart {
+    padding-inline: 22px;
+  }
+
+  .reportCaption {
+    display: grid;
+    gap: 2px;
+    padding-inline: 22px;
+  }
+}
+
+@media (max-width: 620px) {
+  .reportSection {
+    width: min(100% - 24px, 1200px);
+  }
+
+  .reportFigure {
+    border-radius: 24px;
+  }
+
+  .supportDeck {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .supportDeck > .reportPanel + .reportPanel {
+    border-top: 1px solid rgb(255 255 255 / 9%);
+    border-left: 0;
+  }
+
+  .tracePanel {
+    min-height: 520px;
+  }
+
+  .gmiPanel,
+  .tirPanel,
+  .agpPanel {
+    min-height: 0;
+    padding: 24px 22px;
+  }
+
+  .traceHeader {
+    padding: 27px 22px 19px;
+  }
+
+  .traceContext {
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  .tracePlot,
+  .traceSvg {
+    height: 230px;
+  }
+
+  .traceLatestLabel {
+    right: 5px;
+  }
+
+  .traceTimeAxis [data-minor='true'] {
+    display: none;
+  }
+
+  .gmiDial {
+    width: min(82%, 250px);
+  }
+
+  .tirLegend li {
+    grid-template-columns: 3px minmax(78px, 0.9fr) minmax(82px, 1fr) auto;
+  }
+
+  .agpPanel {
+    grid-column: auto;
+  }
+
+  .agpPanel .panelHeader {
+    flex-wrap: wrap;
+  }
+
+  .agpSvg {
+    height: 220px;
+  }
+
+  .agpAxis [data-minor='true'] {
+    display: none;
+  }
+
+  .reportEntrance[data-entrance-state='armed'] .supportDeck > .reportPanel,
+  .reportEntrance[data-entrance-state='armed'] .profileColumn {
+    opacity: 1;
+    transform: none;
+  }
+
+  .reportEntrance[data-entrance-state='armed'] .gmiProgress {
+    stroke-dasharray:
+      var(--gmi-progress-length)
+      var(--gmi-arc-length);
+  }
+
+  .reportEntrance[data-entrance-state='armed'] .gmiEndCap {
+    opacity: 1;
+  }
+
+  .reportEntrance[data-entrance-state='armed'] .tirRail {
+    clip-path: inset(0 0 0 0 round 999px);
+  }
+
+  .reportEntrance[data-entrance-state='revealing'] .supportDeck > .reportPanel,
+  .reportEntrance[data-entrance-state='revealing'] .profileColumn,
+  .reportEntrance[data-entrance-state='revealing'] .gmiProgress,
+  .reportEntrance[data-entrance-state='revealing'] .gmiEndCap,
+  .reportEntrance[data-entrance-state='revealing'] .tirRail {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reportEntrance .reportFigure,
+  .reportEntrance [data-motion-part],
+  .reportEntrance .supportDeck > .reportPanel,
+  .reportEntrance .profileColumn {
+    animation: none;
+    filter: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .reportEntrance .traceMask {
+    transform: scaleX(1);
+  }
+
+  .reportEntrance .tirRail {
+    clip-path: inset(0 0 0 0 round 999px);
+  }
+
+  .reportEntrance .traceLatestLabel {
+    transform: translateY(calc(-100% - 12px));
+  }
+
+  .reportEntrance .gmiProgress {
+    stroke-dasharray:
+      var(--gmi-progress-length)
+      var(--gmi-arc-length);
+  }
+}

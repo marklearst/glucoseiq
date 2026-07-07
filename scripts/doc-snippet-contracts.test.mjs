@@ -329,30 +329,37 @@ test('the visible homepage sample is explicitly marked and standalone', () => {
   assert.equal(result.diagnostics.length, 0, formatSnippetDiagnostics(result.diagnostics))
 })
 
-test('homepage signal and UI examples pair visual shorthand with semantic text', () => {
+test('homepage report and UI examples pair visual shorthand with semantic text', () => {
   const homepage = readTracked('apps/docs/app/(home)/page.tsx')
-  const signalFigure = readTracked(
-    'apps/docs/app/(home)/glucose-signal-figure.tsx'
+  const reportSuite = readTracked(
+    'apps/docs/app/(home)/glucose-report-suite.tsx'
   )
   const glucoseTrace = readTracked(
     'apps/docs/app/(home)/glucose-trace.tsx'
   )
-  assert.match(homepage, /<GlucoseSignalFigure/u)
+  const gmi = readTracked('apps/docs/app/(home)/gmi-scale.tsx')
+  const timeInRange = readTracked(
+    'apps/docs/app/(home)/time-in-range-distribution.tsx'
+  )
+  const dailyProfile = readTracked(
+    'apps/docs/app/(home)/agp-profile.tsx'
+  )
+  assert.match(homepage, /<GlucoseReportSuite/u)
   assert.match(
-    signalFigure,
-    /<figure\s+className=\{styles\.signalInstrument\}\s+data-motion-part="instrument"\s*>/u
+    reportSuite,
+    /<figure className=\{styles\.reportFigure\} data-motion-part="report">/u
   )
   assert.match(
-    signalFigure,
-    /<figcaption\s+className=\{styles\.signalCaption\}\s+data-motion-part="caption"\s*>/u
+    reportSuite,
+    /<figcaption className=\{styles\.reportCaption\}>/u
   )
   assert.match(
-    signalFigure,
-    /Synthetic\s+14-day report with its latest 24-hour trace\./u
+    reportSuite,
+    /Synthetic data\. Not clinically representative\./u
   )
   assert.match(
-    signalFigure,
-    /<GlucoseTrace geometry=\{geometry\} \/>/u
+    reportSuite,
+    /<GlucoseTrace geometry=\{traceGeometry\} \/>/u
   )
   assert.match(
     glucoseTrace,
@@ -366,7 +373,19 @@ test('homepage signal and UI examples pair visual shorthand with semantic text',
     glucoseTrace,
     /target\s+range is 70 to 180 milligrams per deciliter/u
   )
-  assert.match(signalFigure, /mg\/dL/u)
+  assert.match(
+    gmi,
+    /aria-label=\{`GMI estimate: \$\{value\} percent/u
+  )
+  assert.match(
+    timeInRange,
+    /aria-label=\{`Of \$\{total\.toLocaleString\('en-US'\)\} synthetic readings`/u
+  )
+  assert.match(
+    dailyProfile,
+    /aria-labelledby=\{`\$\{titleId\} \$\{descriptionId\}`\}/u
+  )
+  assert.match(reportSuite, /mg\/dL/u)
   assert.match(homepage, /aria-label="Package documentation"/u)
   assert.doesNotMatch(homepage, /className=\{styles\.chartPanel\}/u)
   assert.doesNotMatch(homepage, /className=\{styles\.recentReadings\}/u)

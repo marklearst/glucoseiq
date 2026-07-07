@@ -11,7 +11,12 @@ import {
   convertGlucoseUnit,
 } from '../src/conversions'
 import { GlucoseUnit } from '../src/types'
-import { MG_DL, MMOL_L } from '../src/constants'
+import {
+  GMI_COEFFICIENTS,
+  MGDL_MMOLL_CONVERSION,
+  MG_DL,
+  MMOL_L,
+} from '../src/constants'
 
 describe('Conversions', () => {
   describe('A1C and Average Glucose', () => {
@@ -32,6 +37,10 @@ describe('Conversions', () => {
       expect(estimateEAG(7)).toBe(154)
       expect(estimateEAG(8)).toBe(183)
       expect(() => estimateEAG(-1)).toThrow('A1C must be positive')
+      expect(() => estimateEAG(0)).toThrow('A1C must be positive')
+      expect(() => estimateEAG(Number.NaN)).toThrow(
+        'A1C must be positive'
+      )
     })
 
     it('estimates A1C from average glucose with different units', () => {
@@ -50,19 +59,43 @@ describe('Conversions', () => {
 
   describe('GMI Calculations', () => {
     it('estimates GMI from number input', () => {
-      expect(estimateGMI(100, MG_DL)).toBeCloseTo(5.4, 1)
+      expect(estimateGMI(100, MG_DL)).toBeCloseTo(5.7, 1)
       expect(estimateGMI(154, MG_DL)).toBeCloseTo(7.0, 1)
-      expect(estimateGMI(5.5, MMOL_L)).toBeCloseTo(12.1, 1)
+      expect(estimateGMI(5.5, MMOL_L)).toBeCloseTo(5.7, 1)
     })
 
     it('estimates GMI from string input', () => {
-      expect(estimateGMI('100 mg/dL')).toBeCloseTo(5.4, 1)
-      expect(estimateGMI('5.5 mmol/L')).toBeCloseTo(12.1, 1)
+      expect(estimateGMI('100 mg/dL')).toBeCloseTo(5.7, 1)
+      expect(estimateGMI('5.5 mmol/L')).toBeCloseTo(5.7, 1)
     })
 
     it('estimates GMI from options object', () => {
-      expect(estimateGMI({ value: 100, unit: MG_DL })).toBeCloseTo(5.4, 1)
-      expect(estimateGMI({ value: 5.5, unit: MMOL_L })).toBeCloseTo(12.1, 1)
+      expect(estimateGMI({ value: 100, unit: MG_DL })).toBeCloseTo(5.7, 1)
+      expect(estimateGMI({ value: 5.5, unit: MMOL_L })).toBeCloseTo(5.7, 1)
+    })
+
+    it.each([54, 72.75, 100, 154, 180, 250])(
+      'returns the same GMI for %s mg/dL in either glucose unit',
+      (mgDl) => {
+        expect(estimateGMI(mgDl, MG_DL)).toBe(
+          estimateGMI(mgDl / 18.0182, MMOL_L)
+        )
+      }
+    )
+
+    it('keeps the public mmol/L coefficient aligned with unit-normalized GMI', () => {
+      const mmolL = 5.2
+      const directEstimate = Number(
+        (
+          GMI_COEFFICIENTS.MMOL_L_INTERCEPT +
+          GMI_COEFFICIENTS.MMOL_L_SLOPE * mmolL
+        ).toFixed(1)
+      )
+
+      expect(GMI_COEFFICIENTS.MMOL_L_SLOPE).toBe(
+        GMI_COEFFICIENTS.MG_DL_SLOPE * MGDL_MMOLL_CONVERSION
+      )
+      expect(directEstimate).toBe(estimateGMI(mmolL, MMOL_L))
     })
 
     it('handles GMI calculation errors', () => {
@@ -83,10 +116,11 @@ describe('Conversions', () => {
       )
     })
 
-    it('converts A1C to GMI', () => {
-      expect(a1cToGMI(7)).toBeCloseTo(3.48, 2)
-      expect(a1cToGMI(5)).toBeCloseTo(3.43, 2)
-      expect(a1cToGMI(9)).toBeCloseTo(3.53, 2)
+    it('maps legacy A1C input through eAG before estimating GMI', () => {
+      expect(a1cToGMI(7)).toBe(7)
+      expect(a1cToGMI(5)).toBe(5.6)
+      expect(a1cToGMI(9)).toBe(8.4)
+      expect(() => a1cToGMI(0)).toThrow('A1C must be positive')
     })
   })
 

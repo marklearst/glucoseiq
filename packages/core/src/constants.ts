@@ -55,29 +55,33 @@ export const A1C_TO_EAG_MULTIPLIER = 28.7
 export const A1C_TO_EAG_CONSTANT = 46.7
 
 /**
- * GMI (Glucose Management Indicator) calculation coefficients.
- * @see https://diatribe.org/glucose-management-indicator-gmi
- */
-export const GMI_COEFFICIENTS = {
-  /** Slope for mmol/L to GMI conversion */
-  MMOL_L_SLOPE: 1.57,
-  /** Intercept for mmol/L to GMI conversion */
-  MMOL_L_INTERCEPT: 3.5,
-  /** Slope for mg/dL to GMI conversion */
-  MG_DL_SLOPE: 0.03,
-  /** Intercept for mg/dL to GMI conversion */
-  MG_DL_INTERCEPT: 2.4,
-  /** Slope for A1C to GMI conversion */
-  A1C_SLOPE: 0.02392,
-  /** Intercept for A1C to GMI conversion */
-  A1C_INTERCEPT: 3.31,
-} as const
-
-/**
  * Conversion factor between mg/dL and mmol/L.
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  */
 export const MGDL_MMOLL_CONVERSION = 18.0182
+
+/**
+ * GMI (Glucose Management Indicator) calculation coefficients.
+ *
+ * `A1C_SLOPE` and `A1C_INTERCEPT` are deprecated names retained as aliases
+ * for the mg/dL coefficients. They do not define an A1C-to-GMI conversion.
+ *
+ * @see https://doi.org/10.2337/dc18-1581
+ */
+export const GMI_COEFFICIENTS = {
+  /** Slope for mean CGM glucose in mmol/L after exact unit normalization */
+  MMOL_L_SLOPE: 0.430995344,
+  /** Intercept for mmol/L to GMI conversion */
+  MMOL_L_INTERCEPT: 3.31,
+  /** Slope for mg/dL to GMI conversion */
+  MG_DL_SLOPE: 0.02392,
+  /** Intercept for mg/dL to GMI conversion */
+  MG_DL_INTERCEPT: 3.31,
+  /** @deprecated Legacy alias for `MG_DL_SLOPE`; not an A1C coefficient */
+  A1C_SLOPE: 0.02392,
+  /** @deprecated Legacy alias for `MG_DL_INTERCEPT`; not an A1C coefficient */
+  A1C_INTERCEPT: 3.31,
+} as const
 
 /**
  * String literal for mg/dL glucose unit.

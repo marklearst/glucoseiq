@@ -16,9 +16,9 @@ typography:
   display:
     fontFamily: "-apple-system, BlinkMacSystemFont, SF Pro Display, Segoe UI, sans-serif"
     fontSize: "clamp(3.5rem, 7vw, 6rem)"
-    fontWeight: 700
+    fontWeight: 600
     lineHeight: 0.98
-    letterSpacing: "-0.035em"
+    letterSpacing: "-0.025em"
   body:
     fontFamily: "-apple-system, BlinkMacSystemFont, SF Pro Display, Segoe UI, sans-serif"
     fontSize: "clamp(1.0625rem, 1.6vw, 1.25rem)"
@@ -37,18 +37,18 @@ width:
 motion:
   drop: "700ms fall from above the page with one restrained impact"
   ring: "720ms clockwise reveal, delayed 760ms"
-  signalPassage: "Homepage report only; a completed report is available without JavaScript and for reduced motion."
+  report: "One observer starts one bounded report entrance. The report stays in document flow and never takes over scrolling."
 ---
 
 # Design System: GlucoseIQ Documentation
 
 ## 1. Direction
 
-The homepage uses one black surface from navigation through footer. A compact glucose instrument gives visitors the first concrete proof of package output without pretending to be a finished application. The typed report, ownership boundary, and package index follow in flat sections separated by thin rules.
+The homepage uses one black surface from navigation through footer. A four-view glucose report gives visitors concrete proof of package output without pretending to be a finished application. The shared reading set, typed report, ownership boundary, and package index follow in flat sections separated by thin rules.
 
 The design takes its cues from precise software documentation: direct system type, generous spacing, sharp alignment, and controls with a small fixed radius. Glucose range colors appear in the mark and data visual. The rest of the page stays black, white, and muted gray.
 
-Avoid canned landing-page patterns: centered gradient text, card walls, fake terminal controls, decorative status metrics, frosted cards, repeated labels, and broad scroll effects. Blur belongs only to the sticky navigation boundary. The shallow red field below it is atmosphere, not a section background.
+Avoid canned landing-page patterns: centered gradient text, card walls, fake terminal controls, decorative status metrics, repeated labels, and broad scroll effects. A restrained material treatment is allowed inside the report. It should read as one instrument, not a stack of glass cards. The shallow red field below the navigation is atmosphere, not a section background.
 
 ## 2. Color
 
@@ -82,25 +82,31 @@ Use the system mono stack for package names, commands, code, types, and returned
 
 ### Hierarchy
 
-- **Display:** `clamp(3.5rem, 7vw, 6rem)`, weight `700`, line height `0.98`, letter spacing `-0.035em`.
-- **Section heading:** `clamp(2.5rem, 5.2vw, 4.5rem)`, weight `700`, line height `1`.
+- **Display:** `clamp(3.5rem, 7vw, 6rem)`, weight `600`, line height `0.98`, letter spacing `-0.025em`.
+- **Section heading:** `clamp(2.5rem, 5.2vw, 4.5rem)`, weight `600`, line height `1`.
 - **Body:** `clamp(1.0625rem, 1.6vw, 1.25rem)`, line height `1.6`, with a practical reading measure.
+- **Labels and actions:** weight `500` or `550`.
 - **Mono:** `0.8125rem`, line height `1.7`.
 
 Use sentence case. Uppercase remains limited to established terms such as CGM, AGP, GMI, and API. Headings use balanced wrapping; longer copy uses pretty wrapping where supported.
+
+Meaningful report labels do not fall below `13px`. Remove a label before shrinking it into display noise.
 
 ## 4. Layout
 
 - The outer page width stops at `1400px`.
 - Hero copy, sections, captions, and footer stop at `1120px`.
 - The hero is centered with generous top spacing. Its mark is `92px`; its display type never exceeds `96px`.
-- The glucose instrument stops at the content width. Its top row pairs the latest reading with the observed 24-hour and target ranges. A 24-hour trace spans the row below, followed by one shared caption.
+- The glucose report stops at `1400px`. Its top view pairs the latest reading with the observed 24-hour and target ranges above a full-width trace.
+- A joined analytical deck follows in a `3:4:5` grid: GMI scale, five-zone range distribution, and daily percentile profile.
+- On tablet, GMI and time in range stay side by side while the daily profile spans the next row. On phones, the views stack in the order trace, GMI, time in range, and daily profile.
 - Content sections use spacing and one-pixel rules instead of separate surfaces.
 - Code scrolls inside its own region if a line exceeds the available width.
-- At `860px` and below, report columns stack.
+- At `1100px` and below, the daily profile moves below GMI and time in range.
+- At `620px` and below, all report views stack.
 - At `760px` and below, ownership statements, package introductions, package rows, captions, and footer content stack.
 - At `480px` and below, the hero actions stack to full width.
-- The page clips accidental outer overflow. The glucose instrument stacks on narrow screens and does not create horizontal page scrolling.
+- The page clips accidental outer overflow. The glucose report stacks on narrow screens and does not create horizontal page scrolling.
 
 ## 5. Components
 
@@ -113,11 +119,13 @@ Use sentence case. Uppercase remains limited to established terms such as CGM, A
 - Hover feedback runs only when the device reports a fine pointer.
 - Keyboard focus uses a `2px` Accent outline with a `3px` offset.
 
-### Glucose Instrument
+### Glucose Report
 
-The docs build runs `latestReading`, `computeGlucoseTrend`, and `analyzeGlucose` against the repeatable 14-day homepage fixture. The settled frame uses one `#0e0e10` plane with a `24px` radius. Its header identifies latest, observed, and target values. A 2.15-pixel monotone trace covers the latest 24 hours. White marks in-range segments, yellow marks high segments, and red marks low segments.
+The docs build runs `latestReading`, `computeGlucoseTrend`, `analyzeGlucose`, and the AGP metrics against one fixed 14-day homepage fixture. The 24-hour trace reads that fixture directly. The analytical views use its typed report. The first view identifies the latest, observed, and target values. Its trace uses white in range, yellow above range, and red below range.
 
-A 5-percent target field spans the report. The chart uses only 70 and 180 mg/dL hairlines for target boundaries. Four support metrics and one caption complete the frame. The report uses no glow, graph-paper grid, five-part legend, or repeated values. Sensor gaps stay open, isolated readings remain visible as points, and the caption states the time span and synthetic-data limitation.
+The second row is one joined deck rather than three detached cards. The GMI view uses a clean 260-degree open scale from 5–10%+, with a quiet track, continuous gradient, and rounded end. It has no bead, pointer, notch, or decorative marker. Mean glucose belongs in this view. The time-in-range view shows the exact five-zone distribution and keeps every percentage readable outside color. The daily profile uses twelve two-hour columns: a thin 5th–95th percentile stem, a 25th–75th percentile capsule, and a median tick. CV belongs in this view.
+
+Target fields stay quiet and use only the 70 and 180 mg/dL boundaries. Sensor gaps remain open, isolated readings remain visible as points, and one caption states the sample size, generated span, time zone, and synthetic-data limitation. A faint report-level light field and a short focus reveal are allowed; each panel does not get its own glow.
 
 ### Code and Output
 
@@ -140,6 +148,9 @@ The package index uses a full-width list. Every row has a top or bottom hairline
 - Hover styles do not carry required information and do not run on coarse pointers.
 - Text and controls meet WCAG 2.2 AA contrast against the Background color.
 - The glucose trace is a titled SVG image with a text description of the time span, target range, latest value, unit, and synthetic-data limitation.
+- The GMI scale has a text alternative that names the estimate, display scale, mean glucose, and generated span. It is not exposed as task progress.
+- The range distribution names all five zones, thresholds, and percentages.
+- The daily profile has a titled SVG description for its percentile stems, middle-50% capsules, median ticks, target field, CV, span, and time zone.
 - Glucose states pair color with labels, values, or chart position.
 - Content remains visible when animation support is unavailable.
 - The mark runs once on page load. Its outline starts `520px` above its resting position, falls beneath the navigation, takes one restrained impact, and settles before the ring begins.
@@ -147,14 +158,16 @@ The package index uses a full-width list. Every row has a top or bottom hairline
 - Reduced motion renders the finished mark immediately and shortens interaction transitions.
 - The mobile stack keeps outer page scrolling vertical. Code manages its own overflow.
 
-### Signal Passage
+### Report Entrance
 
-Signal Passage is limited to the homepage report. The complete report remains visible without JavaScript. Reduced motion shows the completed report. Other homepage sections do not gain reveal effects. Native page scrolling is never captured, replaced, snapped, or slowed.
+One observer starts one report sequence when the joined surface enters the viewport. The shell settles from a small rise and scale, the trace draws from left to right, and the analytical views follow with short offsets. The full sequence finishes in 1.5 seconds and never pauses, pins, or changes native scrolling.
 
-Signal Passage is the only homepage exception to the broad scroll-effects prohibition. The CSS module `glucose-signal.module.css` defines the `--signal-passage` view timeline after a 900-by-720 gate confirms a suitable viewport. An observer fallback runs once and reveals the completed report. Its normal 25-percent gate steps down when the instrument grows beyond twice the viewport height. The smaller value is half the maximum visible ratio, leaving room for browser chrome and rounding at extreme zoom. While armed, it recalculates after viewport changes so a live zoom cannot leave the report hidden. A scroll-end check latches the final frame if a fast jump skips the completion sentinel. Mobile uses normal flow. The report uses no third-party animation library.
+At `620px` and below, only the shell and trace animate; the lower views render in their finished state. Every entrance plays once per page load and then stays still. CSS owns the sequence; there is no animation runtime.
+
+Without JavaScript, the server-rendered report is complete. Reduced motion renders each view in its finished state. Native scrolling remains unchanged.
 
 ## 7. Use and Avoid
 
-Use the GlucoseIQ mark, one dark page, a compact synthetic-data instrument, direct copy, thin rules, fixed control geometry, flat package rows, visible focus, and one purposeful mark entrance.
+Use the GlucoseIQ mark, one dark page, one four-view synthetic report, direct copy, thin rules, fixed control geometry, flat package rows, visible focus, and short report entrances that suit the current layout.
 
-Avoid card-based section layouts, fake product frames, decorative charts, broad claims, broad scroll effects, or controls that change size during interaction.
+Avoid uniform card walls, fake product frames, decorative charts, broad claims, scroll-fed animation, or controls that change size during interaction.

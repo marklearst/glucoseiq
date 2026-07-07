@@ -32,10 +32,17 @@ console.log(readings.length, traceWithGap.length)
 | `start` | `2024-01-01T00:00:00Z` | ISO timestamp for the first day. |
 | `basal` | `110` | Baseline in mg/dL. |
 | `mealTimes` | `420, 780, 1140` | Meal times as minutes of day. |
-| `mealAmplitude` | `70` | Meal excursion amplitude in mg/dL. |
-| `noise` | `8` | Noise amplitude in mg/dL. |
-| `nocturnalHypoDays` | `[]` | Zero-based days receiving the test dip. |
+| `mealAmplitude` | `70` | Nominal meal excursion amplitude in mg/dL. |
+| `noise` | `8` | Maximum correlated sensor variation in mg/dL. |
+| `nocturnalHypoDays` | `[]` | Zero-based days receiving a smooth 02:00–04:00 dip. |
 | `unit` | `mg/dL` | Output unit, either mg/dL or mmol/L. |
+
+The seed gives each meal its own timing offset (-15 to +25 minutes), peak
+amplitude (65% to 125% of `mealAmplitude`), 40- to 90-minute rise, and
+120- to 210-minute recovery. Meal responses ease in and out instead of
+changing direction sharply. Sensor variation is bounded and carries across
+neighboring readings, while requested nocturnal lows form a smooth two-hour
+depression.
 
 The `steadyDay`, `hypoNight`, `rollercoaster`, and `gappyTrace` scenarios use
 fixed settings and seeds.
@@ -48,9 +55,10 @@ output size before allocating the result.
 
 ## Safety limits
 
-One call is capped at 100,000 readings. The output is synthetic CGM-shaped
-data and is not clinically representative or a substitute for validation with
-real device data. Do not use generated values for medical decisions.
+One call is capped at 100,000 readings and 100,000 seeded meal responses. The
+output is synthetic CGM-shaped data and is not clinically representative or a
+substitute for validation with real device data. Do not use generated values
+for medical decisions.
 
 ## Documentation
 
