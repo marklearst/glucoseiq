@@ -66,9 +66,9 @@ function loadTypeScript() {
     join(MODULE_REPOSITORY_ROOT, 'apps/docs/package.json')
   )
   typescript = requireFromDocs('typescript')
-  if (typescript.version !== '5.8.3') {
+  if (typescript.version !== '5.9.3') {
     throw new Error(
-      `The documentation contract requires TypeScript 5.8.3; resolved ${typescript.version}.`
+      `The documentation contract requires TypeScript 5.9.3; resolved ${typescript.version}.`
     )
   }
   return typescript
@@ -1439,9 +1439,9 @@ export function resolveDocsToolchain({
   const typescriptManifest = readJson(typescriptManifestPath)
   const react18Manifest = readJson(react18ManifestPath)
   const react19Manifest = readJson(react19ManifestPath)
-  if (typescriptManifest.version !== '5.8.3') {
+  if (typescriptManifest.version !== '5.9.3') {
     throw new Error(
-      `Documentation snippets require TypeScript 5.8.3; resolved ${typescriptManifest.version}.`
+      `Documentation snippets require TypeScript 5.9.3; resolved ${typescriptManifest.version}.`
     )
   }
   if (react18Manifest.version !== '18.3.31') {
@@ -1449,9 +1449,9 @@ export function resolveDocsToolchain({
       `React 18 declarations must be exactly 18.3.31; resolved ${react18Manifest.version}.`
     )
   }
-  if (react19Manifest.version !== '19.2.17') {
+  if (react19Manifest.version !== '19.2.18') {
     throw new Error(
-      `React 19 declarations must be exactly 19.2.17; resolved ${react19Manifest.version}.`
+      `React 19 declarations must be exactly 19.2.18; resolved ${react19Manifest.version}.`
     )
   }
   if (realpathSync(react18Root) === realpathSync(react19Root)) {

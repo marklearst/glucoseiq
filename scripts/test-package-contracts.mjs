@@ -68,7 +68,7 @@ const publicEntrypoints = [
 ]
 const reactConsumers = [
   { label: 'React 18', react: '18.3.1', reactTypes: '18.3.31' },
-  { label: 'React 19', react: '19.2.7', reactTypes: '19.2.17' },
+  { label: 'React 19', react: '19.2.8', reactTypes: '19.2.18' },
 ]
 const reactRuntimeExports = [
   'AgpChart',

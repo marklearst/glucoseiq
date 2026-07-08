@@ -211,7 +211,7 @@ function snapshotRegularTree(root) {
   )
 }
 
-test('renders every TypeDoc 0.28.4 type node deliberately', () => {
+test('renders every TypeDoc 0.28.20 type node deliberately', () => {
   const cases = [
     [intrinsic('string'), 'string'],
     [{ type: 'literal', value: 'mg/dL' }, "'mg/dL'"],
@@ -1765,7 +1765,7 @@ test('dedicated TypeDoc config and dependency ownership are exact', () => {
   const corePackage = JSON.parse(
     readFileSync(join(REPO_ROOT, 'packages/core/package.json'), 'utf8'),
   )
-  assert.equal(docsPackage.devDependencies.typedoc, '0.28.4')
+  assert.equal(docsPackage.devDependencies.typedoc, '0.28.20')
   assert.equal(corePackage.devDependencies?.typedoc, undefined)
   assert.equal(corePackage.devDependencies?.['typedoc-plugin-markdown'], undefined)
   assert.equal(corePackage.scripts?.['docs:api'], undefined)
@@ -1773,12 +1773,12 @@ test('dedicated TypeDoc config and dependency ownership are exact', () => {
 
 test('resolves the TypeDoc binary and package version from the docs package', () => {
   const resolved = resolveTypeDocBinary()
-  assert.equal(resolved.version, '0.28.4')
+  assert.equal(resolved.version, '0.28.20')
   assert.equal(
     realpathSync(resolved.binaryPath),
     realpathSync(join(DOCS_DIR, 'node_modules/typedoc/bin/typedoc')),
   )
-  assert.match(realpathSync(resolved.packagePath), /typedoc@0\.28\.4/)
+  assert.match(realpathSync(resolved.packagePath), /typedoc@0\.28\.20/)
 })
 
 test('validates spawn errors, signals, and nonzero statuses', () => {
