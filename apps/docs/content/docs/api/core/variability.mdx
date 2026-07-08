@@ -259,7 +259,8 @@ glucoseCoefficientOfVariation(readings: number[]): number
 Calculates the coefficient of variation (CV) for glucose values.
 CV = (SD / mean) × 100. Used to assess glycemic variability.
 
-**Returns:** Coefficient of variation as a percentage, or NaN if &lt;2 values or mean is 0
+**Returns:** Coefficient of variation as a percentage, or NaN if `readings` is not an array,
+contains fewer than 2 values, or has a mean of 0
 
 **See:** [ADA 2019: Glycemic Targets](https://care.diabetesjournals.org/content/42/8/1593)
 
@@ -270,8 +271,8 @@ const valuesMgDl: number[] = [100, 120, 140]
 const coefficientOfVariation = glucoseCoefficientOfVariation(valuesMgDl)
 ```
 
-**Remarks:** - If readings contains &lt;2 values or mean is 0, returns NaN.
-- Handles NaN/Infinity values by propagating them in the result.
+**Remarks:** Returns NaN when `readings` is not an array, contains fewer than 2 values,
+or has a mean of 0. Arrays containing NaN or infinite values return NaN.
 
 | Parameter | Description |
 | --- | --- |
@@ -463,7 +464,7 @@ Calculates specified percentiles from an array of glucose values using the neare
 
 **Returns:** Object mapping percentile to value, or &#123;&#125; if input is empty
 
-**Throws:** If readings or percentiles is not an array (`INVALID_OPTION`)
+**Throws:** If either readings or percentiles is not an array (`INVALID_OPTION`)
 
 **See:**
 
@@ -478,9 +479,8 @@ const requestedPercentiles: number[] = [10, 50, 90]
 const percentiles = glucosePercentiles(valuesMgDl, requestedPercentiles)
 ```
 
-**Remarks:** - Returns the value at the nearest-rank for each percentile.
-- If readings is empty, returns an empty object.
-- Percentiles outside \[0, 100] are ignored.
+**Remarks:** Returns the nearest-rank value for each percentile. Empty readings return an
+empty object. Percentiles outside \[0, 100] are ignored.
 
 | Parameter | Description |
 | --- | --- |
@@ -501,7 +501,7 @@ glucoseStandardDeviation(readings: number[]): number
 Calculates the unbiased sample standard deviation (SD) of glucose values.
 Uses n-1 in the denominator (sample SD), as recommended in research guidelines.
 
-**Returns:** Standard deviation, or NaN if fewer than 2 values
+**Returns:** Standard deviation, or NaN if `readings` is not an array or contains fewer than 2 values
 
 **See:**
 
@@ -515,8 +515,8 @@ const valuesMgDl: number[] = [100, 120, 140]
 const standardDeviation = glucoseStandardDeviation(valuesMgDl)
 ```
 
-**Remarks:** - If readings contains &lt;2 values, returns NaN (not enough data for SD).
-- Handles NaN/Infinity values by propagating them in the result.
+**Remarks:** Returns NaN when `readings` is not an array or contains fewer than 2 values.
+Arrays containing NaN or infinite values return NaN.
 
 | Parameter | Description |
 | --- | --- |

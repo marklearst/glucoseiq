@@ -31,3 +31,7 @@ A1C input.
 All five packages require Node 24 or newer. The core runtime and its subpaths
 support ESM and CommonJS consumers with format-specific TypeScript declaration
 routes.
+
+Core source documentation and the generated API reference now use direct
+descriptions and document existing return behavior for variability metrics.
+The variability calculations and public API signatures are unchanged.
