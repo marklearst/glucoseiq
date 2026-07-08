@@ -65,7 +65,7 @@ const { rocPerMin, trend } = computeGlucoseTrend(readings)
 **Import:** `@glucoseiq/core`
 
 ```ts fragment="generated API declaration or signature"
-latestReading(readings: GlucoseReading[]): null | GlucoseReading
+latestReading(readings: GlucoseReading[]): GlucoseReading | null
 ```
 
 Returns the most recent fully usable reading by timestamp (readings need not
@@ -86,7 +86,7 @@ or below 600 mg/dL after normalization, and a parseable timestamp.
 **Import:** `@glucoseiq/core`
 
 ```ts fragment="generated API declaration or signature"
-minutesSinceLastReading(readings: GlucoseReading[], now?: string | number | Date): null | number
+minutesSinceLastReading(readings: GlucoseReading[], now?: string | number | Date): number | null
 ```
 
 Returns minutes elapsed since the most recent reading (sensor staleness).
