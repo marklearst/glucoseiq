@@ -1,11 +1,11 @@
 ---
-title: Build a Live Glucose Surface
-description: Combine current readings, derived trend, and sensor staleness without coupling your interface to a CGM vendor.
+title: Build a Live Glucose View
+description: Combine current readings, derived trend, and sensor staleness without tying your interface to one CGM vendor.
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout'
 
-A live glucose experience has two separate jobs:
+A live glucose view has two jobs:
 
 1. Your data layer receives new CGM readings through polling, a subscription,
    or a server-side connector.
@@ -27,17 +27,17 @@ The live view model uses four functions from `@glucoseiq/core`:
 | Function | Use it for |
 | --- | --- |
 | `latestReading` | Find the newest fully usable reading without pre-sorting input |
-| `computeGlucoseTrend` | Fit rate-of-change over a trailing window and classify the trend |
-| `minutesSinceLastReading` | Measure sensor staleness against now or a supplied clock |
+| `computeGlucoseTrend` | Fit a rate of change over a trailing window and classify the trend |
+| `minutesSinceLastReading` | Measure time since the latest reading using the current time or a supplied time |
 | `classifyGlucoseTrend` | Classify an existing mg/dL-per-minute rate |
 
 For React, `useGlucoseLive` combines the first three into one view model.
 
 ## 1. Keep a rolling history
 
-Trend derivation needs at least two valid readings inside its trailing window.
-Keep a small immutable history rather than replacing the array with only the
-newest value. Put the merge helper in `merge-readings.ts`:
+A trend needs at least two valid readings with different timestamps inside its
+trailing window. Keep a small immutable history instead of replacing the array
+with only the newest reading. Put the merge helper in `merge-readings.ts`:
 
 ```ts typecheck
 import type { GlucoseReading } from '@glucoseiq/core'
@@ -61,10 +61,10 @@ export function mergeReadings(
 }
 ```
 
-At a five-minute sensor cadence, 48 readings retain roughly four hours. The
+With one reading every five minutes, 48 readings cover about four hours. The
 default trend fit uses only the trailing 15 minutes.
 
-## 2. Feed it from your data layer
+## 2. Receive readings from your data layer
 
 Fetch readings in your data layer. This polling hook expects normalized
 readings from the endpoint and keeps a rolling window in the client:
@@ -122,7 +122,7 @@ Validate the response in the API route before it reaches this hook. For a
 push-based feed, call the same `mergeReadings` helper when a WebSocket or event
 subscription delivers a new batch.
 
-## 3. Render current glucose, trend, and freshness
+## 3. Show the latest reading, trend, and age
 
 Put the view component in `CurrentGlucose.tsx`:
 
@@ -178,7 +178,7 @@ export function CurrentGlucose({ readings }: CurrentGlucoseProps) {
 }
 ```
 
-Then connect the feed to the surface:
+Then connect the feed to the component:
 
 ```tsx fragment="composes tutorial hooks and components defined earlier in this guide"
 export function LiveGlucose() {
@@ -193,9 +193,9 @@ export function LiveGlucose() {
 }
 ```
 
-<Callout type="info" title="What refreshMs actually does">
-  `refreshMs` updates the staleness clock so “minutes ago” continues to tick
-  while the sensor is quiet. It does not fetch data. New readings must still
+<Callout type="info" title="How refreshMs works">
+  `refreshMs` requests interval renders so “minutes ago” keeps updating while
+  the sensor is quiet. It does not fetch data. New readings must still
   arrive through your polling, subscription, or server-data layer. Omit it to
   disable interval refresh. A provided value must be a whole number of
   milliseconds from `1` through `2_147_483_647`; invalid values throw the typed
@@ -239,5 +239,5 @@ Pass a fixed `now` value in tests to reproduce staleness calculations.
 | New reading arrives | Replace or merge by your stable source identifier, then cap history |
 
 Staleness is product policy, not a hard-coded GlucoseIQ rule. Choose the
-threshold that fits the source cadence and the claims your product is allowed
-to make.
+threshold based on how often the source sends readings and the claims your
+product is allowed to make.
