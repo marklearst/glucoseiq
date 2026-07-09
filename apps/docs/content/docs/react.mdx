@@ -23,7 +23,7 @@ package; use `@glucoseiq/core` directly for server-only work.
 | `useAGPProfile` | Percentile bins across a 24-hour clock | Custom AGP charts in D3, Visx, Canvas, or another renderer |
 | `useGlucoseIQScore` | Score, rating, and zone | A compact wellness summary |
 | `useMealResponse` | Baseline, peak, delta, timing, and iAUC | Post-meal detail views |
-| `useGlucoseLive` | Latest reading, derived trend, and staleness | Current-glucose surfaces |
+| `useGlucoseLive` | Latest reading, derived trend, and staleness | Current glucose views |
 | `AgpChart`, `TirBar`, `TrendTile` | Inline SVG inside a wrapper element | Chart-library-free SVG visuals |
 
 All hooks accept the same `GlucoseReading[]` contract as `@glucoseiq/core`.
@@ -110,7 +110,7 @@ value only advances the staleness clock. It does not poll a CGM source or add
 readings. Your application remains responsible for transport and for updating
 the array when data arrives.
 
-See [Build a Live Glucose Surface](/docs/live) for a polling example and
+See [Build a Live Glucose View](/docs/live) for a polling example and
 failure states.
 
 ## Use the SVG components
