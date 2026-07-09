@@ -61,6 +61,10 @@ export function mergeReadings(
 }
 ```
 
+This helper uses the exact timestamp string as the reading's ID. An incoming
+reading replaces an earlier reading with the same timestamp string. Different
+strings that describe the same time stay separate.
+
 With one reading every five minutes, 48 readings cover about four hours. The
 default trend fit uses only the trailing 15 minutes.
 
@@ -159,7 +163,15 @@ export function CurrentGlucose({ readings }: CurrentGlucoseProps) {
     return <p>No current glucose reading is available.</p>
   }
 
-  const age = Math.max(0, Math.round(live.minutesSince))
+  if (live.minutesSince < 0) {
+    return (
+      <p role="status">
+        The latest reading time is ahead of the current clock.
+      </p>
+    )
+  }
+
+  const age = Math.round(live.minutesSince)
   const isStale = age > 10
   const rate = Number.isFinite(live.trend.rocPerMin)
     ? `${live.trend.rocPerMin.toFixed(1)} mg/dL/min`
@@ -235,8 +247,9 @@ Pass a fixed `now` value in tests to reproduce staleness calculations.
 | No usable reading | Show “No reading” instead of a zero value |
 | Fewer than two recent readings | Show the value with an unknown trend |
 | Reading older than your product threshold | Keep the last value visible and label it stale |
+| Reading time is ahead of the current clock | Show a clock or source-timing problem instead of labeling the reading current |
 | Feed request fails | Preserve the last reading and show connection status separately |
-| New reading arrives | Replace or merge by your stable source identifier, then cap history |
+| New reading arrives | Replace a reading with the same exact timestamp string, then cap history |
 
 Staleness is product policy, not a hard-coded GlucoseIQ rule. Choose the
 threshold based on how often the source sends readings and the claims your

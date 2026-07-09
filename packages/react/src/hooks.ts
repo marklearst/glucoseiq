@@ -95,7 +95,10 @@ export interface GlucoseLive {
   readonly latest: GlucoseReading | null
   /** Derived trend and rate of change. */
   readonly trend: GlucoseTrendResult
-  /** Minutes since the last reading (staleness), or null. */
+  /**
+   * Signed minutes since the last reading, or null. A future timestamp
+   * produces a negative value.
+   */
   readonly minutesSince: number | null
 }
 
@@ -107,7 +110,8 @@ export interface GlucoseLive {
  * The trend updates when React receives a different `readings` array or
  * `options` object. `minutesSince` recalculates on every render. When set,
  * `refreshMs` requests interval renders so reading age can change while the
- * readings stay the same.
+ * readings stay the same. `minutesSince` is negative when the latest usable
+ * reading is later than the current clock.
  *
  * @throws {DomainError} If `refreshMs` is not a whole number of milliseconds from `1` through `2_147_483_647` (`INVALID_OPTION`).
  */
