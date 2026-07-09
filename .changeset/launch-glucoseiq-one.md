@@ -40,3 +40,9 @@ CLI package metadata and docs now describe CGM CSV analysis as command-line
 work that does not require application code. Help text and human-readable
 reports use the same informational disclaimer. Commands, options, exit codes,
 report data, and file output are unchanged.
+
+Core package metadata now lists the analytics it provides and states that core
+has no runtime dependencies. React source documentation now explains how its
+hooks and components use core. It also names React as a peer dependency and core
+as a runtime dependency. Package exports, dependencies, calculations, and
+runtime behavior are unchanged.
