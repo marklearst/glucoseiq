@@ -40,8 +40,8 @@ const DEFAULT_MAX_OUTPUT_BYTES = 512 * 1024
 
 export const MANUAL_FRAGMENT_ALLOWLIST = Object.freeze([
   'apps/docs/content/docs/dashboard.mdx:193:imports the GlucoseDashboard component defined earlier in this guide',
-  'apps/docs/content/docs/live.mdx:73:imports the mergeReadings helper defined earlier in this guide',
-  'apps/docs/content/docs/live.mdx:183:composes tutorial hooks and components defined earlier in this guide',
+  'apps/docs/content/docs/live.mdx:77:imports the mergeReadings helper defined earlier in this guide',
+  'apps/docs/content/docs/live.mdx:195:composes tutorial hooks and components defined earlier in this guide',
 ])
 
 let typescript

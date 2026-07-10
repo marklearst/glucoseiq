@@ -34,7 +34,7 @@ their contents have not changed.
 | --- | --- | --- |
 | `latest` | `GlucoseReading \| null` | Most recent reading |
 | `trend` | `GlucoseTrendResult` | Derived trend and rate of change |
-| `minutesSince` | `number \| null` | Minutes since the latest reading |
+| `minutesSince` | `number \| null` | Signed minutes since the latest reading; negative when its timestamp is ahead of the current clock |
 
 `GlucoseLiveOptions` extends core `GlucoseTrendOptions` and adds optional
 `refreshMs`. Omit it to disable interval refresh. When provided, it must be a

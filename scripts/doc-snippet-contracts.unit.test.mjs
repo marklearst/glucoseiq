@@ -62,8 +62,8 @@ test('shares one frozen, line-stable manual fragment allowlist', () => {
   assert.equal(Object.isFrozen(MANUAL_FRAGMENT_ALLOWLIST), true)
   assert.deepEqual(MANUAL_FRAGMENT_ALLOWLIST, [
     'apps/docs/content/docs/dashboard.mdx:193:imports the GlucoseDashboard component defined earlier in this guide',
-    'apps/docs/content/docs/live.mdx:73:imports the mergeReadings helper defined earlier in this guide',
-    'apps/docs/content/docs/live.mdx:183:composes tutorial hooks and components defined earlier in this guide',
+    'apps/docs/content/docs/live.mdx:77:imports the mergeReadings helper defined earlier in this guide',
+    'apps/docs/content/docs/live.mdx:195:composes tutorial hooks and components defined earlier in this guide',
   ])
 })
 

@@ -248,6 +248,10 @@ describe('minutesSinceLastReading', () => {
     expect(minutesSinceLastReading(readings, '2024-01-01T08:07:00Z')).toBe(7)
   })
 
+  it('returns a negative age when the latest reading is ahead of now', () => {
+    expect(minutesSinceLastReading(readings, '2024-01-01T07:57:00Z')).toBe(-3)
+  })
+
   it('defaults to the current time', () => {
     expect(minutesSinceLastReading(readings)).toBeGreaterThan(0)
   })
