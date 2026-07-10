@@ -3,8 +3,8 @@
  *
  * Aggregate Ambulatory Glucose Profile (AGP) metrics calculator.
  *
- * Computes a selected aggregate set of CGM metrics in one call: mean, SD, CV,
- * LBGI/HBGI, ADRR, GRADE, GRI, J-index, MODD, CONGA, and active percent.
+ * `calculateAGPMetrics` computes mean, SD, CV, LBGI/HBGI, ADRR, GRADE, GRI,
+ * J-index, MODD, CONGA, and active percent.
  *
  * @see https://cran.r-project.org/web/packages/iglu/vignettes/metrics_list.html
  */
@@ -33,7 +33,7 @@ export interface AGPMetricsOptions {
   readonly activePercent?: ActivePercentOptions
 }
 
-/** Selected aggregate AGP metrics result. */
+/** Result of {@link calculateAGPMetrics}. */
 export interface AGPMetricsResult {
   /** Mean glucose in mg/dL */
   readonly meanGlucose: number
@@ -64,15 +64,13 @@ export interface AGPMetricsResult {
 }
 
 /**
- * Calculates a selected aggregate set of AGP metrics from glucose readings.
+ * Calculates the fields in {@link AGPMetricsResult} from glucose readings.
  *
- * This convenience function computes the fields in {@link AGPMetricsResult} in
- * one call. Other public metrics remain available through their focused
- * functions.
+ * Other public metrics remain available through their own functions.
  *
  * @param readings - Array of GlucoseReading objects with timestamps
  * @param options - Optional configuration for individual metrics
- * @returns Selected aggregate AGP metrics result
+ * @returns An {@link AGPMetricsResult} with the calculated fields
  * @throws {EmptyDatasetError} If readings array is empty
  * @throws {DomainError} If a nested metric rejects a reading or option
  */
