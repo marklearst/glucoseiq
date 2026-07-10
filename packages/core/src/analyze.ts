@@ -1,16 +1,15 @@
 /**
  * @file src/analyze.ts
  *
- * One-call CGM analytics summary. `analyzeGlucose` screens one normalized set
- * of readings before calculating its report. The report contains scalar
- * summaries (mean, GMI, CV, and SD), enhanced 5-range TIR and tight-range
- * results, risk and data-sufficiency blocks, episode candidates, and an
- * optional AGP-style percentile-band series.
+ * `analyzeGlucose` filters a normalized set of readings before calculating its
+ * report. The report contains summary metrics (mean, GMI, CV, and SD), enhanced
+ * 5-range TIR and tight-range results, risk metrics, data-sufficiency results,
+ * episode candidates, and an optional AGP-style percentile-band series.
  *
- * The screened set feeds each result block, but individual metrics retain
- * their documented pairing, window, and sufficiency requirements. Input with
- * no usable screened readings returns a typed `valid: false` report rather
- * than throwing.
+ * Each result uses the filtered readings, but each metric keeps its documented
+ * pairing, window, and sufficiency requirements. If filtering leaves no usable
+ * readings, the function returns a typed `valid: false` report instead of
+ * throwing.
  */
 
 import type { GlucoseReading, EnhancedTIRResult } from './types'
@@ -82,11 +81,11 @@ export interface AnalyzeGlucoseResult {
 }
 
 /**
- * Produces a selected CGM analytics summary from glucose readings in one call.
+ * Calculates the fields in {@link AnalyzeGlucoseResult} from glucose readings.
  *
  * @param readings - Glucose readings with ISO 8601 timestamps
  * @param options - Time zone, profile toggle, and sufficiency thresholds
- * @returns A typed report; `valid: false` when no usable readings remain after screening
+ * @returns A typed report; `valid: false` when filtering leaves no usable readings
  *
  * @example
  * ```ts typecheck

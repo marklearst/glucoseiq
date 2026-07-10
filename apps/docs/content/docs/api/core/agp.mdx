@@ -1,6 +1,6 @@
 ---
-title: "AGP & Metrics Aggregate"
-description: "AGP-style percentile-band series and selected aggregate metrics."
+title: "AGP-Style Profiles and Metrics"
+description: "AGP-style percentile-band series and calculated CGM metrics."
 ---
 
 ### buildAGPProfile
@@ -49,13 +49,11 @@ void median
 calculateAGPMetrics(readings: GlucoseReading[], options?: AGPMetricsOptions): AGPMetricsResult
 ```
 
-Calculates a selected aggregate set of AGP metrics from glucose readings.
+Calculates the fields in [AGPMetricsResult](/docs/api/core/types#agpmetricsresult) from glucose readings.
 
-This convenience function computes the fields in [AGPMetricsResult](/docs/api/core/types#agpmetricsresult) in
-one call. Other public metrics remain available through their focused
-functions.
+Other public metrics remain available through their own functions.
 
-**Returns:** Selected aggregate AGP metrics result
+**Returns:** An [AGPMetricsResult](/docs/api/core/types#agpmetricsresult) with the calculated fields
 
 **Throws:** If readings array is empty
 

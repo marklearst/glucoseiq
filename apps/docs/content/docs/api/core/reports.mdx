@@ -1,6 +1,6 @@
 ---
 title: "Reports"
-description: "Selected composed CGM analytics summaries."
+description: "A CGM report with summary metrics, glucose ranges, risk metrics, data sufficiency, episode candidates, and an optional AGP-style profile."
 ---
 
 ### analyzeGlucose
@@ -11,9 +11,9 @@ description: "Selected composed CGM analytics summaries."
 analyzeGlucose(readings: GlucoseReading[], options?: AnalyzeGlucoseOptions): AnalyzeGlucoseResult
 ```
 
-Produces a selected CGM analytics summary from glucose readings in one call.
+Calculates the fields in [AnalyzeGlucoseResult](/docs/api/core/types#analyzeglucoseresult) from glucose readings.
 
-**Returns:** A typed report; `valid: false` when no usable readings remain after screening
+**Returns:** A typed report; `valid: false` when filtering leaves no usable readings
 
 ```ts typecheck
 import { analyzeGlucose, type GlucoseReading } from '@glucoseiq/core'
