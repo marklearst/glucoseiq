@@ -46,16 +46,18 @@ function resolveLibreUnit(flag: unknown): typeof MG_DL | typeof MMOL_L {
 export function normalizeLibreTrend(
   trend: number | null | undefined
 ): CGMTrend {
-  if (trend == null) {
-    return 'unknown'
-  }
-
   // LibreTrendValue is defined as 1–5; anything else is treated as unknown.
-  if (trend < 1 || trend > 5) {
+  if (
+    typeof trend !== 'number' ||
+    !Number.isFinite(trend) ||
+    !Number.isInteger(trend) ||
+    trend < 1 ||
+    trend > 5
+  ) {
     return 'unknown'
   }
 
-  return LIBRE_TREND_MAP[trend as LibreTrendValue] ?? 'unknown'
+  return LIBRE_TREND_MAP[trend as LibreTrendValue]
 }
 
 /**
