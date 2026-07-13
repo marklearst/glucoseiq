@@ -11,6 +11,7 @@
 
 import { MG_DL } from '../constants'
 import { TimestampError } from '../errors'
+import { toUsableMgDl } from '../reading-policy'
 import type {
   DexcomShareEntry,
   DexcomTrendString,
@@ -40,17 +41,27 @@ const DEXCOM_TREND_MAP: Record<DexcomTrendString, CGMTrend> = {
  * @throws {TimestampError} If the date string cannot be parsed
  */
 export function parseDexcomDate(raw: string): string {
-  const parseErrorMessage = `Unable to parse Dexcom date: ${raw}`
-  const epochMatch = raw.match(/Date\((\d+)\)/)
+  const parseErrorMessage = `Unable to parse Dexcom date: ${String(raw)}`
+  if (typeof raw !== 'string') {
+    throw new TimestampError(parseErrorMessage)
+  }
+  const epochMatch = raw.match(
+    /^(?:Date\((\d+)\)|\/Date\((\d+)\)\/)$/
+  )
   if (epochMatch) {
-    const date = new Date(Number(epochMatch[1]))
+    const date = new Date(Number(epochMatch[1] ?? epochMatch[2]))
     if (Number.isNaN(date.getTime())) {
       throw new TimestampError(parseErrorMessage)
     }
     return date.toISOString()
   }
-  const parsed = Date.parse(raw)
-  if (isNaN(parsed)) {
+  let parsed = Number.NaN
+  try {
+    parsed = Date.parse(raw)
+  } catch {
+    throw new TimestampError(parseErrorMessage)
+  }
+  if (!Number.isFinite(parsed)) {
     throw new TimestampError(parseErrorMessage)
   }
   const date = new Date(parsed)
@@ -78,11 +89,13 @@ export function normalizeDexcomTrend(
  * @param entry - Raw Dexcom Share entry
  * @returns Normalized reading compatible with all `@glucoseiq/core` analytics functions
  * @throws {TimestampError} If the date string cannot be parsed
+ * @throws {DomainError} If the glucose value is not usable
  */
 export function normalizeDexcomEntry(
   entry: DexcomShareEntry
 ): NormalizedCGMReading {
   const timestamp = parseDexcomDate(entry.WT)
+  toUsableMgDl(entry.Value, MG_DL, 'Dexcom entry')
   const vendorId = entry.ST ?? entry.DT
   return {
     value: entry.Value,

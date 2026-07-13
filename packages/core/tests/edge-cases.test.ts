@@ -119,7 +119,7 @@ describe('boundary value handling', () => {
 describe('full pipeline: connector → analytics → FHIR', () => {
   it('Dexcom entries flow through to FHIR summary', () => {
     const entries: DexcomShareEntry[] = Array.from({ length: 100 }, (_, i) => ({
-      Value: 80 + Math.round(80 * Math.sin(i / 10)),
+      Value: 100 + Math.round(80 * Math.sin(i / 10)),
       Trend: 'Flat' as const,
       WT: `Date(${1700000000000 + i * 300000})`,
     }))
