@@ -5,6 +5,19 @@ import {
   glucosePercentiles,
   glucoseMAGE,
 } from '../src/variability'
+import { DomainError } from '../src/errors'
+
+function expectInvalidOption(call: () => unknown, message: string): void {
+  let thrown: unknown
+  try {
+    call()
+  } catch (error) {
+    thrown = error
+  }
+
+  expect(thrown).toBeInstanceOf(DomainError)
+  expect(thrown).toMatchObject({ code: 'INVALID_OPTION', message })
+}
 
 // Example dataset from clinical literature
 const clinicalData = [90, 100, 110, 120, 130, 140, 150, 160, 170, 180]
@@ -54,6 +67,24 @@ describe('glucosePercentiles', () => {
   it('returns empty object for empty input', () => {
     expect(glucosePercentiles([], [10, 50, 90])).toEqual({})
   })
+  it('rejects non-array readings with a coded option error', () => {
+    expectInvalidOption(
+      () => glucosePercentiles(null as never, [50]),
+      'readings must be an array'
+    )
+  })
+  it.each([
+    ['non-empty', [100]],
+    ['empty', []],
+  ])(
+    'rejects non-array percentiles before processing %s readings',
+    (_label, readings) => {
+      expectInvalidOption(
+        () => glucosePercentiles(readings, null as never),
+        'percentiles must be an array'
+      )
+    }
+  )
   it('ignores invalid percentiles', () => {
     const p = glucosePercentiles(clinicalData, [-10, 50, 110])
     expect(p[50]).toBe(130) // nearest-rank for 50th percentile

@@ -193,8 +193,6 @@ export interface EnhancedTIRResult {
 export interface EnhancedTIROptions {
   /** Population type for target assessment (default: 'standard') */
   readonly population?: TIRPopulation
-  /** Glucose unit for input validation (default: 'mg/dL') */
-  readonly unit?: GlucoseUnit
   /** Override for the very low threshold (<54 mg/dL). Value must be provided in mg/dL. */
   readonly veryLowThreshold?: number
   /** Override for the low threshold (54-69 mg/dL). Value must be provided in mg/dL. */

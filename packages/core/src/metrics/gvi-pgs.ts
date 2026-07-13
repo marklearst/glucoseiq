@@ -17,7 +17,7 @@
  * @see https://github.com/nightscout/cgm-remote-monitor  Nightscout GVI/PGS
  */
 
-import type { GlucoseReading, GlucoseUnit } from '../types'
+import type { GlucoseReading } from '../types'
 import { MG_DL, MGDL_MMOLL_CONVERSION } from '../constants'
 
 /** Nightscout maxGap: 310000 ms. */
@@ -25,8 +25,6 @@ const DEFAULT_MAX_GAP_MIN = 310000 / 60000
 
 /** Options for {@link calculateGVIPGS}. */
 export interface GVIPGSOptions {
-  /** Unit of input readings (default 'mg/dL'); 'mmol/L' is converted to mg/dL. */
-  readonly unit?: GlucoseUnit
   /** In-range lower bound, mg/dL, inclusive (default 70). */
   readonly targetLow?: number
   /** In-range upper bound, mg/dL, exclusive (default 180). */
@@ -51,7 +49,7 @@ export interface GVIPGSResult {
  * Calculates GVI and PGS from glucose readings (Nightscout algorithm).
  *
  * @param readings - Glucose readings with ISO 8601 timestamps
- * @param options - Unit, target range, and max gap
+ * @param options - Target range and maximum gap
  * @returns GVI, PGS, the mean glucose, and PTIR; NaN when there are no valid steps
  * @category Variability
  * @public
@@ -60,7 +58,6 @@ export function calculateGVIPGS(
   readings: GlucoseReading[],
   options?: GVIPGSOptions
 ): GVIPGSResult {
-  const unit = options?.unit ?? MG_DL
   const targetLow = options?.targetLow ?? 70
   const targetHigh = options?.targetHigh ?? 180
   const maxGap = options?.maxGapMinutes ?? DEFAULT_MAX_GAP_MIN

@@ -13,7 +13,7 @@
  * @see https://doi.org/10.1177/19322968221085273  Klonoff et al. (2023) — GRI
  */
 
-import type { GlucoseReading, GlucoseUnit } from './types'
+import type { GlucoseReading } from './types'
 import { MG_DL, MGDL_MMOLL_CONVERSION } from './constants'
 import { calculateEnhancedTIR } from './tir-enhanced'
 import { calculateGRI, type GRIResult } from './metrics/gri'
@@ -25,12 +25,6 @@ export type GlucoseIQRating =
   | 'fair'
   | 'needs attention'
   | 'insufficient'
-
-/** Options for {@link glucoseIQScore}. */
-export interface GlucoseIQOptions {
-  /** Unit for TIR validation (default 'mg/dL'). */
-  readonly unit?: GlucoseUnit
-}
 
 /** Result of {@link glucoseIQScore}. */
 export interface GlucoseIQScore {
@@ -50,7 +44,6 @@ export interface GlucoseIQScore {
  * Computes the Glucose IQ score (100 − GRI) from glucose readings.
  *
  * @param readings - Glucose readings with ISO 8601 timestamps
- * @param options - Unit for validation
  * @returns Score, underlying GRI, zone, and a qualitative rating
  *
  * @example
@@ -61,10 +54,7 @@ export interface GlucoseIQScore {
  * @category Score
  * @public
  */
-export function glucoseIQScore(
-  readings: GlucoseReading[],
-  options?: GlucoseIQOptions
-): GlucoseIQScore {
+export function glucoseIQScore(readings: GlucoseReading[]): GlucoseIQScore {
   const clean = readings.filter((r) => {
     if (!Number.isFinite(r.value) || r.value <= 0) return false
     const mgdl = r.unit === MG_DL ? r.value : r.value * MGDL_MMOLL_CONVERSION
@@ -76,7 +66,7 @@ export function glucoseIQScore(
     return { score: NaN, gri: NaN, zone: null, rating: 'insufficient', valid: false }
   }
 
-  const tir = calculateEnhancedTIR(clean, { unit: options?.unit })
+  const tir = calculateEnhancedTIR(clean)
   const gri = calculateGRI({
     veryLowPercent: tir.veryLow.percentage,
     lowPercent: tir.low.percentage,

@@ -100,7 +100,6 @@ describe('detectEpisodes', () => {
       hyperLevel2: 240,
       minDurationMin: 10,
       endDurationMin: 10,
-      unit: 'mg/dL',
     })
     expect(res.hypoEvents).toHaveLength(1)
     expect(res.hypoEvents[0].durationMinutes).toBe(10)

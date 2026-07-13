@@ -14,7 +14,7 @@
  * Pure and dependency-free.
  */
 
-import type { GlucoseReading, GlucoseUnit, EnhancedTIRResult } from './types'
+import type { GlucoseReading, EnhancedTIRResult } from './types'
 import { MG_DL, MGDL_MMOLL_CONVERSION } from './constants'
 import { estimateGMI } from './conversions'
 import { calculateEnhancedTIR } from './tir-enhanced'
@@ -33,8 +33,6 @@ const DEFAULT_MIN_ACTIVE_PERCENT = 70
 
 /** Options for {@link analyzeGlucose}. */
 export interface AnalyzeGlucoseOptions {
-  /** Unit for TIR validation/labeling (default 'mg/dL'). */
-  readonly unit?: GlucoseUnit
   /** IANA time zone for the AGP profile (default 'UTC'). */
   readonly timeZone?: string
   /** Include the AGP percentile-band series (default true). */
@@ -88,7 +86,7 @@ export interface AnalyzeGlucoseResult {
  * Produces a comprehensive clinical report from glucose readings in one call.
  *
  * @param readings - Glucose readings with ISO 8601 timestamps
- * @param options - Unit, time zone, profile toggle, and sufficiency thresholds
+ * @param options - Time zone, profile toggle, and sufficiency thresholds
  * @returns A typed report; `valid: false` when there are no in-range readings
  *
  * @example
@@ -140,7 +138,7 @@ export function analyzeGlucose(
   }
 
   const agp = calculateAGPMetrics(clean)
-  const timeInRange = calculateEnhancedTIR(clean, { unit: options?.unit })
+  const timeInRange = calculateEnhancedTIR(clean)
   const tightRange = calculateTITR(clean)
   const agpProfile = includeProfile
     ? buildAGPProfile(clean, { timeZone: options?.timeZone })

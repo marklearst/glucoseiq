@@ -20,7 +20,6 @@ import {
   type AnalyzeGlucoseResult,
   type AGPProfileOptions,
   type AGPProfileResult,
-  type GlucoseIQOptions,
   type GlucoseIQScore,
   type MealResponseOptions,
   type MealResponseResult,
@@ -45,11 +44,8 @@ export function useAGPProfile(
 }
 
 /** Memoized Glucose IQ score. */
-export function useGlucoseIQScore(
-  readings: GlucoseReading[],
-  options?: GlucoseIQOptions
-): GlucoseIQScore {
-  return useMemo(() => glucoseIQScore(readings, options), [readings, options])
+export function useGlucoseIQScore(readings: GlucoseReading[]): GlucoseIQScore {
+  return useMemo(() => glucoseIQScore(readings), [readings])
 }
 
 /** Memoized meal-response analysis. */
