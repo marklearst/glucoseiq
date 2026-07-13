@@ -1,5 +1,18 @@
 import { describe, it, expect } from 'vitest'
 import { generateCGMSeries, scenarios } from '../src'
+import type { GenerateOptions } from '../src'
+
+function expectOptionRangeError(options: GenerateOptions, message: string): void {
+  let thrown: unknown
+  try {
+    generateCGMSeries(options)
+  } catch (error) {
+    thrown = error
+  }
+
+  expect(thrown).toBeInstanceOf(RangeError)
+  expect(thrown).toMatchObject({ message })
+}
 
 describe('generateCGMSeries', () => {
   it('is deterministic for the same seed', () => {
@@ -37,6 +50,20 @@ describe('generateCGMSeries', () => {
     expect(r[0].value).toBeLessThan(25) // mmol scale
   })
 
+  it('preserves sub-minute intervals', () => {
+    const r = generateCGMSeries({ intervalMin: 0.5 })
+    expect(r).toHaveLength(2880)
+    expect(Date.parse(r[1].timestamp) - Date.parse(r[0].timestamp)).toBe(30_000)
+  })
+
+  it('preserves fractional meal times', () => {
+    expect(generateCGMSeries({ mealTimes: [420.5] })).toHaveLength(288)
+  })
+
+  it('accepts the maximum interval', () => {
+    expect(generateCGMSeries({ intervalMin: 1440 })).toHaveLength(1)
+  })
+
   it('injects nocturnal hypos on the requested days', () => {
     const r = generateCGMSeries({ days: 2, seed: 3, nocturnalHypoDays: [1] })
     const day1Night = r.filter((x) => {
@@ -44,6 +71,101 @@ describe('generateCGMSeries', () => {
       return d.getUTCDate() === 2 && d.getUTCHours() >= 2 && d.getUTCHours() < 4
     })
     expect(day1Night.some((x) => x.value < 70)).toBe(true)
+  })
+
+  it.each([
+    {
+      name: 'zero days',
+      options: { days: 0 },
+      message: 'days must be a positive integer',
+    },
+    {
+      name: 'fractional days',
+      options: { days: 1.5 },
+      message: 'days must be a positive integer',
+    },
+    {
+      name: 'infinite days',
+      options: { days: Infinity },
+      message: 'days must be a positive integer',
+    },
+    {
+      name: 'non-finite intervalMin',
+      options: { intervalMin: NaN },
+      message: 'intervalMin must be finite, positive, and no greater than 1440',
+    },
+    {
+      name: 'zero intervalMin',
+      options: { intervalMin: 0 },
+      message: 'intervalMin must be finite, positive, and no greater than 1440',
+    },
+    {
+      name: 'negative intervalMin',
+      options: { intervalMin: -1 },
+      message: 'intervalMin must be finite, positive, and no greater than 1440',
+    },
+    {
+      name: 'non-finite seed',
+      options: { seed: Infinity },
+      message: 'seed must be a safe integer',
+    },
+    {
+      name: 'invalid start',
+      options: { start: 'not-a-timestamp' },
+      message: 'start must be a valid timestamp',
+    },
+    {
+      name: 'start whose generated timestamps overflow',
+      options: { start: '+275760-09-12T23:59:00.000Z' },
+      message: 'start must be a valid timestamp',
+    },
+    {
+      name: 'non-positive basal',
+      options: { basal: 0 },
+      message: 'basal must be positive and finite',
+    },
+    {
+      name: 'negative noise',
+      options: { noise: -1 },
+      message: 'noise must be non-negative and finite',
+    },
+    {
+      name: 'negative mealAmplitude',
+      options: { mealAmplitude: -1 },
+      message: 'mealAmplitude must be non-negative and finite',
+    },
+    {
+      name: 'invalid mealTimes entry',
+      options: { mealTimes: [-1] },
+      message: 'mealTimes entries must be finite and between 0 and 1439',
+    },
+    {
+      name: 'negative nocturnalHypoDays entry',
+      options: { nocturnalHypoDays: [-1] },
+      message: 'nocturnalHypoDays entries must be non-negative integers',
+    },
+    {
+      name: 'unsupported unit',
+      options: { unit: 'other' as never },
+      message: 'unit must be mg/dL or mmol/L',
+    },
+  ] satisfies {
+    name: string
+    options: GenerateOptions
+    message: string
+  }[])('rejects $name', ({ options, message }) => {
+    expectOptionRangeError(options, message)
+  })
+
+  it('rejects output larger than 100,000 readings', () => {
+    expectOptionRangeError(
+      { days: 348 },
+      'generateCGMSeries cannot create more than 100000 readings'
+    )
+  })
+
+  it('accepts exactly 100,000 readings', () => {
+    expect(generateCGMSeries({ days: 100, intervalMin: 1.439 })).toHaveLength(100_000)
   })
 })
 
