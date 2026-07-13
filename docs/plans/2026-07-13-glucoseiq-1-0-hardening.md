@@ -1910,16 +1910,21 @@ git commit -m "ci: enforce types lint and bundle size"
 
 **Files:**
 
+- Modify: `.github/workflows/ci.yml`
 - Modify: `.github/workflows/release.yml`
 - Modify: `.github/release-pr-body.md`
 - Modify: `.changeset/README.md`
 - Modify: `.changeset/launch-glucoseiq-one.md`
+- Modify: `docs/LAUNCH_RUNBOOK.md`
 - Create: `scripts/test-changeset-policy.mjs`
 - Create: `scripts/test-changeset-policy.test.mjs`
 - Create: `scripts/release-preflight.mjs`
 - Create: `scripts/release-preflight.test.mjs`
 - Create: `scripts/verify-published-packages.mjs`
 - Create: `scripts/verify-published-packages.test.mjs`
+- Create: `scripts/lib/package-command.mjs`
+- Modify: `scripts/lib/package-contracts.mjs`
+- Modify: `scripts/package-contract-helpers.test.mjs`
 - Modify: `scripts/release-metadata.test.mjs`
 - Modify: `scripts/test-package-contracts.mjs`
 - Modify: all six published package manifests
@@ -1930,14 +1935,14 @@ git commit -m "ci: enforce types lint and bundle size"
 - A read-only quality job must succeed in the same release workflow before versioning or publication.
 - Generated release pull requests stay draft.
 - Publication requires the live domain preflight.
-- Post-publication verification runs only when the publish action reports `published == 'true'`.
+- Post-attempt inventory runs after either a successful or failed publish action, using a nonempty action inventory when available and the validated version plan only when action outputs are empty.
 - Each source manifest allows `CHANGELOG.md`; the versioned release-candidate and registry checks require the generated changelog in every tarball.
 
 - [ ] **Step 1: Add failing workflow and script contracts**
 
-Expand `release-metadata.test.mjs` to require separate `quality`, `version`, and `publish` jobs, job-level permissions, `persist-credentials: false`, a draft release pull request, exact check publication for the release-candidate head, domain preflight, the `published` output condition, and every heading in the human checklist.
+Expand `release-metadata.test.mjs` to require separate `quality`, `version`, and `publish` jobs, job-level permissions, `persist-credentials: false`, a draft release pull request, exact check publication for the release-candidate head, domain preflight, success-and-failure publication inventory, npm-auth cleanup before verification, and every heading in the human checklist.
 
-Add unit tests for changeset policy, domain responses, registry polling, manifest validation, tags, provenance metadata, and partial publication. Inject command execution and fetch functions so tests never contact GitHub, npm, or the production domain.
+Add unit tests for changeset policy, domain responses, registry polling, manifest validation, tags, provenance metadata, and partial publication. Inject command execution and fetch functions so tests never contact GitHub, npm, or the production domain. Expose them through one durable `pnpm test:release-safety` command and run it in CI, release quality, and exact-candidate verification.
 
 - [ ] **Step 2: Run the release red tests**
 
@@ -1950,7 +1955,9 @@ Expected: the current single-job workflow, permissive checklist, and missing scr
 
 - [ ] **Step 3: Enforce Changeset policy**
 
-Compare the pull request diff against `origin/main`. Require a non-README Changeset when release-affecting files under the six public packages change. Exempt `release/glucoseiq-packages` and documentation-only changes. Print each release-affecting path when the check fails.
+Compare pull requests against the `origin/main` merge base and main pushes against the trusted pre-push SHA. Require a non-README Changeset when release-affecting files under the six public packages change. Exempt `release/glucoseiq-packages`, documentation-only changes, and only the exact generated-version merge shape: deleted valid Changesets, modified public manifests with matching added or modified changelogs, and an optional modified lockfile, with no other paths. Print each release-affecting path and the comparison base when the check fails. Publish only when that exact version shape has no remaining tracked Changesets; fail closed with a stale-release diagnostic otherwise.
+
+For a generated-version main push, replay the pinned Changesets version command and lockfile update from the trusted pre-push commit in an isolated temporary worktree. Compare the complete binary Git patch with the committed result so path shape alone cannot authorize a fabricated version, changelog, dependency range, or lockfile. Bound every replay command and terminate resistant children on timeout.
 
 - [ ] **Step 4: Split release permissions and candidate verification**
 
@@ -1962,7 +1969,7 @@ Create:
 
 Use Node 24 and pnpm 11.12.0 in all three jobs. Pin npm 11.17.0 in the publish job. Keep every action SHA-pinned and keep public npm provenance enabled.
 
-The version job must create or update `release/glucoseiq-packages` as a draft, check out the returned head SHA, run the full candidate suite against versioned manifests, and create a `Build & test (Node 24)` check run on that exact SHA with a link to the workflow run and its real conclusion. Remove the detached manual workflow dispatch.
+The version job must create or update `release/glucoseiq-packages` as a draft, check out the returned head SHA, run the full candidate suite against versioned manifests, and create a `Build & test (Node 24)` check run on that exact SHA with a link to the workflow run and its real conclusion. The durable gates include the release-safety unit suites and docs API generator tests. Remove the detached manual workflow dispatch. On the same-repository generated release branch, give the ordinary CI job a different name and skip it so the required check has exactly one producer; fork pull requests with the same branch name must still run ordinary CI.
 
 - [ ] **Step 5: Add the live-domain preflight**
 
@@ -1980,26 +1987,36 @@ Keep the command injectable for unit tests. Do not run this preflight locally wh
 
 Add `CHANGELOG.md` to each published manifest’s `files` array and assert the allowlist entry on the unversioned launch branch. Do not hand-create changelogs before Changesets versions the packages. The release-candidate job must assert that Changesets created each changelog and that each versioned tarball contains it. Refactor the packed consumer matrix so it can run against local tarballs, a versioned candidate checkout, or exact registry versions.
 
-After a real publication, verify all six versions, `latest` and `legacy` dist-tags, internal dependency ranges, tarball contents, integrity, signatures, provenance or attestation metadata, Git tags, GitHub releases, every ESM/CommonJS entrypoint, NodeNext and Bundler declarations, React 18/19, CLI execution, and all 107 compatibility exports.
+After a real publication, verify all six versions, `latest` and `legacy` dist-tags, internal dependency ranges, tarball contents, integrity, signatures, provenance or attestation metadata, Git tags, GitHub releases, every ESM/CommonJS entrypoint, NodeNext and Bundler declarations, React 18/19, CLI execution, and all 107 compatibility exports. Keep the Changesets `publishedPackages` output as a diagnostic subset, but pass the complete validated version plan to provenance verification. Bind every package in that plan to `HEAD`; for packages outside the plan, require their tag and provenance to agree on their own source commit.
 
-Run the legacy-tag and registry verification steps only when:
+Derive the intended name/version inventory from the validated generated-version commit before publication. If the action fails after npm accepts a package but before its outputs are updated, use that plan as the fail-closed reported-inventory fallback; do not republish or synthesize missing Git artifacts. For a manual rerun, resolve `HEAD^1` and replay the exact Changesets operation before deriving the plan, so an independent release does not bind unchanged packages to the new commit. Run metadata polling concurrently within each attempt, hard-bound every package-consumer command, remove user-level npm authentication after the legacy-tag attempt on both success and failure paths, and require cleanup to succeed before registry consumers run.
+
+Resolve the publication inventory after either terminal action outcome:
 
 ```yaml
-if: steps.changesets.outputs.published == 'true'
+if: ${{ !cancelled() && (steps.changesets.outcome == 'success' || steps.changesets.outcome == 'failure') }}
 ```
+
+Use the resolved inventory to decide whether the compatibility tag needs its
+idempotent preservation step. Run npm-auth cleanup after that attempt for both
+action outcomes, even if legacy-tag correction fails. Registry verification
+must require successful inventory resolution and credential cleanup. The
+original action or legacy-tag failure remains visible because neither step is
+marked `continue-on-error`.
 
 - [ ] **Step 7: Expand the human release gate and release notes**
 
-Use unchecked boxes for domain registration, Vercel production, apex and `www`, search/routes/robots/sitemap, package versions and changelogs, packed manifests, temporary one-day npm credential, metadata scan, final approval, trusted-publisher migration, and credential removal. Expand the launch Changeset with package-specific 1.0 capabilities and the compatibility bridge behavior.
+Use unchecked boxes for domain registration, Vercel production, apex and `www`, search/routes/robots/sitemap, package versions and changelogs, packed manifests, a release branch current with `main` and no newer Changesets, temporary one-day npm credential, metadata scan, final approval, trusted-publisher migration, and credential removal. Require the main ruleset to keep pull-request branches up to date before merge. Expand the launch Changeset with package-specific 1.0 capabilities and the compatibility bridge behavior.
 
 - [ ] **Step 8: Verify and commit**
 
 ```sh
 node scripts/release-metadata.test.mjs
-node --test scripts/test-changeset-policy.test.mjs scripts/release-preflight.test.mjs scripts/verify-published-packages.test.mjs
+pnpm test:release-safety
 pnpm test:launch
 pnpm test:packages
 git add .github .changeset scripts package.json packages/*/package.json
+git add docs/LAUNCH_RUNBOOK.md docs/plans/2026-07-13-glucoseiq-1-0-hardening.md
 git commit -m "ci: harden release and registry verification"
 ```
 
@@ -2045,7 +2062,7 @@ pnpm --filter docs docs:api:check
 node --test apps/docs/scripts/site-contracts.test.mjs
 pnpm --filter docs build
 node scripts/release-metadata.test.mjs
-node --test scripts/test-changeset-policy.test.mjs scripts/release-preflight.test.mjs scripts/verify-published-packages.test.mjs
+pnpm test:release-safety
 git diff --check
 ```
 
