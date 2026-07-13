@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moved development, documentation, and releases to the
   [GlucoseIQ repository](https://github.com/marklearst/glucoseiq).
 
+### Fixed
+
+- Corrected the default `getA1CCategory` boundaries in `@glucoseiq/core` 1.0
+  and the `diabetic-utils` 2.0 compatibility bridge to match the
+  [CDC categories](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html):
+  normal is below 5.7%, prediabetes is 5.7% to below 6.5%, and diabetes is 6.5%
+  or higher. Explicit custom maxima remain inclusive. The published
+  `diabetic-utils` 1.5.x artifacts are unchanged and remain available via the
+  `legacy` dist-tag.
+
 ## [1.5.0] - 2026-03-12
 
 ### Added

@@ -397,6 +397,143 @@ try {
     const { parseGlucoseCSV } = require('@glucoseiq/core');
     ${csvContractBody}
   `
+  const a1cCategoryContractBody = `
+    const captureCategory = (call) => {
+      try {
+        return { value: call() };
+      } catch (error) {
+        return { error: error.name };
+      }
+    };
+    const evaluateCategoryContract = (getA1CCategory) => {
+      const thresholdSymbol = Symbol('threshold');
+      const earlyAccesses = [];
+      let earlyNormalReads = 0;
+      let earlyPrediabetesReads = 0;
+      const earlyThresholds = Object.defineProperties({}, {
+        normalMax: {
+          get() {
+            earlyAccesses.push('normalMax');
+            earlyNormalReads += 1;
+            return 6;
+          },
+        },
+        prediabetesMax: {
+          get() {
+            earlyAccesses.push('prediabetesMax');
+            earlyPrediabetesReads += 1;
+            return 7;
+          },
+        },
+      });
+      const earlyCategory = getA1CCategory(5.5, earlyThresholds);
+
+      const invalidAccesses = [];
+      let invalidCoercions = 0;
+      const hostileA1C = {
+        [Symbol.toPrimitive]() {
+          invalidCoercions += 1;
+          return 6;
+        },
+        valueOf() {
+          invalidCoercions += 1;
+          return 6;
+        },
+        toString() {
+          invalidCoercions += 1;
+          return '6';
+        },
+      };
+      const invalidThresholds = Object.defineProperties({}, {
+        normalMax: {
+          get() {
+            invalidAccesses.push('normalMax');
+            return thresholdSymbol;
+          },
+        },
+        prediabetesMax: {
+          get() {
+            invalidAccesses.push('prediabetesMax');
+            return thresholdSymbol;
+          },
+        },
+      });
+      const invalidCategory = getA1CCategory(hostileA1C, invalidThresholds);
+
+      return {
+        defaults: {
+          belowNormal: getA1CCategory(5.699999999999999),
+          normalBoundary: getA1CCategory(5.7),
+          belowDiabetes: getA1CCategory(6.499999999999999),
+          diabetesBoundary: getA1CCategory(6.5),
+          aboveDiabetes: getA1CCategory(6.500000000000001),
+        },
+        custom: {
+          normalOnlyEquality: getA1CCategory(6, { normalMax: 6 }),
+          prediabetesOnlyEquality: getA1CCategory(7, { prediabetesMax: 7 }),
+          bothNormalEquality: getA1CCategory(6, { normalMax: 6, prediabetesMax: 7 }),
+          bothPrediabetesEquality: getA1CCategory(7, { normalMax: 6, prediabetesMax: 7 }),
+        },
+        nullish: {
+          undefinedNormal: getA1CCategory(5.7, { normalMax: undefined, prediabetesMax: 7 }),
+          undefinedNormalInterior: getA1CCategory(5.6, { normalMax: undefined, prediabetesMax: 7 }),
+          undefinedPrediabetes: getA1CCategory(6.5, { normalMax: 6, prediabetesMax: undefined }),
+          undefinedPrediabetesInterior: getA1CCategory(6, { normalMax: 5.5, prediabetesMax: undefined }),
+          nullNormal: getA1CCategory(5.7, { normalMax: null, prediabetesMax: 7 }),
+          nullNormalInterior: getA1CCategory(5.6, { normalMax: null, prediabetesMax: 7 }),
+          nullPrediabetes: getA1CCategory(6.5, { normalMax: 6, prediabetesMax: null }),
+          nullPrediabetesInterior: getA1CCategory(6, { normalMax: 5.5, prediabetesMax: null }),
+          nullThresholdsAtNormal: getA1CCategory(5.7, null),
+          nullThresholdsAtDiabetes: getA1CCategory(6.5, null),
+        },
+        runtimeValues: {
+          zeroNormal: getA1CCategory(5.6, { normalMax: 0 }),
+          nanPrediabetes: getA1CCategory(6, { prediabetesMax: Number.NaN }),
+          numericStringNormal: getA1CCategory(6, { normalMax: '6' }),
+          numericStringPrediabetes: getA1CCategory(7, { prediabetesMax: '7' }),
+          infiniteNormal: getA1CCategory(19.999, { normalMax: Infinity }),
+          infinitePrediabetes: getA1CCategory(19.999, { prediabetesMax: Infinity }),
+        },
+        symbols: {
+          skippedPrediabetes: captureCategory(() =>
+            getA1CCategory(5.6, { prediabetesMax: thresholdSymbol })),
+          reachedNormal: captureCategory(() =>
+            getA1CCategory(6, { normalMax: thresholdSymbol })),
+          reachedPrediabetes: captureCategory(() =>
+            getA1CCategory(6, { prediabetesMax: thresholdSymbol })),
+          invalid: captureCategory(() => getA1CCategory(-1, {
+            normalMax: thresholdSymbol,
+            prediabetesMax: thresholdSymbol,
+          })),
+        },
+        earlyGetters: {
+          category: earlyCategory,
+          accesses: earlyAccesses,
+          normalReads: earlyNormalReads,
+          prediabetesReads: earlyPrediabetesReads,
+        },
+        invalidInput: {
+          category: invalidCategory,
+          accesses: invalidAccesses,
+          coercions: invalidCoercions,
+        },
+      };
+    };
+    console.log(JSON.stringify({
+      core: evaluateCategoryContract(coreGetA1CCategory),
+      compatibility: evaluateCategoryContract(compatibilityGetA1CCategory),
+    }));
+  `
+  const esmA1CCategoryContractCode = `
+    import { getA1CCategory as coreGetA1CCategory } from '@glucoseiq/core';
+    import { getA1CCategory as compatibilityGetA1CCategory } from 'diabetic-utils';
+    ${a1cCategoryContractBody}
+  `
+  const cjsA1CCategoryContractCode = `
+    const { getA1CCategory: coreGetA1CCategory } = require('@glucoseiq/core');
+    const { getA1CCategory: compatibilityGetA1CCategory } = require('diabetic-utils');
+    ${a1cCategoryContractBody}
+  `
   const expectedCsvContract = {
     invalidEmpty: {
       error: {
@@ -429,6 +566,62 @@ try {
         { value: 130, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00.000Z' },
       ],
     },
+  }
+  const expectedA1CCategoryValues = {
+    defaults: {
+      belowNormal: 'normal',
+      normalBoundary: 'prediabetes',
+      belowDiabetes: 'prediabetes',
+      diabetesBoundary: 'diabetes',
+      aboveDiabetes: 'diabetes',
+    },
+    custom: {
+      normalOnlyEquality: 'normal',
+      prediabetesOnlyEquality: 'prediabetes',
+      bothNormalEquality: 'normal',
+      bothPrediabetesEquality: 'prediabetes',
+    },
+    nullish: {
+      undefinedNormal: 'prediabetes',
+      undefinedNormalInterior: 'normal',
+      undefinedPrediabetes: 'diabetes',
+      undefinedPrediabetesInterior: 'prediabetes',
+      nullNormal: 'prediabetes',
+      nullNormalInterior: 'normal',
+      nullPrediabetes: 'diabetes',
+      nullPrediabetesInterior: 'prediabetes',
+      nullThresholdsAtNormal: 'prediabetes',
+      nullThresholdsAtDiabetes: 'diabetes',
+    },
+    runtimeValues: {
+      zeroNormal: 'prediabetes',
+      nanPrediabetes: 'diabetes',
+      numericStringNormal: 'normal',
+      numericStringPrediabetes: 'prediabetes',
+      infiniteNormal: 'normal',
+      infinitePrediabetes: 'prediabetes',
+    },
+    symbols: {
+      skippedPrediabetes: { value: 'normal' },
+      reachedNormal: { error: 'TypeError' },
+      reachedPrediabetes: { error: 'TypeError' },
+      invalid: { value: 'invalid' },
+    },
+    earlyGetters: {
+      category: 'normal',
+      accesses: ['normalMax', 'prediabetesMax'],
+      normalReads: 1,
+      prediabetesReads: 1,
+    },
+    invalidInput: {
+      category: 'invalid',
+      accesses: ['normalMax', 'prediabetesMax'],
+      coercions: 0,
+    },
+  }
+  const expectedA1CCategoryContract = {
+    core: expectedA1CCategoryValues,
+    compatibility: expectedA1CCategoryValues,
   }
   const expectedErrorContract = [
     {
@@ -636,6 +829,22 @@ try {
         csvContract,
         expectedCsvContract,
         `${consumer.label} ${format} CSV contract`,
+      )
+    }
+
+    for (const [format, source, inputType] of [
+      ['ESM', esmA1CCategoryContractCode, 'module'],
+      ['CommonJS', cjsA1CCategoryContractCode, 'commonjs'],
+    ]) {
+      const a1cCategoryContract = JSON.parse(
+        run('node', ['--input-type', inputType, '--eval', source], {
+          cwd: consumerRoot,
+        }),
+      )
+      assert.deepEqual(
+        a1cCategoryContract,
+        expectedA1CCategoryContract,
+        `${consumer.label} ${format} packed A1C category contract`,
       )
     }
 
