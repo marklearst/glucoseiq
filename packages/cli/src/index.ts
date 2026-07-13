@@ -138,8 +138,17 @@ export function run(argv: string[], io: CliIO): number {
     }
 
     const delimiter = values.delimiter ?? ','
-    if (delimiter.length !== 1) {
-      return fail(io, 'Invalid delimiter: expected exactly one character.')
+    if (
+      delimiter.length !== 1 ||
+      delimiter === '"' ||
+      delimiter === '\0' ||
+      delimiter === '\r' ||
+      delimiter === '\n'
+    ) {
+      return fail(
+        io,
+        'Invalid delimiter: expected exactly one character other than double quote, NUL, CR, or LF.',
+      )
     }
 
     let text: string

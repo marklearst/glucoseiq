@@ -10,7 +10,7 @@
 
 import type { GlucoseReading, GlucoseUnit } from './types'
 import { MG_DL } from './constants'
-import { ParseError } from './errors'
+import { DomainError, ParseError } from './errors'
 
 /** Options for {@link parseGlucoseCSV}. */
 export interface CSVParseOptions {
@@ -81,10 +81,25 @@ function cell(fields: string[], index: number): string {
  */
 export function parseGlucoseCSV(text: string, options: CSVParseOptions): GlucoseReading[] {
   const unit = options.unit ?? MG_DL
-  const delimiter = options.delimiter ?? ','
+  const configuredDelimiter: unknown = options.delimiter
+  const delimiter = configuredDelimiter === undefined ? ',' : configuredDelimiter
+  if (
+    typeof delimiter !== 'string' ||
+    delimiter.length !== 1 ||
+    delimiter === '"' ||
+    delimiter === '\0' ||
+    delimiter === '\r' ||
+    delimiter === '\n'
+  ) {
+    throw new DomainError(
+      'parseGlucoseCSV: delimiter must be exactly one character other than double quote, NUL, CR, or LF',
+      'INVALID_OPTION'
+    )
+  }
 
-  const lines = text.split(/\r?\n/).filter((l) => l.length > 0)
-  if (lines.length < 2) return []
+  const document = text.startsWith('\ufeff') ? text.slice(1) : text
+  const lines = document.split(/\r?\n/).filter((line) => line.trim().length > 0)
+  if (lines.length === 0) return []
 
   const header = parseLine(lines[0], delimiter).map((h) => h.trim())
   const tsIdx = header.indexOf(options.timestampColumn)

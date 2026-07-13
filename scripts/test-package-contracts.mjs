@@ -298,6 +298,74 @@ try {
     } = require('@glucoseiq/core');
     ${errorContractBody}
   `
+  const csvContractBody = `
+    const capture = (call) => {
+      try {
+        return { value: call() };
+      } catch (error) {
+        return { error: { name: error.name, code: error.code, message: error.message } };
+      }
+    };
+    const options = { timestampColumn: 't', valueColumn: 'v' };
+    console.log(JSON.stringify({
+      invalidEmpty: capture(() => parseGlucoseCSV('', { ...options, delimiter: '||' })),
+      headerOnly: capture(() => parseGlucoseCSV('t,v', options)),
+      missingColumnHeaderOnly: capture(() => parseGlucoseCSV('t,other', options)),
+      bomCrLf: capture(() => parseGlucoseCSV(
+        '\\ufefft,v\\r\\n2024-01-01T08:00:00Z,120\\r\\n',
+        options,
+      )),
+      quoted: capture(() => parseGlucoseCSV(
+        '\"Time, local\",\"Val\"\"ue\"\\n\"2024-01-01T08:00:00Z\",\"125\"',
+        { timestampColumn: 'Time, local', valueColumn: 'Val\"ue' },
+      )),
+      custom: capture(() => parseGlucoseCSV(
+        't;v\\n2024-01-01T08:00:00Z;130',
+        { ...options, delimiter: ';' },
+      )),
+    }));
+  `
+  const esmCsvContractCode = `
+    import { parseGlucoseCSV } from '@glucoseiq/core';
+    ${csvContractBody}
+  `
+  const cjsCsvContractCode = `
+    const { parseGlucoseCSV } = require('@glucoseiq/core');
+    ${csvContractBody}
+  `
+  const expectedCsvContract = {
+    invalidEmpty: {
+      error: {
+        name: 'DomainError',
+        code: 'INVALID_OPTION',
+        message:
+          'parseGlucoseCSV: delimiter must be exactly one character other than double quote, NUL, CR, or LF',
+      },
+    },
+    headerOnly: { value: [] },
+    missingColumnHeaderOnly: {
+      error: {
+        name: 'ParseError',
+        code: 'CSV_COLUMN_NOT_FOUND',
+        message: 'parseGlucoseCSV: column not found (timestamp="t", value="v")',
+      },
+    },
+    bomCrLf: {
+      value: [
+        { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00.000Z' },
+      ],
+    },
+    quoted: {
+      value: [
+        { value: 125, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00.000Z' },
+      ],
+    },
+    custom: {
+      value: [
+        { value: 130, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00.000Z' },
+      ],
+    },
+  }
   const expectedErrorContract = [
     {
       name: 'GlucoseIQError',
@@ -475,6 +543,22 @@ try {
       )
     }
 
+    for (const [format, source, inputType] of [
+      ['ESM', esmCsvContractCode, 'module'],
+      ['CommonJS', cjsCsvContractCode, 'commonjs'],
+    ]) {
+      const csvContract = JSON.parse(
+        run('node', ['--input-type', inputType, '--eval', source], {
+          cwd: consumerRoot,
+        }),
+      )
+      assert.deepEqual(
+        csvContract,
+        expectedCsvContract,
+        `${consumer.label} ${format} CSV contract`,
+      )
+    }
+
     const compatibility = JSON.parse(
       run('node', ['--input-type=commonjs', '--eval', compatibilityCode], { cwd: consumerRoot }),
     )
@@ -521,6 +605,12 @@ try {
       ['report', cliFixture, '--unknown'],
       /Unknown option '--unknown'/,
       { cwd: consumerRoot, label: `${consumer.label} packed CLI unknown flag` },
+    )
+    assertCommandFailure(
+      cliExecutable,
+      ['report', join(consumerRoot, 'missing.csv'), '--delimiter', '💉'],
+      /^Invalid delimiter: expected exactly one character other than double quote, NUL, CR, or LF\.$/,
+      { cwd: consumerRoot, label: `${consumer.label} packed CLI invalid delimiter` },
     )
 
     writeFileSync(join(consumerRoot, 'consumer.mts'), esmSource)
