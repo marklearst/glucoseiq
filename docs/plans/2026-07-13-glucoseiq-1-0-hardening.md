@@ -852,6 +852,337 @@ git commit -m "docs: harden the generated api reference"
 
 ---
 
+### Task 8A: Close proven packed, parser, and SVG trust boundaries
+
+No new public package or export is justified by these fixes. Keep the work in the
+existing core and CLI packages, preserve current constructor and renderer signatures,
+and make each boundary an independently reviewed commit before documentation prose is
+expanded. Do not change the established visual layer.
+
+Commit this reviewed plan amendment before the three implementation units so their
+staging commands remain atomic:
+
+```sh
+git add docs/plans/2026-07-13-glucoseiq-1-0-hardening.md
+git commit -m "docs: add package boundary hardening steps"
+```
+
+#### Commit 8A.1: Preserve public error names in packed runtimes
+
+**Files:**
+
+- Modify: `packages/core/src/errors.ts`
+- Modify: `packages/core/tests/errors.test.ts`
+- Modify: `scripts/test-package-contracts.mjs`
+
+**Interfaces:**
+
+- `GlucoseIQError`, `ParseError`, `DomainError`, `EmptyDatasetError`, and
+  `TimestampError` retain those exact `.name` values in source, packed ESM, and packed
+  CommonJS execution.
+- `instanceof`, `code`, `message`, inheritance, and every constructor signature remain
+  unchanged. Do not make `constructor.name` part of the public contract.
+- Do not enable global `keepNames`. A measured build increased the reachable ESM gzip
+  graph from 18,663 to 19,940 bytes, leaving only 60 bytes under the planned 20 KB
+  ceiling.
+
+- [ ] **Step 1: Add source and packed error-identity contracts**
+
+In `errors.test.ts`, instantiate all five classes and assert their literal `.name`,
+base identity, subclass identity, code, and message. Include the two-argument base,
+parse, and domain constructors and the one-argument empty-dataset and timestamp
+constructors.
+
+In `test-package-contracts.mjs`, load `@glucoseiq/core` from the extracted tarball
+through both `import()` and `require()`. For each format, construct all five errors and
+assert the same names, inheritance relationships, codes, and messages. Assert only the
+instance `.name`; minifier-dependent function names are not contractual.
+
+- [ ] **Step 2: Run the RED packed contract**
+
+```sh
+pnpm --filter @glucoseiq/core exec vitest run tests/errors.test.ts
+pnpm --filter @glucoseiq/core build
+pnpm test:packages
+```
+
+Expected: source behavior characterizes the intended contract, while packed ESM and
+CommonJS expose shortened subclass names and fail.
+
+- [ ] **Step 3: Implement the GREEN error identity**
+
+Assign `this.name = 'GlucoseIQError'` in the base constructor. Give each subclass its
+existing public constructor signature, call `super`, and then assign its own literal
+name. Do not derive a public value from `new.target.name`, add a runtime dependency, or
+alter error codes and messages.
+
+- [ ] **Step 4: Verify, review, and commit**
+
+```sh
+pnpm --filter @glucoseiq/core exec vitest run tests/errors.test.ts
+pnpm --filter @glucoseiq/core test:coverage
+pnpm --filter @glucoseiq/core build
+pnpm test:packages
+git diff --check
+```
+
+Have an independent reviewer inspect the source and both packed formats. Resolve every
+substantive finding and rerun the ladder. Use the following subject as the complete
+commit message, with an empty body and no trailers:
+
+```sh
+git add packages/core/src/errors.ts packages/core/tests/errors.test.ts scripts/test-package-contracts.mjs
+git commit -m "fix: preserve public error names"
+```
+
+#### Commit 8A.2: Validate delimited input before reading or parsing
+
+**Files:**
+
+- Modify: `packages/core/src/csv.ts`
+- Modify: `packages/core/tests/csv.test.ts`
+- Modify: `packages/core/tests/errors.test.ts`
+- Modify: `packages/cli/src/index.ts`
+- Modify: `packages/cli/tests/cli.test.ts`
+- Modify: `scripts/test-package-contracts.mjs`
+
+**Interfaces:**
+
+- An omitted delimiter defaults to comma. A supplied delimiter must be a string of
+  exactly one UTF-16 code unit and must not be double quote, NUL, CR, or LF.
+- Invalid delimiters throw `DomainError` with code `INVALID_OPTION` and this exact core
+  message:
+
+  ```text
+  parseGlucoseCSV: delimiter must be exactly one character other than double quote, NUL, CR, or LF
+  ```
+
+- The CLI rejects the same values before file I/O with this exact single-line message:
+
+  ```text
+  Invalid delimiter: expected exactly one character other than double quote, NUL, CR, or LF.
+  ```
+
+- Empty, BOM-only, and blank-only documents return `[]`. A valid header-only document
+  returns `[]`; a header-only document missing either mapped column throws the existing
+  `ParseError` with code `CSV_COLUMN_NOT_FOUND` and its unchanged message.
+- Comma, semicolon, tab, pipe, and space remain valid. Preserve BOM handling, LF and
+  CRLF input, quoted delimiters, doubled quotes, whitespace-only physical-line
+  filtering, and invalid-row skipping. Physical newlines inside quoted fields remain
+  unsupported and must be stated in the public CSV contract when source comments are
+  synchronized in Commit 8A.3.
+
+- [ ] **Step 1: Add the core delimiter and document-shape matrix**
+
+Add table-driven tests that pass empty string, multiple code units, an astral character,
+double quote, NUL, CR, LF, `null`, and representative non-string runtime values as the
+delimiter. Assert the exact error type, code, and message, including when the document
+is empty, to prove option validation runs first.
+
+Add positive cases for comma, semicolon, tab, pipe, and space. Cover empty, BOM-only,
+blank-only, BOM-prefixed header, valid header-only, missing-column header-only,
+whitespace-only physical lines, LF, CRLF, a quoted delimiter, doubled quotes, short
+rows, and rows with invalid timestamps or glucose values.
+
+- [ ] **Step 2: Add CLI and packed-consumer contracts**
+
+In `cli.test.ts`, assert every prohibited delimiter returns the exact CLI message. Use a
+missing file path in at least one case so the assertion proves delimiter validation
+precedes `readFileSync`. Keep stderr to one sanitized line.
+
+In `test-package-contracts.mjs`, exercise `parseGlucoseCSV` through packed ESM and
+CommonJS for invalid delimiter order, valid header-only input, missing-column
+header-only input, BOM and CRLF, quoting, and a valid custom delimiter. Run the packed
+`glucoseiq` executable against an invalid delimiter and nonexistent file, and assert
+status `1`, empty stdout, and the exact delimiter diagnostic.
+
+- [ ] **Step 3: Run the RED parser contracts**
+
+```sh
+pnpm --filter @glucoseiq/core exec vitest run tests/csv.test.ts tests/errors.test.ts
+pnpm --filter @glucoseiq/cli exec vitest run tests/cli.test.ts
+pnpm build
+pnpm test:packages
+```
+
+Expected: invalid core delimiters are accepted or misclassified, the CLI does not reject
+all prohibited delimiters, and a missing-column header-only document incorrectly
+returns `[]`.
+
+- [ ] **Step 4: Implement the GREEN parser boundary**
+
+Validate the snapshotted delimiter before classifying document emptiness. Default only
+`undefined`; reject every other value outside the stated one-code-unit allowlist with
+the exact `DomainError`. Strip a leading BOM for header matching, ignore whitespace-only
+physical lines, distinguish a truly empty document from a header-only document, and
+always validate mapped columns when a header exists. Keep the line parser and
+invalid-row policy otherwise unchanged.
+
+Mirror the same delimiter predicate in the CLI before file access and emit the exact
+CLI diagnostic. Do not loosen terminal-output sanitization or expose a new helper from
+either package.
+
+- [ ] **Step 5: Verify, review, and commit**
+
+```sh
+pnpm --filter @glucoseiq/core exec vitest run tests/csv.test.ts tests/errors.test.ts
+pnpm --filter @glucoseiq/cli exec vitest run tests/cli.test.ts
+pnpm --filter @glucoseiq/core test:coverage
+pnpm build
+pnpm test:packages
+git diff --check
+```
+
+Have an independent reviewer check validation order, exact diagnostics, BOM and
+header-only behavior, packed formats, and executable behavior. Resolve findings and
+rerun the ladder. Use the following subject as the complete commit message, with an
+empty body and no trailers:
+
+```sh
+git add packages/core/src/csv.ts packages/core/tests/csv.test.ts packages/core/tests/errors.test.ts packages/cli/src/index.ts packages/cli/tests/cli.test.ts scripts/test-package-contracts.mjs
+git commit -m "fix: validate delimited input options"
+```
+
+#### Commit 8A.3: Harden SVG renderer inputs without changing valid output
+
+**Files:**
+
+- Create: `packages/core/src/render/svg-options.ts`
+- Modify: `packages/core/src/render/agp-svg.ts`
+- Modify: `packages/core/src/render/tir-bar.ts`
+- Modify: `packages/core/src/render/trend-tile.ts`
+- Modify: `packages/core/src/csv.ts` (public limitation and throw documentation only)
+- Modify: `packages/core/tests/agp-svg.test.ts`
+- Modify: `packages/core/tests/tir-bar.test.ts`
+- Modify: `packages/core/tests/trend-tile.test.ts`
+- Modify: `packages/core/tests/errors.test.ts`
+- Regenerate: `apps/docs/content/docs/api/core/**`
+
+**Interfaces:**
+
+- All three renderers default dimensions only when the raw option is `undefined`.
+  Present dimensions must be finite, positive primitive numbers. Invalid values throw
+  `DomainError` with code `INVALID_OPTION` and one of these exact messages:
+
+  ```text
+  agpChartToSVG: width must be a finite positive number
+  agpChartToSVG: height must be a finite positive number
+  tirBarToSVG: width must be a finite positive number
+  tirBarToSVG: height must be a finite positive number
+  trendTileToSVG: width must be a finite positive number
+  trendTileToSVG: height must be a finite positive number
+  ```
+
+- A present AGP title must be a primitive string or throw `DomainError` /
+  `INVALID_OPTION` with the exact message `agpChartToSVG: title must be a string`.
+  Primitive strings remain XML-escaped.
+- Existing valid default and normal-size output remains byte-for-byte stable. Small
+  positive canvases produce finite coordinates and finite, nonnegative length and radius
+  attributes. `Number.MAX_VALUE` is accepted without producing a non-finite attribute.
+  No palette option, public type, subpath, package, or export is added.
+- A trend tile snapshots every input reading's value, unit, and timestamp into plain
+  objects exactly once, validates that snapshot, and derives both the selected latest
+  value and trend from the same immutable snapshot. A getter that throws during the
+  snapshot produces the existing finite `No data` frame. Invalid captured readings are
+  skipped under the established reading policy; `No data` is returned only when no
+  usable snapshot remains. Later accessor changes are never read and cannot affect or
+  inject into output.
+
+- [ ] **Step 1: Add dimension and injection red tests**
+
+For each renderer and for both `width` and `height`, test `NaN`, positive and negative
+infinity, zero, a negative number, `null`, a numeric string, a `BigInt`, an
+attribute-breaking string, and an object whose conversion hooks throw or return markup.
+Assert the exact `DomainError`, `INVALID_OPTION` code, and renderer-specific message,
+and prove conversion hooks are never called. Add getter fixtures proving each raw
+dimension is read once and defaulting occurs only for `undefined`.
+
+For small positive canvases below fixed margins, assert every emitted numeric geometry
+attribute is finite and every length-like `width`, `height`, `r`, `rx`, and `ry`
+attribute is nonnegative. Negative positional `x` or `y` values remain valid SVG and do
+not require clamping. Exercise `Number.MAX_VALUE` for each dimension and reject every
+non-finite derived attribute. Preserve exact output fixtures for established valid
+dimensions and defaults.
+
+- [ ] **Step 2: Add title and hostile-reading red tests**
+
+Test an AGP title object whose conversion hooks throw, other present non-string values,
+an accessor that changes value, and primitive titles containing all XML metacharacters.
+Assert non-strings produce the exact typed error without invoking conversion hooks and
+strings remain escaped.
+
+For the trend tile, use multiple readings with getters that count, mutate after their
+first read, or throw for value, unit, and timestamp. Assert every captured field is read
+once, both latest selection and trend derivation use the captured values, later hostile
+strings never appear, and a throwing capture yields the existing `No data` frame. Add a
+mixed invalid/valid snapshot regression proving invalid readings are skipped while a
+usable reading still renders. Include ordinary readings to prove the value, unit, zone,
+and trend arrow still render normally.
+
+- [ ] **Step 3: Run the RED renderer matrix**
+
+```sh
+pnpm --filter @glucoseiq/core exec vitest run tests/agp-svg.test.ts tests/tir-bar.test.ts tests/trend-tile.test.ts tests/errors.test.ts
+```
+
+Expected: unchecked dimensions reach SVG attributes, hostile title values are coerced,
+small canvases emit negative lengths, extreme finite dimensions overflow rounding, and
+unstable reading accessors let the displayed value and derived trend observe different
+states or throw.
+
+- [ ] **Step 4: Implement the GREEN private renderer boundary**
+
+Create `svg-options.ts` as an unexported implementation module. Snapshot each raw
+dimension once, default only `undefined`, require `typeof value === 'number'`,
+`Number.isFinite(value)`, and `value > 0`, then throw the exact typed diagnostic on
+failure. Use the validated locals for every SVG attribute, make rounding and percentage
+arithmetic overflow-safe for extreme finite values, and clamp only inner length-like
+plot dimensions to zero when fixed margins exceed a small positive canvas.
+
+Snapshot the AGP title once and reject present non-string values before rendering. Keep
+the existing XML escaping for primitive strings. In the trend renderer, snapshot the
+entire series once inside a guarded boundary, validate the plain snapshot, and use only
+that snapshot for latest selection and trend derivation. Return the existing no-data
+frame when capture throws or no usable snapshot remains; otherwise retain the existing
+policy of skipping invalid readings. Do not add caller-controlled colors or change
+output for established valid inputs.
+
+- [ ] **Step 5: Synchronize public source contracts and generated API**
+
+After the runtime behavior is green, document the exact dimension and title throws on
+the three renderers. Document the delimiter rule, header-only behavior, and unsupported
+physical newlines inside quoted CSV fields in `csv.ts`. Keep these source-comment
+changes with this final boundary commit so the managed reference is regenerated once
+after all three fixes.
+
+```sh
+pnpm --filter docs docs:api
+pnpm --filter docs docs:api:check
+```
+
+- [ ] **Step 6: Verify 100% coverage, review, and commit**
+
+```sh
+pnpm --filter @glucoseiq/core test:coverage
+pnpm --filter @glucoseiq/core build
+pnpm --filter docs docs:api:check
+pnpm --filter docs build
+pnpm test:packages
+git diff --check
+```
+
+Have an independent reviewer inspect runtime trust boundaries, exact error contracts,
+valid-output stability, tiny geometry, accessor handling, API drift, and coverage.
+Resolve findings and rerun the complete ladder. Use the following subject as the
+complete commit message, with an empty body and no trailers:
+
+```sh
+git add packages/core/src/render packages/core/src/csv.ts packages/core/tests/agp-svg.test.ts packages/core/tests/tir-bar.test.ts packages/core/tests/trend-tile.test.ts packages/core/tests/errors.test.ts apps/docs/content/docs/api/core
+git commit -m "fix: harden svg renderer inputs"
+```
+
+---
+
 ### Task 9: Make package READMEs and public claims match runtime behavior
 
 **Files:**
