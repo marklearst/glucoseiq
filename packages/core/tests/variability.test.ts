@@ -91,6 +91,12 @@ describe('glucosePercentiles', () => {
     expect(p[-10]).toBeUndefined()
     expect(p[110]).toBeUndefined()
   })
+  it('ignores NaN without creating a nonnumeric result key', () => {
+    const result = glucosePercentiles(clinicalData, [NaN, 50])
+
+    expect(result).toEqual({ 50: 130 })
+    expect(Object.prototype.hasOwnProperty.call(result, 'NaN')).toBe(false)
+  })
 })
 
 describe('glucoseMAGE', () => {
