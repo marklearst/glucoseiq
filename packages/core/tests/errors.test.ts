@@ -48,15 +48,59 @@ function expectCodedError(
 }
 
 describe('error hierarchy', () => {
-  it('subclasses carry stable codes and extend GlucoseIQError and Error', () => {
-    const e = new DomainError('nope', 'INVALID_GLUCOSE_VALUE')
-    expect(e).toBeInstanceOf(Error)
-    expect(e).toBeInstanceOf(GlucoseIQError)
-    expect(e).toBeInstanceOf(DomainError)
-    expect(e.code).toBe('INVALID_GLUCOSE_VALUE')
-    expect(e.message).toBe('nope')
-    expect(e.name).toBe('DomainError')
-  })
+  const cases = [
+    {
+      expectedName: 'GlucoseIQError',
+      expectedCode: 'INVALID_OPTION',
+      expectedMessage: 'base failure',
+      type: GlucoseIQError,
+      create: () => new GlucoseIQError('base failure', 'INVALID_OPTION'),
+    },
+    {
+      expectedName: 'ParseError',
+      expectedCode: 'PARSE_FAILED',
+      expectedMessage: 'parse failure',
+      type: ParseError,
+      create: () => new ParseError('parse failure', 'PARSE_FAILED'),
+    },
+    {
+      expectedName: 'DomainError',
+      expectedCode: 'INVALID_GLUCOSE_VALUE',
+      expectedMessage: 'domain failure',
+      type: DomainError,
+      create: () =>
+        new DomainError('domain failure', 'INVALID_GLUCOSE_VALUE'),
+    },
+    {
+      expectedName: 'EmptyDatasetError',
+      expectedCode: 'EMPTY_DATASET',
+      expectedMessage: 'empty failure',
+      type: EmptyDatasetError,
+      create: () => new EmptyDatasetError('empty failure'),
+    },
+    {
+      expectedName: 'TimestampError',
+      expectedCode: 'TIMESTAMP_UNPARSEABLE',
+      expectedMessage: 'timestamp failure',
+      type: TimestampError,
+      create: () => new TimestampError('timestamp failure'),
+    },
+  ] as const
+
+  for (const errorCase of cases) {
+    it(`${errorCase.expectedName} preserves its public identity and constructor contract`, () => {
+      const error = errorCase.create()
+
+      expect(error).toBeInstanceOf(Error)
+      expect(error).toBeInstanceOf(GlucoseIQError)
+      expect(error).toBeInstanceOf(errorCase.type)
+      expect(error).toMatchObject({
+        name: errorCase.expectedName,
+        code: errorCase.expectedCode,
+        message: errorCase.expectedMessage,
+      })
+    })
+  }
 })
 
 describe('typed throws across the library', () => {

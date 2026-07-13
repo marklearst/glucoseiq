@@ -258,6 +258,93 @@ try {
     }));
     console.log(JSON.stringify({ actual, expected: ZONE_PALETTE.dark }));
   `
+  const errorContractBody = `
+    const cases = [
+      [GlucoseIQError, new GlucoseIQError('base failure', 'INVALID_OPTION')],
+      [ParseError, new ParseError('parse failure', 'PARSE_FAILED')],
+      [DomainError, new DomainError('domain failure', 'INVALID_GLUCOSE_VALUE')],
+      [EmptyDatasetError, new EmptyDatasetError('empty failure')],
+      [TimestampError, new TimestampError('timestamp failure')],
+    ];
+    console.log(JSON.stringify(cases.map(([Type, error]) => ({
+      name: error.name,
+      code: error.code,
+      message: error.message,
+      isError: error instanceof Error,
+      isBase: error instanceof GlucoseIQError,
+      isOwnType: error instanceof Type,
+      hasExpectedBasePrototype: Type === GlucoseIQError
+        ? Object.getPrototypeOf(Type.prototype) === Error.prototype
+        : Object.getPrototypeOf(Type.prototype) === GlucoseIQError.prototype,
+    }))));
+  `
+  const esmErrorContractCode = `
+    import {
+      DomainError,
+      EmptyDatasetError,
+      GlucoseIQError,
+      ParseError,
+      TimestampError,
+    } from '@glucoseiq/core';
+    ${errorContractBody}
+  `
+  const cjsErrorContractCode = `
+    const {
+      DomainError,
+      EmptyDatasetError,
+      GlucoseIQError,
+      ParseError,
+      TimestampError,
+    } = require('@glucoseiq/core');
+    ${errorContractBody}
+  `
+  const expectedErrorContract = [
+    {
+      name: 'GlucoseIQError',
+      code: 'INVALID_OPTION',
+      message: 'base failure',
+      isError: true,
+      isBase: true,
+      isOwnType: true,
+      hasExpectedBasePrototype: true,
+    },
+    {
+      name: 'ParseError',
+      code: 'PARSE_FAILED',
+      message: 'parse failure',
+      isError: true,
+      isBase: true,
+      isOwnType: true,
+      hasExpectedBasePrototype: true,
+    },
+    {
+      name: 'DomainError',
+      code: 'INVALID_GLUCOSE_VALUE',
+      message: 'domain failure',
+      isError: true,
+      isBase: true,
+      isOwnType: true,
+      hasExpectedBasePrototype: true,
+    },
+    {
+      name: 'EmptyDatasetError',
+      code: 'EMPTY_DATASET',
+      message: 'empty failure',
+      isError: true,
+      isBase: true,
+      isOwnType: true,
+      hasExpectedBasePrototype: true,
+    },
+    {
+      name: 'TimestampError',
+      code: 'TIMESTAMP_UNPARSEABLE',
+      message: 'timestamp failure',
+      isError: true,
+      isBase: true,
+      isOwnType: true,
+      hasExpectedBasePrototype: true,
+    },
+  ]
   const esmSource = `
     import * as core from '@glucoseiq/core'
     import * as metrics from '@glucoseiq/core/metrics'
@@ -277,6 +364,13 @@ try {
     const chartProps: ChartBaseProps = { readings }
     const liveOptions: GlucoseLiveOptions = {}
     const liveResult = null as unknown as GlucoseLive
+    const errors = [
+      new core.GlucoseIQError('base failure', 'INVALID_OPTION'),
+      new core.ParseError('parse failure', 'PARSE_FAILED'),
+      new core.DomainError('domain failure', 'INVALID_GLUCOSE_VALUE'),
+      new core.EmptyDatasetError('empty failure'),
+      new core.TimestampError('timestamp failure'),
+    ]
     core.calculatePregnancyTIR(readings, { unit: 'mmol/L' })
     // @ts-expect-error Each reading already carries its unit.
     core.calculateEnhancedTIR(readings, { unit: 'mg/dL' })
@@ -298,7 +392,7 @@ try {
     type RemovedCohortOptions = import('@glucoseiq/core').CohortOptions
     // @ts-expect-error GlucoseIQOptions was removed before 1.0.
     type RemovedGlucoseIQOptions = import('@glucoseiq/core').GlucoseIQOptions
-    void [core, metrics, connectors, interop, render, reactAdapter, tokens, testing, cli, compatibility, unit, readings, patients, chartProps, liveOptions, liveResult]
+    void [core, metrics, connectors, interop, render, reactAdapter, tokens, testing, cli, compatibility, unit, readings, patients, chartProps, liveOptions, liveResult, errors]
   `
   const cjsSource = `
     import core = require('@glucoseiq/core')
@@ -313,7 +407,14 @@ try {
     import compatibility = require('diabetic-utils')
     import type { ChartBaseProps, GlucoseLive, GlucoseLiveOptions } from '@glucoseiq/react'
     const reactTypes = null as unknown as [ChartBaseProps, GlucoseLive, GlucoseLiveOptions]
-    void [core, metrics, connectors, interop, render, reactAdapter, tokens, testing, cli, compatibility, reactTypes]
+    const errors = [
+      new core.GlucoseIQError('base failure', 'INVALID_OPTION'),
+      new core.ParseError('parse failure', 'PARSE_FAILED'),
+      new core.DomainError('domain failure', 'INVALID_GLUCOSE_VALUE'),
+      new core.EmptyDatasetError('empty failure'),
+      new core.TimestampError('timestamp failure'),
+    ]
+    void [core, metrics, connectors, interop, render, reactAdapter, tokens, testing, cli, compatibility, reactTypes, errors]
   `
   const tsc = join(root, 'packages/core/node_modules/typescript/bin/tsc')
   const sharedTypeArgs = ['--noEmit', '--strict', '--skipLibCheck', 'false', '--target', 'ES2022']
@@ -357,6 +458,22 @@ try {
       reactRuntimeExports,
       `${consumer.label} React runtime exports`,
     )
+
+    for (const [format, source, inputType] of [
+      ['ESM', esmErrorContractCode, 'module'],
+      ['CommonJS', cjsErrorContractCode, 'commonjs'],
+    ]) {
+      const errorContract = JSON.parse(
+        run('node', ['--input-type', inputType, '--eval', source], {
+          cwd: consumerRoot,
+        }),
+      )
+      assert.deepEqual(
+        errorContract,
+        expectedErrorContract,
+        `${consumer.label} ${format} error contract`,
+      )
+    }
 
     const compatibility = JSON.parse(
       run('node', ['--input-type=commonjs', '--eval', compatibilityCode], { cwd: consumerRoot }),
