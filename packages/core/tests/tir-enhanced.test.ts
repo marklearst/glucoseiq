@@ -2,11 +2,46 @@
 
 import { describe, it, expect } from 'vitest'
 import { calculateEnhancedTIR, calculatePregnancyTIR } from '../src/tir-enhanced'
-import type { GlucoseReading } from '../src/types'
+import { DomainError } from '../src/errors'
+import type {
+  EnhancedTIROptions,
+  EnhancedTIRResult,
+  GlucoseReading,
+  GlucoseUnit,
+} from '../src/types'
 
 // Test constants
 const TEST_TIMESTAMP_BASE = new Date(2024, 0, 1, 8, 0)
 const MINUTE_IN_MS = 60 * 1000
+
+const ENHANCED_ZONES = [
+  'veryLow',
+  'low',
+  'inRange',
+  'high',
+  'veryHigh',
+] as const
+
+function classifiedReadingCount(result: EnhancedTIRResult): number {
+  return ENHANCED_ZONES.reduce(
+    (count, zone) => count + result[zone].readingCount,
+    0
+  )
+}
+
+function zoneFor(
+  value: number,
+  unit: GlucoseUnit
+): (typeof ENHANCED_ZONES)[number] | undefined {
+  const result = calculateEnhancedTIR([
+    {
+      value,
+      unit,
+      timestamp: TEST_TIMESTAMP_BASE.toISOString(),
+    },
+  ])
+  return ENHANCED_ZONES.find((zone) => result[zone].readingCount === 1)
+}
 
 describe('calculateEnhancedTIR', () => {
   // Helper to create glucose readings
@@ -129,9 +164,65 @@ describe('calculateEnhancedTIR', () => {
       expect(result.high.readingCount).toBe(1)
       expect(result.veryHigh.readingCount).toBe(1)
     })
+
+    it('should compare custom thresholds in mg/dL for mmol/L readings', () => {
+      const readings = createReadings([6], 'mmol/L')
+
+      const result = calculateEnhancedTIR(readings, {
+        veryLowThreshold: 54,
+        lowThreshold: 70,
+        highThreshold: 100,
+        veryHighThreshold: 180,
+      })
+
+      expect(result.high.readingCount).toBe(1)
+      expect(result.high.averageValue).toBe(108)
+    })
   })
 
   describe('Boundary values', () => {
+    it('should use gap-free native-unit boundaries', () => {
+      expect(zoneFor(180.005, 'mg/dL')).toBe('high')
+      expect(zoneFor(250.005, 'mg/dL')).toBe('veryHigh')
+      expect(zoneFor(3.0, 'mmol/L')).toBe('low')
+      expect(zoneFor(3.9, 'mmol/L')).toBe('inRange')
+      expect(zoneFor(10.0, 'mmol/L')).toBe('inRange')
+      expect(zoneFor(13.9, 'mmol/L')).toBe('high')
+      expect(zoneFor(13.91, 'mmol/L')).toBe('veryHigh')
+    })
+
+    it('should classify every reading in a boundary dataset exactly once', () => {
+      const readings = createReadings([
+        54,
+        70,
+        180,
+        180.005,
+        250,
+        250.005,
+      ])
+
+      const result = calculateEnhancedTIR(readings)
+
+      expect(classifiedReadingCount(result)).toBe(readings.length)
+    })
+
+    it('should classify every reading in a mixed-unit dataset exactly once', () => {
+      const readings: GlucoseReading[] = [
+        ...createReadings([3.0, 3.9, 10.0, 13.9, 13.91], 'mmol/L'),
+        {
+          value: 180.005,
+          unit: 'mg/dL',
+          timestamp: new Date(
+            TEST_TIMESTAMP_BASE.getTime() + 25 * MINUTE_IN_MS
+          ).toISOString(),
+        },
+      ]
+
+      const result = calculateEnhancedTIR(readings)
+
+      expect(classifiedReadingCount(result)).toBe(readings.length)
+    })
+
     it('should correctly classify value at 54 mg/dL (boundary)', () => {
       const readings = createReadings([54, 100, 110])
 
@@ -464,6 +555,14 @@ describe('calculateEnhancedTIR', () => {
       expect(result.inRange.averageValue).toBeCloseTo(120, -1)
     })
 
+    it('should report mmol/L reading averages in mg/dL', () => {
+      const readings = createReadings([5.5, 6.5], 'mmol/L')
+
+      const result = calculateEnhancedTIR(readings)
+
+      expect(result.inRange.averageValue).toBe(108)
+    })
+
     it('should return null average for empty ranges', () => {
       const readings = createReadings([100, 110, 120])
 
@@ -544,6 +643,38 @@ describe('calculateEnhancedTIR', () => {
 
       expect(() => calculateEnhancedTIR(readings)).toThrow('Invalid glucose value')
     })
+
+    const invalidThresholds: [string, EnhancedTIROptions][] = [
+      ['NaN', { veryLowThreshold: NaN }],
+      ['infinity', { veryHighThreshold: Infinity }],
+      [
+        'equal values',
+        { veryLowThreshold: 54, lowThreshold: 54 },
+      ],
+      [
+        'descending values',
+        { highThreshold: 250, veryHighThreshold: 200 },
+      ],
+    ]
+
+    it.each(invalidThresholds)(
+      'should reject %s in custom thresholds before reading traversal',
+      (_label, options) => {
+        let thrown: unknown
+        try {
+          calculateEnhancedTIR(createReadings([NaN]), options)
+        } catch (error) {
+          thrown = error
+        }
+
+        expect(thrown).toBeInstanceOf(DomainError)
+        expect(thrown).toMatchObject({
+          code: 'INVALID_OPTION',
+          message:
+            'Enhanced TIR thresholds must be finite and strictly increasing',
+        })
+      }
+    )
   })
 
   describe('Edge cases', () => {
@@ -654,6 +785,14 @@ describe('calculatePregnancyTIR', () => {
       expect(result.inRange.readingCount).toBe(2)
       expect(result.aboveRange.readingCount).toBe(1) // 141 is above range
     })
+
+    it('should classify a value immediately above 140 mg/dL as above range', () => {
+      const readings = createReadings([140.005])
+
+      const result = calculatePregnancyTIR(readings)
+
+      expect(result.aboveRange.readingCount).toBe(1)
+    })
   })
 
   describe('Unit conversion (mmol/L)', () => {
@@ -666,6 +805,14 @@ describe('calculatePregnancyTIR', () => {
 
       expect(result.inRange.percentage).toBe(75) // 3 out of 4
       expect(result.aboveRange.percentage).toBe(25) // 1 out of 4
+    })
+
+    it('should classify a value immediately above 7.8 mmol/L as above range', () => {
+      const readings = createReadings([7.805], 'mmol/L')
+
+      const result = calculatePregnancyTIR(readings)
+
+      expect(result.aboveRange.readingCount).toBe(1)
     })
   })
 
