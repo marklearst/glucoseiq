@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { detectGaps, splitDayNight } from '../src/timeseries'
 import { createGlucoseReadings } from './test-helpers'
 import { DomainError } from '../src/errors'
@@ -80,5 +80,25 @@ describe('splitDayNight', () => {
         message: 'Invalid time zone specified: Mars/Phobos',
       })
     }
+  })
+
+  it('rethrows unexpected date-time formatter errors unchanged', () => {
+    const unexpectedError = new Error('Unexpected date-time formatter failure')
+    const dateTimeFormatSpy = vi
+      .spyOn(Intl, 'DateTimeFormat')
+      .mockImplementation(() => {
+        throw unexpectedError
+      })
+    let thrown: unknown
+
+    try {
+      splitDayNight([at(0)])
+    } catch (error) {
+      thrown = error
+    } finally {
+      dateTimeFormatSpy.mockRestore()
+    }
+
+    expect(thrown).toBe(unexpectedError)
   })
 })
