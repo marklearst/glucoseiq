@@ -2,8 +2,8 @@
  * @file src/hooks.ts
  *
  * Memoized React hooks over the @glucoseiq/core engine. Each hook is a thin
- * useMemo around the corresponding pure function — SSR-safe, no effects except
- * the opt-in live clock in useGlucoseLive.
+ * useMemo around the corresponding pure function. useGlucoseLive additionally
+ * supports an opt-in client-side refresh interval.
  */
 
 import { useEffect, useMemo, useState } from 'react'

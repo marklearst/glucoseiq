@@ -4,7 +4,7 @@
  * Headless chart components — thin React wrappers around the zero-dependency
  * SVG-string renderers in @glucoseiq/core. Each renders a wrapper element with
  * the chart SVG inlined; style it like any element (className/style pass
- * through). No chart library, no client-side layout work, SSR/RSC-friendly.
+ * through). No chart library or client-side layout measurement.
  */
 
 import { useMemo, type CSSProperties, type JSX } from 'react'

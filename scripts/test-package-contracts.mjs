@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
+import { createRequire } from 'node:module'
 import {
   mkdtempSync,
   mkdirSync,
@@ -14,6 +15,8 @@ import { fileURLToPath } from 'node:url'
 import { assertValidPackageVersions } from './lib/package-contracts.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const reactRequire = createRequire(join(root, 'packages/react/package.json'))
+const ts = reactRequire('typescript')
 const fixturePath = join(root, 'scripts/fixtures/diabetic-utils-1.5-exports.json')
 const legacyExports = JSON.parse(readFileSync(fixturePath, 'utf8'))
 
@@ -40,6 +43,16 @@ const publicEntrypoints = [
 const reactConsumers = [
   { label: 'React 18', react: '18.3.1', reactTypes: '18.3.31' },
   { label: 'React 19', react: '19.2.7', reactTypes: '19.2.17' },
+]
+const reactRuntimeExports = [
+  'AgpChart',
+  'TirBar',
+  'TrendTile',
+  'useAGPProfile',
+  'useGlucoseAnalysis',
+  'useGlucoseIQScore',
+  'useGlucoseLive',
+  'useMealResponse',
 ]
 
 function run(command, args, options = {}) {
@@ -84,6 +97,21 @@ function assertTypeRoute(exportTarget, label) {
   assert.match(exportTarget.require.default, /\.js$/, `${label} CommonJS runtime`)
 }
 
+function firstDirective(source, fileName) {
+  const sourceFile = ts.createSourceFile(
+    fileName,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.JS,
+  )
+  const first = sourceFile.statements[0]
+  if (!first || !ts.isExpressionStatement(first) || !ts.isStringLiteral(first.expression)) {
+    return undefined
+  }
+  return first.expression.text
+}
+
 assert.equal(legacyExports.length, 107, 'the diabetic-utils 1.5 fixture must contain 107 exports')
 assert.equal(new Set(legacyExports).size, 107, 'the diabetic-utils 1.5 fixture must not contain duplicates')
 
@@ -110,13 +138,17 @@ assertValidPackageVersions(sourceManifests)
 const coreVersion = sourceManifests.get('@glucoseiq/core').version
 
 const reactManifest = sourceManifests.get('@glucoseiq/react')
+assert.deepEqual(Object.keys(reactManifest.exports), ['.'], 'React source entrypoints')
 assert.equal(reactManifest.peerDependencies?.react, '>=18', 'React 18 and 19 must satisfy the peer range')
 assert.equal(reactManifest.dependencies?.react, undefined, 'React must not be a runtime dependency')
+assert.equal(reactManifest.optionalDependencies?.react, undefined, 'React must not be an optional dependency')
+assert.equal(reactManifest.dependencies?.['@glucoseiq/core'], 'workspace:^', 'React source core dependency')
 
 const temporaryRoot = mkdtempSync(join(tmpdir(), 'glucoseiq-packages-'))
 
 try {
   const packedManifests = new Map()
+  const packedRoots = new Map()
   const tarballs = new Map()
 
   for (const spec of packageSpecs) {
@@ -144,10 +176,43 @@ try {
     }
 
     packedManifests.set(spec.name, packedManifest)
+    packedRoots.set(spec.name, packedRoot)
     tarballs.set(spec.name, archivePath)
   }
 
   assert.equal(packedManifests.get('@glucoseiq/cli').bin?.glucoseiq, './dist/bin.js')
+  const packedReactManifest = packedManifests.get('@glucoseiq/react')
+  assert.deepEqual(Object.keys(packedReactManifest.exports), ['.'], 'React packed entrypoints')
+  assert.equal(packedReactManifest.peerDependencies?.react, '>=18', 'React packed peer range')
+  assert.equal(packedReactManifest.dependencies?.react, undefined, 'React packed runtime dependencies')
+  assert.equal(
+    packedReactManifest.optionalDependencies?.react,
+    undefined,
+    'React packed optional dependencies',
+  )
+  assert.equal(
+    packedReactManifest.dependencies?.['@glucoseiq/core'],
+    `^${coreVersion}`,
+    'React packed core dependency',
+  )
+
+  const packedReactRoot = packedRoots.get('@glucoseiq/react')
+  const packedReactDirectives = [
+    ['ESM', 'dist/index.mjs'],
+    ['CommonJS', 'dist/index.js'],
+  ].map(([format, file]) => ({
+    format,
+    directive: firstDirective(readFileSync(join(packedReactRoot, file), 'utf8'), file),
+  }))
+  assert.deepEqual(
+    packedReactDirectives,
+    [
+      { format: 'ESM', directive: 'use client' },
+      { format: 'CommonJS', directive: 'use client' },
+    ],
+    'React packed runtimes must begin with the client directive',
+  )
+
   const inspectModules = (loader) => `
     const names = ${JSON.stringify(publicEntrypoints)};
     const modules = await Promise.all(names.map((name) => ${loader}));
@@ -205,9 +270,13 @@ try {
     import * as cli from '@glucoseiq/cli'
     import * as compatibility from 'diabetic-utils'
     import type { GlucoseUnit } from '@glucoseiq/core'
+    import type { ChartBaseProps, GlucoseLive, GlucoseLiveOptions } from '@glucoseiq/react'
     const unit: GlucoseUnit = 'mg/dL'
     const readings: core.GlucoseReading[] = []
     const patients: core.GlucoseReading[][] = []
+    const chartProps: ChartBaseProps = { readings }
+    const liveOptions: GlucoseLiveOptions = {}
+    const liveResult = null as unknown as GlucoseLive
     core.calculatePregnancyTIR(readings, { unit: 'mmol/L' })
     // @ts-expect-error Each reading already carries its unit.
     core.calculateEnhancedTIR(readings, { unit: 'mg/dL' })
@@ -229,7 +298,7 @@ try {
     type RemovedCohortOptions = import('@glucoseiq/core').CohortOptions
     // @ts-expect-error GlucoseIQOptions was removed before 1.0.
     type RemovedGlucoseIQOptions = import('@glucoseiq/core').GlucoseIQOptions
-    void [core, metrics, connectors, interop, render, reactAdapter, tokens, testing, cli, compatibility, unit, readings, patients]
+    void [core, metrics, connectors, interop, render, reactAdapter, tokens, testing, cli, compatibility, unit, readings, patients, chartProps, liveOptions, liveResult]
   `
   const cjsSource = `
     import core = require('@glucoseiq/core')
@@ -242,7 +311,9 @@ try {
     import testing = require('@glucoseiq/testing')
     import cli = require('@glucoseiq/cli')
     import compatibility = require('diabetic-utils')
-    void [core, metrics, connectors, interop, render, reactAdapter, tokens, testing, cli, compatibility]
+    import type { ChartBaseProps, GlucoseLive, GlucoseLiveOptions } from '@glucoseiq/react'
+    const reactTypes = null as unknown as [ChartBaseProps, GlucoseLive, GlucoseLiveOptions]
+    void [core, metrics, connectors, interop, render, reactAdapter, tokens, testing, cli, compatibility, reactTypes]
   `
   const tsc = join(root, 'packages/core/node_modules/typescript/bin/tsc')
   const sharedTypeArgs = ['--noEmit', '--strict', '--skipLibCheck', 'false', '--target', 'ES2022']
@@ -280,6 +351,12 @@ try {
     for (const [entrypoint, keys] of esmKeys) {
       assert.ok(keys.length > 0, `${consumer.label} ${entrypoint} must expose runtime exports`)
     }
+    const packedReactExports = esmKeys.find(([entrypoint]) => entrypoint === '@glucoseiq/react')?.[1]
+    assert.deepEqual(
+      packedReactExports,
+      reactRuntimeExports,
+      `${consumer.label} React runtime exports`,
+    )
 
     const compatibility = JSON.parse(
       run('node', ['--input-type=commonjs', '--eval', compatibilityCode], { cwd: consumerRoot }),
