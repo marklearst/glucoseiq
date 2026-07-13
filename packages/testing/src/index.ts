@@ -64,6 +64,12 @@ export function generateCGMSeries(options?: GenerateOptions): GlucoseReading[] {
   if (options === null || (options !== undefined && typeof options !== 'object')) {
     throw new RangeError('options must be an object')
   }
+  if (options !== undefined) {
+    const prototype = Object.getPrototypeOf(options)
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw new RangeError('options must be an object')
+    }
+  }
 
   const days = options === undefined || options.days === undefined ? 1 : options.days
   const intervalMin =

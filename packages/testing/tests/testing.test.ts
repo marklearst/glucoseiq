@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { generateCGMSeries, scenarios } from '../src'
 import type { GenerateOptions } from '../src'
 
+class NonPlainOptions {}
+
 function expectOptionRangeError(options: GenerateOptions, message: string): void {
   let thrown: unknown
   try {
@@ -30,6 +32,8 @@ describe('generateCGMSeries', () => {
   it('uses defaults for omitted and explicitly undefined options', () => {
     const expected = generateCGMSeries()
     expect(generateCGMSeries(undefined)).toEqual(expected)
+    expect(generateCGMSeries({})).toEqual(expected)
+    expect(generateCGMSeries(Object.create(null) as GenerateOptions)).toEqual(expected)
     expect(
       generateCGMSeries({
         days: undefined,
@@ -154,6 +158,11 @@ describe('generateCGMSeries', () => {
   it.each([
     { name: 'null', options: null },
     { name: 'number', options: 42 },
+    { name: 'array', options: [] },
+    { name: 'Date', options: new Date() },
+    { name: 'Map', options: new Map() },
+    { name: 'RegExp', options: /x/ },
+    { name: 'class instance', options: new NonPlainOptions() },
   ])('rejects $name top-level options', ({ options }) => {
     expectOptionRangeError(options as never, 'options must be an object')
   })
