@@ -117,6 +117,26 @@ describe('typed throws across the library', () => {
       },
     },
     {
+      name: 'checkGlycemicAlignment rejects invalid glucose values',
+      call: () => checkGlycemicAlignment(6, -1, 5),
+      expected: {
+        type: DomainError,
+        code: 'INVALID_GLUCOSE_VALUE',
+        message:
+          'Invalid fasting glucose value (must be a positive number in mg/dL)',
+      },
+    },
+    {
+      name: 'checkGlycemicAlignment rejects invalid insulin values',
+      call: () => checkGlycemicAlignment(6, 100, -1),
+      expected: {
+        type: DomainError,
+        code: 'INVALID_INSULIN_VALUE',
+        message:
+          'Invalid fasting insulin value (must be a positive number in µIU/mL)',
+      },
+    },
+    {
       name: 'estimateGMI requires a unit for numeric input',
       call: () => estimateGMI(100),
       expected: {
@@ -196,6 +216,26 @@ describe('typed throws across the library', () => {
         type: DomainError,
         code: 'INVALID_TIMEZONE',
         message: 'Invalid time zone specified: Mars/Phobos',
+      },
+    },
+    {
+      name: 'parseDexcomDate reports out-of-range vendor epochs',
+      call: () => parseDexcomDate('Date(8640000000000001)'),
+      expected: {
+        type: TimestampError,
+        code: 'TIMESTAMP_UNPARSEABLE',
+        message:
+          'Unable to parse Dexcom date: Date(8640000000000001)',
+      },
+    },
+    {
+      name: 'parseDexcomDate reports out-of-range ISO timestamps',
+      call: () => parseDexcomDate('+275760-09-13T00:00:00.001Z'),
+      expected: {
+        type: TimestampError,
+        code: 'TIMESTAMP_UNPARSEABLE',
+        message:
+          'Unable to parse Dexcom date: +275760-09-13T00:00:00.001Z',
       },
     },
     {

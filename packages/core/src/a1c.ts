@@ -74,7 +74,7 @@ export function isA1CInTarget(
  * @param current - Current A1C
  * @param previous - Previous A1C
  * @returns Delta (current - previous)
- * @throws If either value is invalid
+ * @throws {DomainError} If either value is invalid
  */
 export function a1cDelta(current: number, previous: number): number {
   if (!isValidA1C(current) || !isValidA1C(previous))

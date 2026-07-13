@@ -36,17 +36,28 @@ const DEXCOM_TREND_MAP: Record<DexcomTrendString, CGMTrend> = {
  *
  * Dexcom Share returns dates in the format `"Date(epochMs)"` or
  * `"/Date(epochMs)/"`. This helper handles both, plus plain ISO strings.
+ *
+ * @throws {TimestampError} If the date string cannot be parsed
  */
 export function parseDexcomDate(raw: string): string {
+  const parseErrorMessage = `Unable to parse Dexcom date: ${raw}`
   const epochMatch = raw.match(/Date\((\d+)\)/)
   if (epochMatch) {
-    return new Date(Number(epochMatch[1])).toISOString()
+    const date = new Date(Number(epochMatch[1]))
+    if (Number.isNaN(date.getTime())) {
+      throw new TimestampError(parseErrorMessage)
+    }
+    return date.toISOString()
   }
   const parsed = Date.parse(raw)
   if (isNaN(parsed)) {
-    throw new TimestampError(`Unable to parse Dexcom date: ${raw}`)
+    throw new TimestampError(parseErrorMessage)
   }
-  return new Date(parsed).toISOString()
+  const date = new Date(parsed)
+  if (Number.isNaN(date.getTime())) {
+    throw new TimestampError(parseErrorMessage)
+  }
+  return date.toISOString()
 }
 
 /**
@@ -66,7 +77,7 @@ export function normalizeDexcomTrend(
  *
  * @param entry - Raw Dexcom Share entry
  * @returns Normalized reading compatible with all `@glucoseiq/core` analytics functions
- * @throws {Error} If the date string cannot be parsed
+ * @throws {TimestampError} If the date string cannot be parsed
  */
 export function normalizeDexcomEntry(
   entry: DexcomShareEntry
