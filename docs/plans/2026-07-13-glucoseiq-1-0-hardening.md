@@ -1447,7 +1447,15 @@ fence must carry exactly one of:
 
 - `typecheck`, meaning it is standalone and compiled independently;
 - `fragment="nonempty reviewed reason"`, accepted only from an explicit path/line
-  allowlist maintained by the contract test.
+  allowlist maintained by the contract test when the fence is hand-authored.
+
+Generated API declaration and signature fences are the sole exception to the manual
+path/line allowlist. Accept them only when all three conditions hold: the file is under
+the managed `apps/docs/content/docs/api/core/**` tree, the API renderer emitted the
+exact repository-owned fragment reason, and renderer unit tests pin that metadata.
+Reject that generated reason everywhere else. This keeps the authored-fragment
+allowlist small and line-stable without maintaining hundreds of generated line-number
+entries or permitting generated pages to self-classify arbitrary examples.
 
 Reject malformed, duplicate, hidden, empty, unclosed, or unclassified fences. Discover
 source `@example` blocks dynamically across all six published packages rather than
@@ -1513,8 +1521,10 @@ green snippet run.
 Only after the unchanged-corpus RED is recorded, mark generated API
 declaration/signature fences as reviewed fragments in the API renderer; convert every
 dynamically discovered public source `@example` to a standalone `typecheck` example;
-and classify every authored docs/README fence. Keep the fragment allowlist small,
-reasoned, and line-stable. Regenerate the managed API after source examples change.
+and classify every authored docs/README fence. Keep the manual fragment allowlist
+small, reasoned, and line-stable; generated declarations and signatures use only the
+managed-path, exact-reason exception above. Regenerate the managed API after source
+examples change.
 
 Use these terms across source and documentation:
 
