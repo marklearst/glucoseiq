@@ -1316,6 +1316,7 @@ git commit -m "fix: correct a1c category boundaries"
 - Modify: `packages/cli/package.json`
 - Modify: `packages/cli/src/index.ts`
 - Modify: `packages/diabetic-utils/package.json`
+- Modify: `packages/diabetic-utils/src/index.ts`
 - Modify: `packages/core/src/a1c.ts`
 - Modify: `packages/core/src/align.ts`
 - Modify: `packages/core/src/analyze.ts`
@@ -1324,8 +1325,13 @@ git commit -m "fix: correct a1c category boundaries"
 - Modify: `packages/core/src/conversions.ts`
 - Modify: `packages/core/src/formatters.ts`
 - Modify: `packages/core/src/glucose.ts`
+- Modify: `packages/core/src/guards.ts`
 - Modify: `packages/core/src/index.ts`
 - Modify: `packages/core/src/connectors/index.ts`
+- Modify: `packages/core/src/connectors/dexcom.ts`
+- Modify: `packages/core/src/connectors/libre.ts`
+- Modify: `packages/core/src/connectors/nightscout.ts`
+- Modify: `packages/core/src/connectors/types.ts`
 - Modify: `packages/core/src/live.ts`
 - Modify: `packages/core/src/mage.ts`
 - Modify: `packages/core/src/score.ts`
@@ -1335,6 +1341,8 @@ git commit -m "fix: correct a1c category boundaries"
 - Modify: `packages/core/src/types.ts`
 - Modify: `packages/core/src/variability.ts`
 - Modify: `packages/core/src/metrics/agp-profile.ts`
+- Modify: `packages/core/src/metrics/active-percent.ts`
+- Modify: `packages/core/src/metrics/agp.ts`
 - Modify: `packages/core/src/metrics/auc.ts`
 - Modify: `packages/core/src/metrics/episodes.ts`
 - Modify: `packages/core/src/metrics/meal.ts`
@@ -1342,6 +1350,13 @@ git commit -m "fix: correct a1c category boundaries"
 - Modify: `packages/core/src/render/index.ts`
 - Modify: `packages/core/src/render/tir-bar.ts`
 - Modify: `packages/core/src/render/trend-tile.ts`
+- Modify: `packages/core/tests/analyze.test.ts`
+- Modify: `packages/core/tests/glucose.test.ts`
+- Modify: `packages/core/tests/guards.test.ts`
+- Modify: `packages/core/tests/metrics.test.ts`
+- Modify: `packages/core/tests/score.test.ts`
+- Modify: `packages/core/tests/tir-bar.test.ts`
+- Modify: `packages/core/tests/tir-enhanced.test.ts`
 - Modify: `apps/docs/app/(home)/page.tsx`
 - Modify: `apps/docs/app/layout.tsx`
 - Modify: `apps/docs/content/docs/agp.mdx`
@@ -1569,6 +1584,52 @@ already tracked `/docs/api` overview plus their package-specific guide, and link
 compatibility bridge to `/docs/api/core` plus `/docs/migration`. Task 10 may replace the
 overview links with package-specific API pages only after those routes exist.
 
+- [ ] **Step 5A: Repair review-discovered runtime boundaries with regressions**
+
+The public-contract review is authorized to fix correctness defects discovered while
+matching documentation to runtime behavior. Keep each repair inside the existing six
+package architecture; do not add a public package unless the review demonstrates an
+independent ownership boundary, consumer, and release value that cannot live in an
+existing package. No such package boundary is currently justified.
+
+Record a focused failing test before each behavior change, then make only that contract
+green:
+
+- require positive finite glucose strings and exact supported units in runtime guards;
+- validate runtime population, reading-unit, and pregnancy unit-option literals before
+  any target or conversion branch, while report/score wrappers consistently screen
+  unsupported-unit rows under their sentinel-result contracts;
+- assess Enhanced and pregnancy TIR targets from raw percentages with strict TIR
+  boundaries, cumulative TBR/TAR limits, the pregnancy Level 2 subset, and explicit
+  `targetBasis` disclosure for configured ranges;
+- count active percent as occupied half-open timestamp slots, excluding invalid
+  timestamps and duplicate rows, with the unrounded ratio driving the threshold flag;
+- make `analyzeGlucose` use unrounded span and slot coverage for sufficiency decisions;
+- make Enhanced and pregnancy summary duration fail closed for invalid or
+  duplicate-only timestamps, require at least 70% slot coverage for quality grades,
+  divide each occupied slot across its distinct observations and zones, collapse exact
+  duplicates, ignore invalid timestamps, and conserve integer minutes across primary
+  range durations;
+- describe threshold-grouped episodes as candidates rather than confirmed recovery;
+- narrow connector, compatibility, testing, token, and aggregate-metric prose to the
+  behavior proven by source and package tests.
+
+Add migration and data-quality disclosures for every public behavior correction. Keep
+the managed API stale while runtime source is moving; regenerate it once after the
+source and narrative contracts settle.
+
+Run the focused and complete gates:
+
+```sh
+pnpm --filter @glucoseiq/core exec vitest run tests/guards.test.ts tests/glucose.test.ts
+pnpm --filter @glucoseiq/core exec vitest run tests/metrics.test.ts tests/analyze.test.ts tests/score.test.ts tests/tir-enhanced.test.ts
+pnpm --filter @glucoseiq/core test:coverage
+pnpm test:errors
+```
+
+Expected: the regression subsets pass and core reports exactly 100% statements,
+branches, functions, and lines before managed API regeneration.
+
 - [ ] **Step 6: Fix strict examples and run green checks**
 
 Narrow nullable report sections before dereference:
@@ -1615,9 +1676,10 @@ test -z "$(git diff --name-only -- packages/core/docs-md/)"
 git add README.md CHANGELOG.md package.json pnpm-lock.yaml
 git add packages/{core,react,tokens,testing,cli,diabetic-utils}/README.md
 git add packages/{react,tokens,testing,cli,diabetic-utils}/package.json
-git add packages/react/src/hooks.ts packages/tokens/src/index.ts packages/testing/src/index.ts packages/cli/src/index.ts
-git add packages/core/src/{a1c,align,analyze,cohort,constants,conversions,csv,formatters,glucose,index,live,mage,score,tir,tir-enhanced,types,variability}.ts
-git add packages/core/src/connectors/index.ts packages/core/src/metrics/{agp-profile,auc,episodes,meal}.ts packages/core/src/render/{agp-svg,index,tir-bar,trend-tile}.ts
+git add packages/react/src/hooks.ts packages/tokens/src/index.ts packages/testing/src/index.ts packages/cli/src/index.ts packages/diabetic-utils/src/index.ts
+git add packages/core/src/{a1c,align,analyze,cohort,constants,conversions,csv,formatters,glucose,guards,index,live,mage,score,tir,tir-enhanced,types,variability}.ts
+git add packages/core/src/connectors/{dexcom,index,libre,nightscout,types}.ts packages/core/src/metrics/{active-percent,agp,agp-profile,auc,episodes,meal}.ts packages/core/src/render/{agp-svg,index,tir-bar,trend-tile}.ts
+git add packages/core/tests/{analyze,glucose,guards,metrics,score,tir-bar,tir-enhanced}.test.ts
 git add apps/docs/package.json apps/docs/app/layout.tsx apps/docs/app/'(home)'/page.tsx
 git add apps/docs/content/docs/{agp,cli,connectors,core-concepts,dashboard,data-model,data-quality,index,interoperability,live,metrics,migration,react,testing,tokens}.mdx
 git add apps/docs/content/docs/api/core apps/docs/scripts/lib/api-renderer.mjs apps/docs/scripts/generate-api.test.mjs
