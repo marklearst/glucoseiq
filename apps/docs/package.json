@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "postinstall": "fumadocs-mdx",
-    "docs:api": "node scripts/generate-api.mjs"
+    "docs:api": "node scripts/generate-api.mjs",
+    "docs:api:check": "node scripts/check-api.mjs",
+    "test:api": "node --test scripts/generate-api.test.mjs"
   },
   "dependencies": {
     "@glucoseiq/core": "workspace:^",
@@ -27,6 +29,7 @@
     "@types/react": "^19.2.0",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.1.7",
+    "typedoc": "0.28.4",
     "typescript": "^5.8.3"
   }
 }

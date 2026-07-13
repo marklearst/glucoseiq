@@ -1,0 +1,24 @@
+---
+title: "Glucose IQ Score"
+description: "The project-defined wellness score derived from GRI."
+---
+
+### glucoseIQScore
+
+**Import:** `@glucoseiq/core`
+
+```ts
+glucoseIQScore(readings: GlucoseReading[]): GlucoseIQScore
+```
+
+Computes the Glucose IQ score (100 − GRI) from glucose readings.
+
+**Returns** — Score, underlying GRI, zone, and a qualitative rating
+
+```ts
+glucoseIQScore(readings).score // 82  → 'good'
+```
+
+| Parameter | Description |
+| --- | --- |
+| `readings` | Glucose readings with ISO 8601 timestamps |

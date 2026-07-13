@@ -1,14 +1,14 @@
 ---
-title: Interoperability
-description: FHIR CGM IG and Open mHealth payload builders.
+title: "Interoperability"
+description: "FHIR and Open mHealth payload builders."
 ---
-
-<Callout title="6 functions">Generated from the source TSDoc — every signature, parameter, and example is the real thing.</Callout>
 
 ### buildFHIRCGMSummary
 
+**Import:** `@glucoseiq/core/interop`
+
 ```ts
-buildFHIRCGMSummary(tir: EnhancedTIRResult, period: { … }, options?: { … }): FHIRCGMSummary
+buildFHIRCGMSummary(tir: EnhancedTIRResult, period: { end: string; start: string }, options?: { cv?: number; gmi?: number; meanGlucose?: number }): FHIRCGMSummary
 ```
 
 Builds a FHIR-aligned CGM summary observation from an EnhancedTIRResult.
@@ -17,18 +17,20 @@ Includes TIR percentages for each range, mean glucose, and CV if provided.
 The output is a plain JSON object that can be serialized and POSTed to any
 FHIR-capable server.
 
+**Returns** — FHIR-aligned CGM summary observation
+
 | Parameter | Description |
 | --- | --- |
 | `tir` | Enhanced TIR result from calculateEnhancedTIR() |
 | `period` | Time period covered &#123; start: ISO string, end: ISO string &#125; |
 | `options` | Optional: meanGlucose, cv (coefficient of variation) |
 
-**Returns** — FHIR-aligned CGM summary observation
-
 
 ---
 
 ### buildFHIRSensorReading
+
+**Import:** `@glucoseiq/core/interop`
 
 ```ts
 buildFHIRSensorReading(reading: GlucoseReading): FHIRCGMSensorReading
@@ -36,16 +38,18 @@ buildFHIRSensorReading(reading: GlucoseReading): FHIRCGMSensorReading
 
 Converts a single GlucoseReading into a FHIR-aligned CGM sensor reading.
 
+**Returns** — FHIR-aligned sensor reading observation
+
 | Parameter | Description |
 | --- | --- |
 | `reading` | A GlucoseReading from any source (raw or normalized) |
-
-**Returns** — FHIR-aligned sensor reading observation
 
 
 ---
 
 ### buildFHIRSensorReadings
+
+**Import:** `@glucoseiq/core/interop`
 
 ```ts
 buildFHIRSensorReadings(readings: GlucoseReading[]): FHIRCGMSensorReading[]
@@ -53,16 +57,18 @@ buildFHIRSensorReadings(readings: GlucoseReading[]): FHIRCGMSensorReading[]
 
 Converts an array of GlucoseReadings into FHIR-aligned sensor reading observations.
 
+**Returns** — Array of FHIR-aligned sensor reading observations
+
 | Parameter | Description |
 | --- | --- |
 | `readings` | Array of glucose readings |
-
-**Returns** — Array of FHIR-aligned sensor reading observations
 
 
 ---
 
 ### buildOMHBloodGlucose
+
+**Import:** `@glucoseiq/core/interop`
 
 ```ts
 buildOMHBloodGlucose(reading: GlucoseReading): OMHBloodGlucose
@@ -70,16 +76,18 @@ buildOMHBloodGlucose(reading: GlucoseReading): OMHBloodGlucose
 
 Converts a GlucoseReading into an Open mHealth blood-glucose body.
 
+**Returns** — OMH blood-glucose body
+
 | Parameter | Description |
 | --- | --- |
 | `reading` | A GlucoseReading from any source |
-
-**Returns** — OMH blood-glucose body
 
 
 ---
 
 ### buildOMHBloodGlucoseList
+
+**Import:** `@glucoseiq/core/interop`
 
 ```ts
 buildOMHBloodGlucoseList(readings: GlucoseReading[]): OMHBloodGlucose[]
@@ -87,16 +95,18 @@ buildOMHBloodGlucoseList(readings: GlucoseReading[]): OMHBloodGlucose[]
 
 Converts an array of GlucoseReadings into Open mHealth blood-glucose bodies.
 
+**Returns** — Array of OMH blood-glucose bodies
+
 | Parameter | Description |
 | --- | --- |
 | `readings` | Array of glucose readings |
-
-**Returns** — Array of OMH blood-glucose bodies
 
 
 ---
 
 ### buildOMHDataPoint
+
+**Import:** `@glucoseiq/core/interop`
 
 ```ts
 buildOMHDataPoint(reading: GlucoseReading, id: string): OMHDataPoint<OMHBloodGlucose>
@@ -104,9 +114,9 @@ buildOMHDataPoint(reading: GlucoseReading, id: string): OMHDataPoint<OMHBloodGlu
 
 Wraps a GlucoseReading into a full Open mHealth DataPoint with header.
 
+**Returns** — Full OMH DataPoint with header and body
+
 | Parameter | Description |
 | --- | --- |
 | `reading` | A GlucoseReading from any source |
 | `id` | Unique datapoint identifier (UUID recommended) |
-
-**Returns** — Full OMH DataPoint with header and body

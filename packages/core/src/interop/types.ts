@@ -12,17 +12,17 @@ import type { GlucoseUnit } from '../types'
 // FHIR-aligned CGM summary types (HL7 CGM IG v1.0.0)
 // ---------------------------------------------------------------------------
 
-interface FHIRCoding {
+export interface FHIRCoding {
   readonly system: string
   readonly code: string
   readonly display: string
 }
 
-interface FHIRCodeableConcept {
+export interface FHIRCodeableConcept {
   readonly coding: readonly FHIRCoding[]
 }
 
-interface FHIRQuantity {
+export interface FHIRQuantity {
   readonly value: number
   readonly unit: string
   readonly system: string

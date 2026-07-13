@@ -1,6 +1,4 @@
 /**
- * @file src/metrics/index.ts
- *
  * Advanced CGM analytics metrics.
  * LBGI/HBGI, ADRR, GRADE, GRI, J-Index, CONGA, MODD, Active Percent,
  * and the aggregate calculateAGPMetrics function.

@@ -1,22 +1,17 @@
 ---
-title: Ingestion
-description: Parse any Dexcom/Libre/Nightscout/Tidepool CSV export.
+title: "Ingestion"
+description: "Mapped header-row delimited data parsing."
 ---
 
-<Callout title="1 function">Generated from the source TSDoc — every signature, parameter, and example is the real thing.</Callout>
-
 ### parseGlucoseCSV
+
+**Import:** `@glucoseiq/core`
 
 ```ts
 parseGlucoseCSV(text: string, options: CSVParseOptions): GlucoseReading[]
 ```
 
 Parses CSV text into glucose readings.
-
-| Parameter | Description |
-| --- | --- |
-| `text` | The CSV document |
-| `options` | Column names, unit, and delimiter |
 
 **Returns** — Parsed readings (rows with an unparseable value or timestamp are skipped)
 
@@ -28,3 +23,8 @@ const readings = parseGlucoseCSV(csv, {
   valueColumn: 'Glucose Value (mg/dL)',
 })
 ```
+
+| Parameter | Description |
+| --- | --- |
+| `text` | The CSV document |
+| `options` | Column names, unit, and delimiter |

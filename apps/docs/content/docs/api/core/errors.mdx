@@ -1,0 +1,116 @@
+---
+title: "Errors"
+description: "Functions and typed failures with stable machine-readable codes."
+---
+
+### DomainError
+
+```ts
+class DomainError extends GlucoseIQError
+```
+
+**Import:** `@glucoseiq/core`
+
+A value or option is outside its valid domain.
+
+**Constructor**
+
+```ts
+new DomainError(message: string, code: GlucoseIQErrorCode)
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly code` | `GlucoseIQErrorCode` | Stable machine-readable code. |
+
+
+---
+
+### EmptyDatasetError
+
+```ts
+class EmptyDatasetError extends GlucoseIQError
+```
+
+**Import:** `@glucoseiq/core`
+
+An operation requires data but the dataset is empty.
+
+**Constructor**
+
+```ts
+new EmptyDatasetError(message: string)
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly code` | `GlucoseIQErrorCode` | Stable machine-readable code. |
+
+
+---
+
+### GlucoseIQError
+
+```ts
+class GlucoseIQError extends Error
+```
+
+**Import:** `@glucoseiq/core`
+
+Base class for all intentional @glucoseiq/core errors.
+
+**Constructor**
+
+```ts
+new GlucoseIQError(message: string, code: GlucoseIQErrorCode)
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly code` | `GlucoseIQErrorCode` | Stable machine-readable code. |
+
+
+---
+
+### ParseError
+
+```ts
+class ParseError extends GlucoseIQError
+```
+
+**Import:** `@glucoseiq/core`
+
+Input text (CSV, glucose string, payload) could not be parsed.
+
+**Constructor**
+
+```ts
+new ParseError(message: string, code: GlucoseIQErrorCode)
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly code` | `GlucoseIQErrorCode` | Stable machine-readable code. |
+
+
+---
+
+### TimestampError
+
+```ts
+class TimestampError extends GlucoseIQError
+```
+
+**Import:** `@glucoseiq/core`
+
+A timestamp could not be parsed.
+
+**Constructor**
+
+```ts
+new TimestampError(message: string)
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly code` | `GlucoseIQErrorCode` | Stable machine-readable code. |
