@@ -3,8 +3,8 @@
 import { DomainError } from './errors'
 
 /**
- * Formats a clinical A1C value as a percent string (e.g., "7.2%").
- * Used for clinical reporting and display.
+ * Formats an A1C value as a percent string (e.g., "7.2%").
+ * Used for analytics output and display.
  * @param val - A1C value (percentage)
  * @returns A1C as string with percent sign
  */
@@ -13,8 +13,8 @@ export function formatA1C(val: number): string {
 }
 
 /**
- * Validates a clinical A1C value (percentage).
- * Ensures value is within physiologically plausible range for clinical analytics.
+ * Validates an A1C value (percentage).
+ * Ensures value is within the library's plausible analytics range.
  * @param value - Candidate A1C value
  * @returns True if value is a valid A1C percentage
  */
@@ -28,7 +28,7 @@ export function isValidA1C(value: unknown): boolean {
 }
 
 /**
- * Returns the clinical category for an A1C value (normal, prediabetes, diabetes, or invalid).
+ * Returns the CDC category for an A1C value (normal, prediabetes, diabetes, or invalid).
  * Uses CDC defaults: normal below 5.7%, prediabetes from 5.7% to below 6.5%,
  * and diabetes at 6.5% or above. Explicit custom maxima are inclusive. At
  * runtime, nullish threshold objects or fields use the CDC defaults.

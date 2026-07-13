@@ -12,6 +12,15 @@ import {
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import {
+  PACKAGE_README_CONTRACTS,
+  createPublicInventory,
+  createTrackedDocsRoutes,
+  findClaimViolations,
+  formatContractDiagnostics,
+  validateDocumentLinks,
+  validateReadmeContract,
+} from './lib/doc-contracts.mjs'
 import { assertValidPackageVersions } from './lib/package-contracts.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -19,6 +28,10 @@ const reactRequire = createRequire(join(root, 'packages/react/package.json'))
 const ts = reactRequire('typescript')
 const fixturePath = join(root, 'scripts/fixtures/diabetic-utils-1.5-exports.json')
 const legacyExports = JSON.parse(readFileSync(fixturePath, 'utf8'))
+const readmeContracts = new Map(
+  PACKAGE_README_CONTRACTS.map((contract) => [contract.packageName, contract]),
+)
+const trackedDocsRoutes = createTrackedDocsRoutes(createPublicInventory({ repoRoot: root }))
 
 const packageSpecs = [
   { directory: 'packages/core', name: '@glucoseiq/core', scoped: true },
@@ -28,6 +41,11 @@ const packageSpecs = [
   { directory: 'packages/cli', name: '@glucoseiq/cli', scoped: true, coreDependency: true },
   { directory: 'packages/diabetic-utils', name: 'diabetic-utils', coreDependency: true },
 ]
+assert.deepEqual(
+  [...readmeContracts.keys()].sort(),
+  packageSpecs.map(({ name }) => name).sort(),
+  'the packed-package matrix and shared README contracts must cover the same packages',
+)
 const publicEntrypoints = [
   '@glucoseiq/core',
   '@glucoseiq/core/metrics',
@@ -182,6 +200,10 @@ const sourceManifests = new Map(
     const manifest = JSON.parse(readFileSync(join(root, spec.directory, 'package.json'), 'utf8'))
     assert.equal(manifest.name, spec.name)
     assert.equal(manifest.engines?.node, '>=24', `${spec.name} Node support`)
+    assert.ok(
+      manifest.files?.includes('README.md'),
+      `${spec.name} source manifest must explicitly pack README.md`,
+    )
     assertTypeRoute(manifest.exports['.'], spec.name)
 
     if (spec.scoped) {
@@ -212,6 +234,7 @@ try {
   const packedManifests = new Map()
   const packedRoots = new Map()
   const tarballs = new Map()
+  const packedReadmeDiagnostics = []
 
   for (const spec of packageSpecs) {
     const packRoot = join(temporaryRoot, spec.name.replaceAll('/', '-').replace('@', ''))
@@ -224,7 +247,16 @@ try {
     run('tar', ['-xzf', archivePath, '-C', packRoot])
 
     const packedRoot = join(packRoot, 'package')
+    const packedReadmePath = join(packedRoot, 'README.md')
+    const sourceReadmePath = join(root, spec.directory, 'README.md')
     const manifestText = readFileSync(join(packedRoot, 'package.json'), 'utf8')
+    const readmeText = readFileSync(packedReadmePath, 'utf8')
+    const sourceReadmeText = readFileSync(sourceReadmePath, 'utf8')
+    assert.equal(
+      readmeText,
+      sourceReadmeText,
+      `${spec.name} packed README must byte-match its compiler-checked source README`,
+    )
     const packedManifest = JSON.parse(manifestText)
     assert.equal(manifestText.includes('workspace:'), false, `${spec.name} tarball must not contain workspace dependencies`)
     assertTypeRoute(packedManifest.exports['.'], `${spec.name} tarball`)
@@ -237,10 +269,34 @@ try {
       )
     }
 
+    const readmeContract = readmeContracts.get(spec.name)
+    assert.ok(readmeContract, `${spec.name} must have one shared README contract`)
+    const diagnosticPath = `packed/${spec.name}/README.md`
+    packedReadmeDiagnostics.push(
+      ...findClaimViolations({ path: diagnosticPath, text: readmeText }),
+      ...validateReadmeContract({
+        ...readmeContract,
+        path: diagnosticPath,
+        text: readmeText,
+      }),
+      ...validateDocumentLinks({
+        path: diagnosticPath,
+        text: readmeText,
+        trackedRoutes: trackedDocsRoutes,
+        publishedReadme: true,
+      }),
+    )
+
     packedManifests.set(spec.name, packedManifest)
     packedRoots.set(spec.name, packedRoot)
     tarballs.set(spec.name, archivePath)
   }
+
+  assert.equal(
+    packedReadmeDiagnostics.length,
+    0,
+    formatContractDiagnostics(packedReadmeDiagnostics),
+  )
 
   assert.equal(packedManifests.get('@glucoseiq/cli').bin?.glucoseiq, './dist/bin.js')
   const packedReactManifest = packedManifests.get('@glucoseiq/react')

@@ -186,6 +186,7 @@ function resultWithPercentages(
       tbrLevel2Safe: false,
       tarLevel1Acceptable: false,
       tarLevel2Acceptable: false,
+      targetBasis: 'consensus-ranges',
       overallAssessment: 'concerning',
       recommendations: [],
     },

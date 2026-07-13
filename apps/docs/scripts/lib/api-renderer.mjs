@@ -22,18 +22,19 @@ const KIND = Object.freeze({
 })
 
 const PACKAGE_NAME = '@glucoseiq/core'
+const GENERATED_API_FRAGMENT = 'ts fragment="generated API declaration or signature"'
 
 const FUNCTION_CATEGORIES = Object.freeze([
   {
     slug: 'reports',
     title: 'Reports',
-    description: 'Composed CGM analytics summaries from the full engine.',
+    description: 'Selected composed CGM analytics summaries.',
     matches: (file) => /(^|\/)analyze\.ts$/u.test(file),
   },
   {
     slug: 'agp',
     title: 'AGP & Metrics Aggregate',
-    description: 'Ambulatory Glucose Profile series and aggregate metrics.',
+    description: 'AGP-style percentile-band series and selected aggregate metrics.',
     matches: (file) => /(^|\/)metrics\/agp(?:-profile)?\.ts$/u.test(file),
   },
   {
@@ -66,7 +67,7 @@ const FUNCTION_CATEGORIES = Object.freeze([
   {
     slug: 'episodes',
     title: 'Episodes',
-    description: 'Hypoglycemia and hyperglycemia episode detection.',
+    description: 'Timestamp-grouped hypoglycemia and hyperglycemia episode candidates.',
     matches: (file) => /(^|\/)metrics\/episodes\.ts$/u.test(file),
   },
   {
@@ -718,10 +719,11 @@ function renderBlockComment(comment, owner, links) {
         neutralizeRawMarkdown: false,
       }).trim()
       const existingFence = /^(`{3,})([^\n]*)\n([\s\S]*?)\n\1$/u.exec(raw)
+      const exampleLanguage = existingFence?.[2].trim().split(/\s+/u)[0] || 'ts'
       sections.push(
         existingFence
-          ? codeBlock(existingFence[3], existingFence[2].trim() || 'ts')
-          : codeBlock(raw),
+          ? codeBlock(existingFence[3], `${exampleLanguage} typecheck`)
+          : codeBlock(raw, 'ts typecheck'),
       )
     } else if (tag.tag === '@defaultValue') sections.push(`**Default** — ${rendered}`)
   }
@@ -813,7 +815,7 @@ function renderCallableMembers(
   for (const signature of reflection.signatures ?? []) {
     lines.push(renderAnonymousSignature(signature, `${owner}.__call`))
   }
-  return lines.length ? `${codeBlock(lines.join('\n'))}\n\n` : ''
+  return lines.length ? `${codeBlock(lines.join('\n'), GENERATED_API_FRAGMENT)}\n\n` : ''
 }
 
 function renderInterface(reflection, links) {
@@ -821,7 +823,7 @@ function renderInterface(reflection, links) {
   assertAllowedFlags(reflection, allowedDeclarationFlags(), owner)
   const generics = renderTypeParameters(reflection.typeParameters, owner)
   const extended = (reflection.extendedTypes ?? []).map((type, index) => renderType(type, `${owner}.extends.${index}`))
-  let output = `### ${reflection.name}\n\n${codeBlock(`interface ${reflection.name}${generics}${extended.length ? ` extends ${extended.join(', ')}` : ''}`)}\n\n`
+  let output = `### ${reflection.name}\n\n${codeBlock(`interface ${reflection.name}${generics}${extended.length ? ` extends ${extended.join(', ')}` : ''}`, GENERATED_API_FRAGMENT)}\n\n`
   output += renderImport(reflection)
   output += renderBlockComment(reflection.comment, owner, links)
   output += renderPropertyTable(
@@ -838,7 +840,7 @@ function renderAlias(reflection, links) {
   const owner = `${PACKAGE_NAME}.${reflection.name}`
   assertAllowedFlags(reflection, allowedDeclarationFlags(), owner)
   const generics = renderTypeParameters(reflection.typeParameters, owner)
-  let output = `### ${reflection.name}\n\n${codeBlock(`type ${reflection.name}${generics} = ${renderType(reflection.type, owner)}`)}\n\n`
+  let output = `### ${reflection.name}\n\n${codeBlock(`type ${reflection.name}${generics} = ${renderType(reflection.type, owner)}`, GENERATED_API_FRAGMENT)}\n\n`
   output += renderImport(reflection)
   output += renderBlockComment(reflection.comment, owner, links)
   return output
@@ -850,7 +852,7 @@ function renderVariable(reflection, links) {
   if (!reflection.flags?.isConst) {
     throw new Error(`Mutable TypeDoc variable cannot be rendered as const at ${owner}`)
   }
-  let output = `### ${reflection.name}\n\n${codeBlock(`const ${reflection.name}: ${renderType(reflection.type, owner)}`)}\n\n`
+  let output = `### ${reflection.name}\n\n${codeBlock(`const ${reflection.name}: ${renderType(reflection.type, owner)}`, GENERATED_API_FRAGMENT)}\n\n`
   output += renderImport(reflection)
   output += renderBlockComment(reflection.comment, owner, links)
   return output
@@ -868,7 +870,7 @@ function renderClass(reflection, links) {
   const implemented = (reflection.implementedTypes ?? []).map((type, index) =>
     renderType(type, `${owner}.implements.${index}`),
   )
-  let output = `### ${reflection.name}\n\n${codeBlock(`${isAbstract ? 'abstract ' : ''}class ${reflection.name}${generics}${extended.length ? ` extends ${extended[0]}` : ''}${implemented.length ? ` implements ${implemented.join(', ')}` : ''}`)}\n\n`
+  let output = `### ${reflection.name}\n\n${codeBlock(`${isAbstract ? 'abstract ' : ''}class ${reflection.name}${generics}${extended.length ? ` extends ${extended[0]}` : ''}${implemented.length ? ` implements ${implemented.join(', ')}` : ''}`, GENERATED_API_FRAGMENT)}\n\n`
   output += renderImport(reflection)
   output += renderBlockComment(reflection.comment, owner, links)
   const constructorReflections = (reflection.children ?? []).filter(
@@ -897,7 +899,7 @@ function renderClass(reflection, links) {
       assertAllowedFlags(signature, allowedDeclarationFlags(), constructorOwner)
       return `new ${reflection.name}${renderTypeParameters(signature.typeParameters, constructorOwner)}(${renderParameters(signature.parameters, constructorOwner)})`
     }).join('\n')
-    output += `**Constructor**\n\n${codeBlock(constructors)}\n\n`
+    output += `**Constructor**\n\n${codeBlock(constructors, GENERATED_API_FRAGMENT)}\n\n`
   }
   output += renderPropertyTable(
     (reflection.children ?? []).filter((child) => child.kind === KIND.property),
@@ -921,7 +923,7 @@ function renderFunction(reflection, links) {
   }
   let output = `### ${reflection.name}\n\n${renderImport(reflection)}`
   for (const signature of reflection.signatures ?? []) {
-    output += `${codeBlock(formatSignature(reflection.name, signature, owner))}\n\n`
+    output += `${codeBlock(formatSignature(reflection.name, signature, owner), GENERATED_API_FRAGMENT)}\n\n`
     output += renderBlockComment(signature.comment ?? reflection.comment, owner, links)
     const described = (signature.parameters ?? []).filter((parameter) => parameter.comment?.summary?.length)
     if (described.length) {

@@ -7,7 +7,7 @@ description: "Unit conversion and A1C, eAG, and GMI estimation."
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 a1cDelta(current: number, previous: number): number
 ```
 
@@ -29,7 +29,7 @@ Calculates the change (delta) between two A1C values.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 a1cToGMI(a1c: number): number
 ```
 
@@ -50,7 +50,7 @@ Converts A1C to Glucose Management Indicator (GMI).
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 a1cTrend(readings: number[]): 'increasing' | 'decreasing' | 'stable' | 'insufficient data'
 ```
 
@@ -69,12 +69,12 @@ Determines the trend of A1C values over time.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 convertGlucoseUnit(input: { unit: GlucoseUnit; value: number }): ConversionResult
 ```
 
-Converts clinical glucose value between mg/dL and mmol/L.
-Used for clinical interoperability and analytics.
+Converts a glucose value between mg/dL and mmol/L.
+Used for interoperability and analytics.
 
 **Returns** — Object with converted value and new unit
 
@@ -95,7 +95,7 @@ Used for clinical interoperability and analytics.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 estimateA1CFromAverage(avgGlucose: number, unit: GlucoseUnit = MG_DL): number
 ```
 
@@ -103,7 +103,7 @@ Estimates A1C from average glucose.
 
 **Returns** — Estimated A1C
 
-**See** — [https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html](https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html)
+**See** — [https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html)
 
 | Parameter | Description |
 | --- | --- |
@@ -117,16 +117,16 @@ Estimates A1C from average glucose.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 estimateA1CFromAvgGlucose(avgMgDl: number): number
 ```
 
-Converts clinical average glucose (mg/dL) to estimated A1C (percentage).
-Used for clinical analytics and patient reporting.
+Estimates A1C (percentage) from average glucose in mg/dL.
+Intended for informational analytics and display.
 
 **Returns** — Estimated A1C value (percentage)
 
-**See** — [https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html](https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html)
+**See** — [https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html)
 
 | Parameter | Description |
 | --- | --- |
@@ -139,16 +139,16 @@ Used for clinical analytics and patient reporting.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 estimateAvgGlucoseFromA1C(a1c: number): number
 ```
 
-Converts clinical A1C value (percentage) to estimated average glucose (mg/dL).
-Used for clinical analytics and patient reporting.
+Estimates average glucose (mg/dL) from an A1C value (percentage).
+Intended for informational analytics and display.
 
 **Returns** — Estimated average glucose in mg/dL
 
-**See** — [https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html](https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html)
+**See** — [https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html)
 
 | Parameter | Description |
 | --- | --- |
@@ -161,18 +161,18 @@ Used for clinical analytics and patient reporting.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 estimateEAG(a1c: number): number
 ```
 
-Estimates eAG (estimated average glucose, mg/dL) from clinical A1C value.
-Throws if input is negative. Used for clinical and research reporting.
+Estimates eAG (estimated average glucose, mg/dL) from an A1C value.
+Throws if input is negative. Suitable for analytics and display workflows.
 
 **Returns** — Estimated average glucose (mg/dL)
 
 **Throws** — If a1c is negative
 
-**See** — [https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html](https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html)
+**See** — [https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html)
 
 | Parameter | Description |
 | --- | --- |
@@ -185,7 +185,7 @@ Throws if input is negative. Used for clinical and research reporting.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 estimateGMI(valueOrOptions: string | number | EstimateGMIOptions, unit?: GlucoseUnit): number
 ```
 
@@ -215,12 +215,12 @@ Estimate Glucose Management Indicator (GMI) from average glucose.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 formatA1C(val: number): string
 ```
 
-Formats a clinical A1C value as a percent string (e.g., "7.2%").
-Used for clinical reporting and display.
+Formats an A1C value as a percent string (e.g., "7.2%").
+Used for analytics output and display.
 
 **Returns** — A1C as string with percent sign
 
@@ -235,11 +235,11 @@ Used for clinical reporting and display.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 getA1CCategory(a1c: number, thresholds?: { normalMax?: number; prediabetesMax?: number }): 'normal' | 'prediabetes' | 'diabetes' | 'invalid'
 ```
 
-Returns the clinical category for an A1C value (normal, prediabetes, diabetes, or invalid).
+Returns the CDC category for an A1C value (normal, prediabetes, diabetes, or invalid).
 Uses CDC defaults: normal below 5.7%, prediabetes from 5.7% to below 6.5%,
 and diabetes at 6.5% or above. Explicit custom maxima are inclusive. At
 runtime, nullish threshold objects or fields use the CDC defaults.
@@ -260,7 +260,7 @@ runtime, nullish threshold objects or fields use the CDC defaults.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 isA1CInTarget(a1c: number, target: [number, number] = [6.5, 7.0], thresholds?: { max?: number; min?: number }): boolean
 ```
 
@@ -281,12 +281,12 @@ Checks if an A1C value is within a target range.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 isValidA1C(value: unknown): boolean
 ```
 
-Validates a clinical A1C value (percentage).
-Ensures value is within physiologically plausible range for clinical analytics.
+Validates an A1C value (percentage).
+Ensures value is within the library's plausible analytics range.
 
 **Returns** — True if value is a valid A1C percentage
 
@@ -301,11 +301,11 @@ Ensures value is within physiologically plausible range for clinical analytics.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 mgDlToMmolL(val: number): number
 ```
 
-Converts clinical glucose value from mg/dL to mmol/L.
+Converts a glucose value from mg/dL to mmol/L.
 Used for international interoperability and reporting.
 
 **Returns** — Value in mmol/L
@@ -314,8 +314,11 @@ Used for international interoperability and reporting.
 
 **See** — [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
 
-```typescript
-const result = mgDlToMmolL(180)
+```ts typecheck
+import { mgDlToMmolL } from '@glucoseiq/core'
+
+const mgdl: number = 180
+const result = mgDlToMmolL(mgdl)
 console.log(result) // 10.0
 ```
 
@@ -330,11 +333,11 @@ console.log(result) // 10.0
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 mmolLToMgDl(val: number): number
 ```
 
-Converts clinical glucose value from mmol/L to mg/dL.
+Converts a glucose value from mmol/L to mg/dL.
 Used for international interoperability and reporting.
 
 **Returns** — Value in mg/dL
@@ -343,8 +346,11 @@ Used for international interoperability and reporting.
 
 **See** — [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
 
-```typescript
-const result = mmolLToMgDl(5.5)
+```ts typecheck
+import { mmolLToMgDl } from '@glucoseiq/core'
+
+const mmol: number = 5.5
+const result = mmolLToMgDl(mmol)
 console.log(result) // 99
 ```
 

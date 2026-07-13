@@ -1,7 +1,7 @@
 {
   "name": "@glucoseiq/tokens",
   "version": "0.0.0",
-  "description": "GlucoseIQ design tokens — the canonical 5-zone glucose palette (colorblind-safe by redundancy), trend glyphs, and zone classification shared by web, watch, and native surfaces.",
+  "description": "GlucoseIQ design tokens: a 5-zone glucose palette, trend glyphs, and mg/dL zone classification for web and native surfaces.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",

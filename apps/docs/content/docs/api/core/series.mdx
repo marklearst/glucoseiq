@@ -7,7 +7,7 @@ description: "Gap detection, day/night splitting, and grid alignment."
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 alignToGrid(readings: GlucoseReading[], options?: AlignOptions): GridPoint[]
 ```
 
@@ -15,7 +15,13 @@ Resamples readings onto a fixed time grid.
 
 **Returns** — Grid points from the first to the last reading; genuine gaps are holes
 
-```ts
+```ts typecheck
+import { alignToGrid, type GlucoseReading } from '@glucoseiq/core'
+
+const readings: GlucoseReading[] = [
+  { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+  { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:10:00Z' },
+]
 const grid = alignToGrid(readings) // 5-min slots, gaps ≤15 min interpolated
 ```
 
@@ -31,7 +37,7 @@ const grid = alignToGrid(readings) // 5-min slots, gaps ≤15 min interpolated
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 detectGaps(readings: GlucoseReading[], options?: GapDetectionOptions): GlucoseGap[]
 ```
 
@@ -51,7 +57,7 @@ Finds gaps (sensor dropouts) between consecutive readings.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 splitDayNight(readings: GlucoseReading[], options?: DayNightOptions): DayNightSplit
 ```
 

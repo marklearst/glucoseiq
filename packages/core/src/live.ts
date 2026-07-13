@@ -2,14 +2,13 @@
  * @file src/live.ts
  *
  * Live / real-time glucose helpers: rate-of-change, trend derivation, and
- * latest-reading / staleness utilities for CGM home screens, dashboards, and
- * watch complications.
+ * latest-reading / staleness utilities for CGM home screens and dashboards.
+ * Watch surfaces require host-application integration.
  *
  * All functions here are *descriptive of past readings* — rate-of-change is
  * computed from observed values, not projected forward. Short-horizon
- * forecasting is intentionally kept out of the zero-dep core (see the
- * @glucoseiq/forecast sibling) to avoid implying a predictive medical-device
- * function.
+ * forecasting is intentionally outside this descriptive zero-dependency core
+ * to avoid implying a predictive medical-device function.
  *
  * @see {@link https://www.dexcom.com | Dexcom trend-arrow rate thresholds}
  */
@@ -95,9 +94,15 @@ export function classifyGlucoseTrend(rocPerMin: number): CGMTrend {
  * @throws {DomainError} If `windowMin` is not a finite positive number
  *
  * @example
- * ```ts
+ * ```ts typecheck
+ * import { computeGlucoseTrend, type GlucoseReading } from '@glucoseiq/core'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ *   { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+ * ]
  * const { rocPerMin, trend } = computeGlucoseTrend(readings)
- * // rocPerMin: 2.1, trend: 'rising'
+ * // rocPerMin: 2, trend: 'rising'
  * ```
  *
  * @category Live

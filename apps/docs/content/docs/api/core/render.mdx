@@ -7,19 +7,25 @@ description: "Dependency-free SVG-string renderers."
 
 **Import:** `@glucoseiq/core/render`
 
-```ts
+```ts fragment="generated API declaration or signature"
 agpChartToSVG(readings: GlucoseReading[], options?: AGPChartOptions): string
 ```
 
-Renders an Ambulatory Glucose Profile chart as an SVG string.
+Renders an AGP-style percentile-band chart as an SVG string.
 
 **Returns** — A complete, self-contained SVG document string
 
 **Throws** — If width or height is not a finite positive number, or if a present title is not a string
 
-```ts
+```ts typecheck
+import { type GlucoseReading } from '@glucoseiq/core'
+import { agpChartToSVG } from '@glucoseiq/core/render'
+
+const readings: GlucoseReading[] = [
+  { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+  { value: 145, unit: 'mg/dL', timestamp: '2024-01-02T08:00:00Z' },
+]
 const svg = agpChartToSVG(readings, { theme: 'dark' })
-// <svg ...>…</svg> — drop into HTML, a README, an email, or a PDF
 ```
 
 | Parameter | Description |
@@ -34,7 +40,7 @@ const svg = agpChartToSVG(readings, { theme: 'dark' })
 
 **Import:** `@glucoseiq/core/render`
 
-```ts
+```ts fragment="generated API declaration or signature"
 tirBarToSVG(readings: GlucoseReading[], options?: TIRBarOptions): string
 ```
 
@@ -44,7 +50,13 @@ Renders a Time-in-Range stacked bar as an SVG string.
 
 **Throws** — If width or height is not a finite positive number
 
-```ts
+```ts typecheck
+import { type GlucoseReading } from '@glucoseiq/core'
+import { tirBarToSVG } from '@glucoseiq/core/render'
+
+const readings: GlucoseReading[] = [
+  { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+]
 const svg = tirBarToSVG(readings)
 ```
 
@@ -60,7 +72,7 @@ const svg = tirBarToSVG(readings)
 
 **Import:** `@glucoseiq/core/render`
 
-```ts
+```ts fragment="generated API declaration or signature"
 trendTileToSVG(readings: GlucoseReading[], options?: TrendTileOptions): string
 ```
 
@@ -70,7 +82,13 @@ Renders a current-glucose trend tile as an SVG string.
 
 **Throws** — If width or height is not a finite positive number
 
-```ts
+```ts typecheck
+import { type GlucoseReading } from '@glucoseiq/core'
+import { trendTileToSVG } from '@glucoseiq/core/render'
+
+const readings: GlucoseReading[] = [
+  { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+]
 const svg = trendTileToSVG(readings) // 120 → IN RANGE
 ```
 

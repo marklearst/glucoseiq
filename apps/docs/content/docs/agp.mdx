@@ -1,16 +1,21 @@
 ---
 title: AGP & Rendering
-description: The Ambulatory Glucose Profile series and the zero-dependency SVG renderers.
+description: Build an AGP-style percentile-band series and optional SVG renderers.
 ---
 
 ## The AGP series
 
 `buildAGPProfile` pools readings by minute-of-day (time-zone aware) across all
-days and reduces each bin to percentile bands — the exact data behind the AGP
-chart clinicians read:
+days and reduces each bin to an AGP-style percentile-band series. It supplies
+chart data rather than a complete standardized AGP report.
 
-```ts
-import { buildAGPProfile } from '@glucoseiq/core'
+```ts typecheck
+import { buildAGPProfile, type GlucoseReading } from '@glucoseiq/core'
+
+const readings: GlucoseReading[] = [
+  { value: 104, unit: 'mg/dL', timestamp: '2026-07-01T08:00:00Z' },
+  { value: 121, unit: 'mg/dL', timestamp: '2026-07-02T08:00:00Z' },
+]
 
 const profile = buildAGPProfile(readings, {
   timeZone: 'America/New_York', // local clock, DST-correct
@@ -18,8 +23,11 @@ const profile = buildAGPProfile(readings, {
   percentiles: [5, 25, 50, 75, 95],
 })
 
-profile.bins[96]
-// { minuteOfDay: 480, percentiles: { 5: 92, 25: 104, 50: 118, 75: 134, 95: 161 }, n: 14 }
+const populatedBin = profile.bins.find((bin) => bin.n > 0)
+if (!populatedBin) throw new Error('Expected one populated time-of-day bin')
+
+populatedBin
+// { minuteOfDay: 240, percentiles: { 5: 104, 25: 104, 50: 104, 75: 121, 95: 121 }, n: 2 }
 ```
 
 Draw it with any chart library as two shaded areas (5–95, 25–75) plus a median
@@ -27,19 +35,28 @@ line — or don't draw it yourself at all:
 
 ## AGP-in-a-tag
 
-```ts
-import { agpChartToSVG } from '@glucoseiq/core'
+```ts typecheck
+import { agpChartToSVG, type GlucoseReading } from '@glucoseiq/core'
+
+const readings: GlucoseReading[] = [
+  { value: 104, unit: 'mg/dL', timestamp: '2026-07-01T08:00:00Z' },
+  { value: 121, unit: 'mg/dL', timestamp: '2026-07-02T08:00:00Z' },
+]
 
 const svg = agpChartToSVG(readings, { theme: 'dark', title: 'Last 14 days' })
 // A complete, self-contained <svg> string — no DOM, no canvas, no framework.
 ```
 
-It renders anywhere a string does: `innerHTML`, email, PDF, a GitHub README,
-React Server Components. Companions: `tirBarToSVG` (the five-zone stacked bar)
-and `trendTileToSVG` (the glanceable current-value tile).
+The renderer returns an SVG string. A browser can embed it as trusted markup;
+email, PDF, README, and native hosts need host-specific embedding, conversion,
+or application integration. Companions are `tirBarToSVG` (the five-zone
+stacked bar) and `trendTileToSVG` (the glanceable current-value tile).
 
 ## Reproducibility
 
 Nearest-rank percentiles are the default — matching `glucosePercentiles` and
 keeping cited results reproducible. Interpolated (type-7) percentiles are an
 explicit opt-in via `method: 'linear'`.
+
+The percentile-band conventions follow the international consensus report:
+[Battelino et al., 2019](https://doi.org/10.2337/dci19-0028).

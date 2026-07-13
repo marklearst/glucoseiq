@@ -87,7 +87,7 @@ export function normalizeDexcomTrend(
  * Converts a single Dexcom Share entry into a NormalizedCGMReading.
  *
  * @param entry - Raw Dexcom Share entry
- * @returns Normalized reading compatible with all `@glucoseiq/core` analytics functions
+ * @returns A normalized reading usable by APIs that accept `GlucoseReading`, subject to each API's contract
  * @throws {TimestampError} If the date string cannot be parsed
  * @throws {DomainError} If the glucose value is not usable
  */

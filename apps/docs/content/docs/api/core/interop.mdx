@@ -7,7 +7,7 @@ description: "FHIR and Open mHealth payload builders."
 
 **Import:** `@glucoseiq/core/interop`
 
-```ts
+```ts fragment="generated API declaration or signature"
 buildFHIRCGMSummary(tir: EnhancedTIRResult, period: { end: string; start: string }, options?: { cv?: number; gmi?: number; meanGlucose?: number }): FHIRCGMSummary
 ```
 
@@ -32,7 +32,7 @@ FHIR-capable server.
 
 **Import:** `@glucoseiq/core/interop`
 
-```ts
+```ts fragment="generated API declaration or signature"
 buildFHIRSensorReading(reading: GlucoseReading): FHIRCGMSensorReading
 ```
 
@@ -51,7 +51,7 @@ Converts a single GlucoseReading into a FHIR-aligned CGM sensor reading.
 
 **Import:** `@glucoseiq/core/interop`
 
-```ts
+```ts fragment="generated API declaration or signature"
 buildFHIRSensorReadings(readings: GlucoseReading[]): FHIRCGMSensorReading[]
 ```
 
@@ -70,7 +70,7 @@ Converts an array of GlucoseReadings into FHIR-aligned sensor reading observatio
 
 **Import:** `@glucoseiq/core/interop`
 
-```ts
+```ts fragment="generated API declaration or signature"
 buildOMHBloodGlucose(reading: GlucoseReading): OMHBloodGlucose
 ```
 
@@ -89,7 +89,7 @@ Converts a GlucoseReading into an Open mHealth blood-glucose body.
 
 **Import:** `@glucoseiq/core/interop`
 
-```ts
+```ts fragment="generated API declaration or signature"
 buildOMHBloodGlucoseList(readings: GlucoseReading[]): OMHBloodGlucose[]
 ```
 
@@ -108,7 +108,7 @@ Converts an array of GlucoseReadings into Open mHealth blood-glucose bodies.
 
 **Import:** `@glucoseiq/core/interop`
 
-```ts
+```ts fragment="generated API declaration or signature"
 buildOMHDataPoint(reading: GlucoseReading, id: string): OMHDataPoint<OMHBloodGlucose>
 ```
 

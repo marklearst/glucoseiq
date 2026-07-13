@@ -60,7 +60,13 @@ export interface AlignOptions {
  * @returns Grid points from the first to the last reading; genuine gaps are holes
  *
  * @example
- * ```ts
+ * ```ts typecheck
+ * import { alignToGrid, type GlucoseReading } from '@glucoseiq/core'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ *   { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:10:00Z' },
+ * ]
  * const grid = alignToGrid(readings) // 5-min slots, gaps ≤15 min interpolated
  * ```
  *

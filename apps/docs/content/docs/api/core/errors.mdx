@@ -5,7 +5,7 @@ description: "Functions and typed failures with stable machine-readable codes."
 
 ### DomainError
 
-```ts
+```ts fragment="generated API declaration or signature"
 class DomainError extends GlucoseIQError
 ```
 
@@ -15,7 +15,7 @@ A value or option is outside its valid domain.
 
 **Constructor**
 
-```ts
+```ts fragment="generated API declaration or signature"
 new DomainError(message: string, code: GlucoseIQErrorCode)
 ```
 
@@ -28,7 +28,7 @@ new DomainError(message: string, code: GlucoseIQErrorCode)
 
 ### EmptyDatasetError
 
-```ts
+```ts fragment="generated API declaration or signature"
 class EmptyDatasetError extends GlucoseIQError
 ```
 
@@ -38,7 +38,7 @@ An operation requires data but the dataset is empty.
 
 **Constructor**
 
-```ts
+```ts fragment="generated API declaration or signature"
 new EmptyDatasetError(message: string)
 ```
 
@@ -51,7 +51,7 @@ new EmptyDatasetError(message: string)
 
 ### GlucoseIQError
 
-```ts
+```ts fragment="generated API declaration or signature"
 class GlucoseIQError extends Error
 ```
 
@@ -61,7 +61,7 @@ Base class for all intentional @glucoseiq/core errors.
 
 **Constructor**
 
-```ts
+```ts fragment="generated API declaration or signature"
 new GlucoseIQError(message: string, code: GlucoseIQErrorCode)
 ```
 
@@ -74,7 +74,7 @@ new GlucoseIQError(message: string, code: GlucoseIQErrorCode)
 
 ### ParseError
 
-```ts
+```ts fragment="generated API declaration or signature"
 class ParseError extends GlucoseIQError
 ```
 
@@ -84,7 +84,7 @@ Input text (CSV, glucose string, payload) could not be parsed.
 
 **Constructor**
 
-```ts
+```ts fragment="generated API declaration or signature"
 new ParseError(message: string, code: GlucoseIQErrorCode)
 ```
 
@@ -97,7 +97,7 @@ new ParseError(message: string, code: GlucoseIQErrorCode)
 
 ### TimestampError
 
-```ts
+```ts fragment="generated API declaration or signature"
 class TimestampError extends GlucoseIQError
 ```
 
@@ -107,7 +107,7 @@ A timestamp could not be parsed.
 
 **Constructor**
 
-```ts
+```ts fragment="generated API declaration or signature"
 new TimestampError(message: string)
 ```
 

@@ -2,10 +2,10 @@
  * @file src/render/trend-tile.ts
  *
  * Renders a glanceable current-glucose tile — the big value, trend arrow, and
- * zone label — as a self-contained SVG string. This is the dashboard/watch
- * "at a glance" element, driven by the live model (latest reading + derived
- * trend). Identity is carried by the value, the arrow, and a text label, not
- * color alone.
+ * zone label — as a self-contained SVG string. This dashboard element is
+ * driven by the live model (latest reading + derived trend). Native and watch
+ * surfaces require host-application integration. Identity is carried by the
+ * value, arrow, and text label, not color alone.
  *
  * Pure and dependency-free.
  */
@@ -97,7 +97,13 @@ function snapshotUsableReadings(
  * @throws {DomainError} If width or height is not a finite positive number
  *
  * @example
- * ```ts
+ * ```ts typecheck
+ * import { type GlucoseReading } from '@glucoseiq/core'
+ * import { trendTileToSVG } from '@glucoseiq/core/render'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ * ]
  * const svg = trendTileToSVG(readings) // 120 → IN RANGE
  * ```
  *

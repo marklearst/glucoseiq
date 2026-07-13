@@ -62,9 +62,18 @@ function round1(v: number): number {
  * @returns Meal-response metrics; `valid: false` if the window has fewer than two readings
  *
  * @example
- * ```ts
- * const r = analyzeMealResponse(readings, '2024-01-01T12:30:00Z')
- * // { baseline: 98, peakValue: 162, delta: 64, timeToPeakMin: 45, ... }
+ * ```ts typecheck
+ * import { type GlucoseReading } from '@glucoseiq/core'
+ * import { analyzeMealResponse } from '@glucoseiq/core/metrics'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 98, unit: 'mg/dL', timestamp: '2024-01-01T12:25:00Z' },
+ *   { value: 162, unit: 'mg/dL', timestamp: '2024-01-01T13:15:00Z' },
+ *   { value: 125, unit: 'mg/dL', timestamp: '2024-01-01T13:45:00Z' },
+ * ]
+ * const result = analyzeMealResponse(readings, '2024-01-01T12:30:00Z')
+ * const delta = result.valid ? result.delta : null
+ * void delta
  * ```
  *
  * @category Meal

@@ -1,11 +1,12 @@
 /**
  * @file src/metrics/episodes.ts
  *
- * Hypo- and hyperglycemia EVENT detection per the international consensus:
- * an event is a stretch of readings beyond a threshold lasting at least a
- * minimum duration (default 15 min), and it ends only after glucose has
- * recovered for at least the end-duration (default 15 min) — so a brief blip
- * back across the threshold does not split one event into two.
+ * Hypo- and hyperglycemia episode-candidate detection. Beyond-threshold
+ * readings remain in one candidate while consecutive flagged timestamps are
+ * less than the end-duration apart (default 15 min); a gap at least that long
+ * starts a new candidate. Candidates must span the minimum duration (default
+ * 15 min). Because non-excursion and missing readings are not retained, this
+ * is timestamp grouping rather than proof of observed recovery.
  *
  * Event duration (percent-time) can hide clinically important episodes (one
  * long overnight low reads the same as scattered brief dips); this surfaces the
@@ -20,7 +21,7 @@
 import type { GlucoseReading } from '../types'
 import { MG_DL, MGDL_MMOLL_CONVERSION } from '../constants'
 
-/** A detected glucose episode. */
+/** A timestamp-grouped glucose episode candidate. */
 export interface GlucoseEpisode {
   /** 'hypo' (below threshold) or 'hyper' (above threshold). */
   readonly type: 'hypo' | 'hyper'
@@ -52,11 +53,11 @@ export interface EpisodeOptions {
   readonly hyperLevel2?: number
   /** Minimum episode duration in minutes (default 15). */
   readonly minDurationMin?: number
-  /** Recovery duration that ends an episode, in minutes (default 15). */
+  /** Minimum gap between flagged readings that separates candidates, in minutes (default 15). */
   readonly endDurationMin?: number
 }
 
-/** Summary counts across detected episodes. */
+/** Summary counts across timestamp-grouped episode candidates. */
 export interface EpisodeSummary {
   readonly hypoCount: number
   readonly hyperCount: number
@@ -128,16 +129,30 @@ function findEpisodes(
 }
 
 /**
- * Detects hypo- and hyperglycemia episodes from a series of readings.
+ * Groups hypo- and hyperglycemia episode candidates from a series of readings.
+ *
+ * Consecutive beyond-threshold timestamps less than `endDurationMin` apart
+ * remain grouped. Non-excursion and missing readings are not retained, so a
+ * candidate does not prove observed recovery or continuous sensor coverage.
  *
  * @param readings - Glucose readings with ISO 8601 timestamps
- * @param options - Thresholds, minimum duration, and recovery duration
- * @returns Hypo and hyper events plus a summary
+ * @param options - Thresholds, minimum candidate duration, and separating gap
+ * @returns Hypo and hyper episode candidates plus a summary
  *
  * @example
- * ```ts
+ * ```ts typecheck
+ * import { type GlucoseReading } from '@glucoseiq/core'
+ * import { detectEpisodes } from '@glucoseiq/core/metrics'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 65, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ *   { value: 60, unit: 'mg/dL', timestamp: '2024-01-01T08:10:00Z' },
+ *   { value: 62, unit: 'mg/dL', timestamp: '2024-01-01T08:20:00Z' },
+ * ]
  * const { hypoEvents, summary } = detectEpisodes(readings)
- * // hypoEvents[0] = { level: 2, durationMinutes: 45, extremeValue: 48, ... }
+ * const firstEpisode = hypoEvents[0]
+ * if (firstEpisode) firstEpisode.durationMinutes
+ * summary.hypoCount
  * ```
  *
  * @category Episodes

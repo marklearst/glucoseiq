@@ -9,7 +9,7 @@ GlucoseIQ 1.0 publishes the headless engine as `@glucoseiq/core`. The
 `diabetic-utils` 2.0 package re-exports that public API so projects on 1.5.x
 can upgrade without changing source imports:
 
-```ts
+```ts typecheck
 import { calculateEnhancedTIR, estimateGMI } from 'diabetic-utils' // still works
 ```
 
@@ -25,7 +25,7 @@ New projects should install the scoped package:
 npm install @glucoseiq/core@^1
 ```
 
-```ts
+```ts typecheck
 import { calculateEnhancedTIR, estimateGMI } from '@glucoseiq/core'
 ```
 
@@ -43,9 +43,43 @@ dist-tag:
 npm install diabetic-utils@legacy
 ```
 
-## Clinical formula compatibility
+## Numeric behavior and intentional corrections
 
-Clinical conversion and metric formulas keep their 1.5.x numeric behavior.
+Conversion and metric formulas keep their 1.5.x numeric behavior except where
+this guide identifies an intentional correction. GlucoseIQ 1.0 makes several
+boundary and data-quality decisions explicit:
+
+- Enhanced and pregnancy TIR reject zero and non-finite glucose values.
+  Pregnancy results now expose the `<54 mg/dL` (`<3.0 mmol/L`) subset as
+  `belowRangeLevel2`.
+- Population target checks use unrounded percentages. TIR must be strictly
+  greater than 70% for the standard population or 50% for older/high-risk
+  populations. TBR and TAR checks are cumulative, with their Level 2 subsets
+  assessed separately. `targetBasis` reports whether those percentage goals
+  were applied to consensus or caller-configured ranges.
+- Older/high-risk checks use total TBR `<1%`, Level 2 TBR `<1%`, total TAR
+  `<50%`, and Level 2 TAR `<10%`.
+- Active percent counts occupied timestamp slots rather than raw rows. Exact
+  duplicates and multiple readings in one slot count once, invalid timestamps
+  are excluded, and threshold flags use the unrounded ratio.
+- Enhanced and pregnancy TIR summary duration is occupied five-minute-slot
+  coverage. Quality fails closed for invalid, duplicate-only, or less-than-70%
+  timestamp coverage. Each occupied slot is divided across its distinct
+  observations and ranges, exact duplicates count once, invalid timestamps add
+  no duration, and primary range durations conserve the covered total.
+- Glucose string guards accept only positive finite values in a supported unit,
+  and GMI option guards require a positive finite value plus the exact
+  `mg/dL` or `mmol/L` unit literal.
+- Enhanced TIR rejects unsupported runtime population and reading-unit values;
+  pregnancy TIR also rejects unsupported unit options instead of selecting a
+  fallback target model.
+- `analyzeGlucose` and `glucoseIQScore` keep their sentinel-result behavior by
+  screening unsupported-unit rows alongside other unusable readings.
+
+Episode detection returns timestamp-grouped candidates that satisfy the
+configured threshold, duration, and gap rules. It does not prove a recovered or
+clinically adjudicated event.
+
 Percentiles use nearest-rank by default, while interpolation remains opt-in.
 Golden-value tests preserve cited results across the package move.
 

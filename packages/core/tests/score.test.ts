@@ -53,4 +53,23 @@ describe('glucoseIQScore', () => {
     expect(res.valid).toBe(true)
     expect(res.score).toBe(100)
   })
+
+  it('screens unsupported units consistently', () => {
+    const unsupported: GlucoseReading = {
+      value: 5,
+      unit: 'grams' as never,
+      timestamp: '2024-01-01T08:00:00Z',
+    }
+    const valid: GlucoseReading = {
+      value: 120,
+      unit: 'mg/dL',
+      timestamp: '2024-01-01T08:05:00Z',
+    }
+
+    expect(glucoseIQScore([unsupported]).valid).toBe(false)
+
+    const mixed = glucoseIQScore([unsupported, valid])
+    expect(mixed.valid).toBe(true)
+    expect(mixed.score).toBe(100)
+  })
 })

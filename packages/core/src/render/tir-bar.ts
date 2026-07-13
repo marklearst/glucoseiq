@@ -4,7 +4,7 @@
  * Renders the Time-in-Range stacked bar (the vertical 5-zone bar from an AGP
  * report) as a self-contained SVG string. Zones are ordered high→low with
  * always-on percent labels, so severity is encoded by position and text — not
- * color alone (colorblind-safe by redundancy).
+ * color alone.
  *
  * Pure and dependency-free.
  *
@@ -61,7 +61,13 @@ function noDataFrame(
  * @throws {DomainError} If width or height is not a finite positive number
  *
  * @example
- * ```ts
+ * ```ts typecheck
+ * import { type GlucoseReading } from '@glucoseiq/core'
+ * import { tirBarToSVG } from '@glucoseiq/core/render'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ * ]
  * const svg = tirBarToSVG(readings)
  * ```
  *

@@ -64,7 +64,7 @@ export function normalizeLibreTrend(
  * Converts a single Libre LinkUp entry into a NormalizedCGMReading.
  *
  * @param entry - Raw Libre LinkUp entry
- * @returns Normalized reading compatible with all `@glucoseiq/core` analytics functions
+ * @returns A normalized reading usable by APIs that accept `GlucoseReading`, subject to each API's contract
  * @throws {TimestampError} If the timestamp cannot be parsed
  * @throws {DomainError} If the unit or glucose value is not usable
  */

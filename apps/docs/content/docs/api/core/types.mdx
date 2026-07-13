@@ -5,13 +5,13 @@ description: "Public contracts for ingestion, analytics, rendering, and integrat
 
 ### A1CReading
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface A1CReading
 ```
 
 **Import:** `@glucoseiq/core`
 
-Single clinical A1C reading (value and ISO date).
+Single A1C reading (value and ISO date).
 
 | Property | Type | Description |
 | --- | --- | --- |
@@ -23,7 +23,7 @@ Single clinical A1C reading (value and ISO date).
 
 ### AGPChartOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface AGPChartOptions
 ```
 
@@ -45,7 +45,7 @@ Options for [agpChartToSVG](/docs/api/core/render#agpcharttosvg).
 
 ### AGPMetricsOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface AGPMetricsOptions
 ```
 
@@ -64,17 +64,17 @@ Options for the aggregate AGP metrics calculation.
 
 ### AGPMetricsResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface AGPMetricsResult
 ```
 
 **Import:** `@glucoseiq/core/metrics`
 
-Comprehensive AGP metrics result.
+Selected aggregate AGP metrics result.
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly activePercent` | `ActivePercentResult` | CGM active percent / wear time |
+| `readonly activePercent` | `ActivePercentResult` | Timestamp-slot coverage estimate; not proof of sensor wear. |
 | `readonly adrr` | `number` | Average Daily Risk Range |
 | `readonly conga` | `number` | Continuous Overall Net Glycemic Action (mg/dL) |
 | `readonly cv` | `number` | Coefficient of variation (%) |
@@ -93,7 +93,7 @@ Comprehensive AGP metrics result.
 
 ### AGPProfileBin
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface AGPProfileBin
 ```
 
@@ -112,7 +112,7 @@ A single time-of-day bin in the AGP profile.
 
 ### AGPProfileOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface AGPProfileOptions
 ```
 
@@ -133,7 +133,7 @@ Options for [buildAGPProfile](/docs/api/core/agp#buildagpprofile).
 
 ### AGPProfileResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface AGPProfileResult
 ```
 
@@ -156,7 +156,7 @@ Result of [buildAGPProfile](/docs/api/core/agp#buildagpprofile).
 
 ### AUCOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface AUCOptions
 ```
 
@@ -173,7 +173,7 @@ Options for AUC helpers.
 
 ### ActivePercentOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface ActivePercentOptions
 ```
 
@@ -183,14 +183,14 @@ Options for active percent calculation.
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly expectedIntervalMinutes?` | `number` | Expected interval between readings in minutes (default: 5 for CGM) |
+| `readonly expectedIntervalMinutes?` | `number` | Positive finite expected interval between readings in minutes (default: 5). |
 
 
 ---
 
 ### ActivePercentResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface ActivePercentResult
 ```
 
@@ -200,10 +200,10 @@ Result of the active percent calculation.
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly activePercent` | `number` | Percentage of expected readings that were captured (0-100) |
-| `readonly actualReadings` | `number` | Number of actual readings in the dataset |
-| `readonly expectedReadings` | `number` | Number of expected readings based on time span and interval |
-| `readonly meetsClinicalMinimum` | `boolean` | Whether the active percent meets the clinical minimum (&gt;= 70%) |
+| `readonly activePercent` | `number` | Percentage of expected timestamp slots that were occupied (0-100). |
+| `readonly actualReadings` | `number` | Number of expected-interval slots containing at least one parseable timestamp. |
+| `readonly expectedReadings` | `number` | Number of expected timestamp slots based on time span and interval. |
+| `readonly meetsClinicalMinimum` | `boolean` | Whether the unrounded slot-coverage ratio is at least 70%. Compatibility field; not a clinical determination. |
 | `readonly totalMinutes` | `number` | Total time span covered in minutes |
 
 
@@ -211,7 +211,7 @@ Result of the active percent calculation.
 
 ### AlignOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface AlignOptions
 ```
 
@@ -230,7 +230,7 @@ Options for [alignToGrid](/docs/api/core/series#aligntogrid).
 
 ### AnalyzeGlucoseOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface AnalyzeGlucoseOptions
 ```
 
@@ -250,7 +250,7 @@ Options for [analyzeGlucose](/docs/api/core/reports#analyzeglucose).
 
 ### AnalyzeGlucoseResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface AnalyzeGlucoseResult
 ```
 
@@ -277,7 +277,7 @@ Result of [analyzeGlucose](/docs/api/core/reports#analyzeglucose).
 
 ### CONGAOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface CONGAOptions
 ```
 
@@ -295,7 +295,7 @@ Options for CONGA calculation.
 
 ### CSVParseOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface CSVParseOptions
 ```
 
@@ -315,7 +315,7 @@ Options for [parseGlucoseCSV](/docs/api/core/ingestion#parseglucosecsv).
 
 ### CohortResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface CohortResult
 ```
 
@@ -336,7 +336,7 @@ Result of [aggregateCohort](/docs/api/core/cohort#aggregatecohort).
 
 ### ConnectorCapabilities
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface ConnectorCapabilities
 ```
 
@@ -359,14 +359,14 @@ Declarative capabilities of a CGM data source.
 
 ### ConversionResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface ConversionResult
 ```
 
 **Import:** `@glucoseiq/core`
 
 Result of glucose unit conversion.
-Provides converted value and new unit for clinical interoperability.
+Provides converted value and new unit for interoperability.
 
 **See** — [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
 
@@ -380,19 +380,19 @@ Provides converted value and new unit for clinical interoperability.
 
 ### DataSufficiency
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface DataSufficiency
 ```
 
 **Import:** `@glucoseiq/core`
 
-Data-sufficiency assessment for a report.
+Data-sufficiency assessment for an analytics result.
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly activePercent` | `number` | CGM active/wear percent. |
+| `readonly activePercent` | `number` | Rounded expected-slot coverage; duplicate/same-slot rows count once. |
 | `readonly daysOfData` | `number` | Span of the data in days (last − first). |
-| `readonly meetsCGMStandard` | `boolean` | Whether the data meets the consensus recording standard. |
+| `readonly meetsCGMStandard` | `boolean` | Whether the observed span and unrounded slot coverage meet the configured numeric thresholds. |
 | `readonly totalReadings` | `number` | Number of valid readings analyzed. |
 
 
@@ -400,7 +400,7 @@ Data-sufficiency assessment for a report.
 
 ### DayNightOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface DayNightOptions
 ```
 
@@ -419,7 +419,7 @@ Options for [splitDayNight](/docs/api/core/series#splitdaynight).
 
 ### DayNightSplit
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface DayNightSplit
 ```
 
@@ -437,7 +437,7 @@ Result of [splitDayNight](/docs/api/core/series#splitdaynight).
 
 ### DexcomShareEntry
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface DexcomShareEntry
 ```
 
@@ -459,7 +459,7 @@ Matches the shape of `@diakem/dexcom-api-client` and `dexcom-share-client` respo
 
 ### DistributionStats
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface DistributionStats
 ```
 
@@ -481,14 +481,14 @@ Distribution of a metric across a cohort.
 
 ### EnhancedTIROptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface EnhancedTIROptions
 ```
 
 **Import:** `@glucoseiq/core`
 
 Options for Enhanced TIR calculation.
-Allows customization for different clinical populations and use cases.
+Allows customization for different population target sets and use cases.
 
 | Property | Type | Description |
 | --- | --- | --- |
@@ -503,14 +503,14 @@ Allows customization for different clinical populations and use cases.
 
 ### EnhancedTIRResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface EnhancedTIRResult
 ```
 
 **Import:** `@glucoseiq/core`
 
 Complete Enhanced Time-in-Range result.
-Provides detailed breakdown across five clinical glucose ranges per International Consensus 2019.
+Provides a five-range glucose breakdown using the 2019 consensus thresholds.
 
 **See** — [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
 
@@ -519,7 +519,7 @@ Provides detailed breakdown across five clinical glucose ranges per Internationa
 | `readonly high` | `RangeMetrics` | High: 181-250 mg/dL (10.1-13.9 mmol/L) - Level 1 Hyperglycemia. Average value is reported in mg/dL. |
 | `readonly inRange` | `RangeMetrics` | In Range: 70-180 mg/dL (3.9-10.0 mmol/L) - Target Range. Average value is reported in mg/dL. |
 | `readonly low` | `RangeMetrics` | Low: 54-69 mg/dL (3.0-3.8 mmol/L) - Level 1 Hypoglycemia. Average value is reported in mg/dL. |
-| `readonly meetsTargets` | `TargetAssessment` | Assessment against clinical targets |
+| `readonly meetsTargets` | `TargetAssessment` | Assessment against the configured targets |
 | `readonly summary` | `TIRSummary` | Summary statistics |
 | `readonly veryHigh` | `RangeMetrics` | Very High: &gt;250 mg/dL (&gt;13.9 mmol/L) - Level 2 Hyperglycemia. Average value is reported in mg/dL. |
 | `readonly veryLow` | `RangeMetrics` | Very Low: &lt;54 mg/dL (3.0 mmol/L) - Level 2 Hypoglycemia. Average value is reported in mg/dL. |
@@ -529,7 +529,7 @@ Provides detailed breakdown across five clinical glucose ranges per Internationa
 
 ### EpisodeOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface EpisodeOptions
 ```
 
@@ -539,7 +539,7 @@ Options for [detectEpisodes](/docs/api/core/episodes#detectepisodes). Thresholds
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly endDurationMin?` | `number` | Recovery duration that ends an episode, in minutes (default 15). |
+| `readonly endDurationMin?` | `number` | Minimum gap between flagged readings that separates candidates, in minutes (default 15). |
 | `readonly hyperLevel2?` | `number` | Level 2 hyperglycemia threshold (default 250). |
 | `readonly hyperThreshold?` | `number` | Hyperglycemia threshold (default 180). |
 | `readonly hypoLevel2?` | `number` | Level 2 hypoglycemia threshold (default 54). |
@@ -551,7 +551,7 @@ Options for [detectEpisodes](/docs/api/core/episodes#detectepisodes). Thresholds
 
 ### EpisodeResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface EpisodeResult
 ```
 
@@ -570,13 +570,13 @@ Result of [detectEpisodes](/docs/api/core/episodes#detectepisodes).
 
 ### EpisodeSummary
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface EpisodeSummary
 ```
 
 **Import:** `@glucoseiq/core/metrics`
 
-Summary counts across detected episodes.
+Summary counts across timestamp-grouped episode candidates.
 
 | Property | Type | Description |
 | --- | --- | --- |
@@ -592,13 +592,13 @@ Summary counts across detected episodes.
 
 ### EstimateGMIOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface EstimateGMIOptions
 ```
 
 **Import:** `@glucoseiq/core`
 
-Options for clinical GMI (Glucose Management Indicator) estimation.
+Options for GMI (Glucose Management Indicator) estimation.
 Used to standardize GMI calculation input.
 
 **See** — [https://diatribe.org/glucose-management-indicator-gmi](https://diatribe.org/glucose-management-indicator-gmi)
@@ -613,7 +613,7 @@ Used to standardize GMI calculation input.
 
 ### FHIRCGMComponent
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface FHIRCGMComponent
 ```
 
@@ -631,7 +631,7 @@ LOINC-coded CGM summary observation component.
 
 ### FHIRCGMSensorReading
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface FHIRCGMSensorReading
 ```
 
@@ -655,7 +655,7 @@ Follows the structure of the HL7 CGM IG sensor reading profile.
 
 ### FHIRCGMSummary
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface FHIRCGMSummary
 ```
 
@@ -680,7 +680,7 @@ without requiring a full FHIR library.
 
 ### FHIRCodeableConcept
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface FHIRCodeableConcept
 ```
 
@@ -695,7 +695,7 @@ interface FHIRCodeableConcept
 
 ### FHIRCoding
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface FHIRCoding
 ```
 
@@ -712,7 +712,7 @@ interface FHIRCoding
 
 ### FHIRQuantity
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface FHIRQuantity
 ```
 
@@ -730,7 +730,7 @@ interface FHIRQuantity
 
 ### GRADEResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface GRADEResult
 ```
 
@@ -750,7 +750,7 @@ Result of the partitioned GRADE calculation.
 
 ### GRIInput
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface GRIInput
 ```
 
@@ -770,7 +770,7 @@ Input percentages for GRI calculation.
 
 ### GRIResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface GRIResult
 ```
 
@@ -790,7 +790,7 @@ GRI result with numeric score and risk zone.
 
 ### GVIPGSOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface GVIPGSOptions
 ```
 
@@ -809,7 +809,7 @@ Options for [calculateGVIPGS](/docs/api/core/variability#calculategvipgs).
 
 ### GVIPGSResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface GVIPGSResult
 ```
 
@@ -829,7 +829,7 @@ Result of [calculateGVIPGS](/docs/api/core/variability#calculategvipgs).
 
 ### GapDetectionOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface GapDetectionOptions
 ```
 
@@ -846,13 +846,13 @@ Options for [detectGaps](/docs/api/core/series#detectgaps).
 
 ### GlucoseEpisode
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface GlucoseEpisode
 ```
 
 **Import:** `@glucoseiq/core/metrics`
 
-A detected glucose episode.
+A timestamp-grouped glucose episode candidate.
 
 | Property | Type | Description |
 | --- | --- | --- |
@@ -870,7 +870,7 @@ A detected glucose episode.
 
 ### GlucoseGap
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface GlucoseGap
 ```
 
@@ -889,7 +889,7 @@ A detected gap between consecutive readings.
 
 ### GlucoseIQScore
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface GlucoseIQScore
 ```
 
@@ -910,14 +910,14 @@ Result of [glucoseIQScore](/docs/api/core/score#glucoseiqscore).
 
 ### GlucoseReading
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface GlucoseReading
 ```
 
 **Import:** `@glucoseiq/core`
 
-Single clinical glucose reading.
-Includes value, unit, and ISO 8601 timestamp for clinical analytics.
+Single glucose reading.
+Includes value, unit, and ISO 8601 timestamp for analytics.
 
 **See** — [https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7445493/](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7445493/)
 
@@ -932,13 +932,13 @@ Includes value, unit, and ISO 8601 timestamp for clinical analytics.
 
 ### GlucoseStatsOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface GlucoseStatsOptions
 ```
 
 **Import:** `@glucoseiq/core`
 
-Options for clinical glucose statistics analytics.
+Options for glucose statistics analytics.
 Controls which metrics are calculated and reported.
 
 | Property | Type | Description |
@@ -963,7 +963,7 @@ Controls which metrics are calculated and reported.
 
 ### GlucoseTrendOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface GlucoseTrendOptions
 ```
 
@@ -980,7 +980,7 @@ Options for [computeGlucoseTrend](/docs/api/core/live#computeglucosetrend).
 
 ### GlucoseTrendResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface GlucoseTrendResult
 ```
 
@@ -1000,7 +1000,7 @@ Result of [computeGlucoseTrend](/docs/api/core/live#computeglucosetrend).
 
 ### GridPoint
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface GridPoint
 ```
 
@@ -1019,7 +1019,7 @@ A resampled grid point.
 
 ### IGCOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface IGCOptions
 ```
 
@@ -1042,7 +1042,7 @@ Options for [calculateIGC](/docs/api/core/variability#calculateigc). All thresho
 
 ### IGCResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface IGCResult
 ```
 
@@ -1061,7 +1061,7 @@ Result of [calculateIGC](/docs/api/core/variability#calculateigc).
 
 ### LibreLinkUpEntry
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface LibreLinkUpEntry
 ```
 
@@ -1085,7 +1085,7 @@ Matches the shape of `librelinkup-api-client` and `libre-client` responses.
 
 ### MAGEOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface MAGEOptions
 ```
 
@@ -1096,15 +1096,15 @@ Configuration options for MAGE calculation.
 | Property | Type | Description |
 | --- | --- | --- |
 | `direction?` | `'auto' \| 'ascending' \| 'descending'` | Excursion direction: 'auto', 'ascending', or 'descending' |
-| `longWindow?` | `number` | Long moving average window (default: 32) |
-| `shortWindow?` | `number` | Short moving average window (default: 5) |
+| `longWindow?` | `number` | Long moving-average window; defaults to `max(shortWindow + 2, min(32, floor(usableLength / 3)))` |
+| `shortWindow?` | `number` | Short moving-average window; defaults to `max(3, min(5, floor(usableLength / 8)))` |
 
 
 ---
 
 ### MODDOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface MODDOptions
 ```
 
@@ -1121,7 +1121,7 @@ Options for MODD calculation.
 
 ### MValueOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface MValueOptions
 ```
 
@@ -1140,7 +1140,7 @@ Options for [glucoseMValue](/docs/api/core/variability#glucosemvalue).
 
 ### MealResponseOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface MealResponseOptions
 ```
 
@@ -1158,7 +1158,7 @@ Options for [analyzeMealResponse](/docs/api/core/meals#analyzemealresponse).
 
 ### MealResponseResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface MealResponseResult
 ```
 
@@ -1183,7 +1183,7 @@ Result of [analyzeMealResponse](/docs/api/core/meals#analyzemealresponse).
 
 ### NightscoutEntry
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface NightscoutEntry
 ```
 
@@ -1208,7 +1208,7 @@ Matches the `/api/v1/entries` response shape.
 
 ### NormalizeError
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface NormalizeError
 ```
 
@@ -1227,14 +1227,15 @@ A single entry that failed to normalize.
 
 ### NormalizedCGMReading
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface NormalizedCGMReading extends GlucoseReading
 ```
 
 **Import:** `@glucoseiq/core/connectors`
 
 Extended glucose reading that preserves vendor metadata.
-Superset of GlucoseReading — can be passed directly to all analytics functions.
+A `GlucoseReading` superset usable by APIs that accept reading objects,
+subject to each API's unit, ordering, and sufficiency contract.
 
 | Property | Type | Description |
 | --- | --- | --- |
@@ -1252,7 +1253,7 @@ Superset of GlucoseReading — can be passed directly to all analytics functions
 
 ### OMHBloodGlucose
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface OMHBloodGlucose
 ```
 
@@ -1273,7 +1274,7 @@ Open mHealth blood-glucose datapoint body.
 
 ### OMHDataPoint
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface OMHDataPoint<T = OMHBloodGlucose>
 ```
 
@@ -1291,7 +1292,7 @@ Wrapped OMH datapoint with header metadata.
 
 ### PregnancyTIROptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface PregnancyTIROptions
 ```
 
@@ -1308,7 +1309,7 @@ Options for Pregnancy TIR calculation.
 
 ### PregnancyTIRResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface PregnancyTIRResult
 ```
 
@@ -1323,9 +1324,10 @@ Uses tighter target range per ADA 2024 guidelines for pregnancy.
 | --- | --- | --- |
 | `readonly aboveRange` | `RangeMetrics` | Above Range: &gt;140 mg/dL (7.8 mmol/L) |
 | `readonly belowRange` | `RangeMetrics` | Below Range: &lt;63 mg/dL (3.5 mmol/L) |
+| `readonly belowRangeLevel2` | `RangeMetrics` | Level 2 Below Range: &lt;54 mg/dL (&lt;3.0 mmol/L). This is a subset of `belowRange`. |
 | `readonly inRange` | `RangeMetrics` | In Range: 63-140 mg/dL (3.5-7.8 mmol/L) |
-| `readonly meetsPregnancyTargets` | `boolean` | Whether metrics meet pregnancy-specific targets (TIR &gt;70%, TBR &lt;4%, TAR &lt;25%) |
-| `readonly recommendations` | `readonly string[]` | Clinical recommendations |
+| `readonly meetsPregnancyTargets` | `boolean` | Whether metrics meet type 1 diabetes pregnancy targets (TIR &gt;70%, TBR &lt;63 mg/dL &lt;4%, TBR &lt;54 mg/dL &lt;1%, TAR &gt;140 mg/dL &lt;25%) |
+| `readonly recommendations` | `readonly string[]` | Informational notes derived from the metrics |
 | `readonly summary` | `TIRSummary` | Summary statistics |
 
 
@@ -1333,19 +1335,19 @@ Uses tighter target range per ADA 2024 guidelines for pregnancy.
 
 ### RangeMetrics
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface RangeMetrics
 ```
 
 **Import:** `@glucoseiq/core`
 
 Detailed metrics for a single glucose range.
-Provides percentage, duration, count, and average value for clinical analysis.
+Provides percentage, duration, count, and average value for analytics.
 
 | Property | Type | Description |
 | --- | --- | --- |
 | `readonly averageValue` | `null \| number` | Average glucose value in this range (mg/dL or mmol/L) |
-| `readonly duration` | `number` | Total duration in this range (minutes) |
+| `readonly duration` | `number` | Estimated occupied-slot duration allocated to this range (minutes). |
 | `readonly percentage` | `number` | Percentage of readings in this range (0-100) |
 | `readonly readingCount` | `number` | Count of readings in this range |
 
@@ -1354,7 +1356,7 @@ Provides percentage, duration, count, and average value for clinical analysis.
 
 ### RiskMetrics
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface RiskMetrics
 ```
 
@@ -1378,7 +1380,7 @@ Risk-metric block of an [AnalyzeGlucoseResult](/docs/api/core/types#analyzegluco
 
 ### SafeNormalizeResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface SafeNormalizeResult
 ```
 
@@ -1396,7 +1398,7 @@ Result of a safe normalization pass.
 
 ### TIRBarOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface TIRBarOptions
 ```
 
@@ -1415,13 +1417,13 @@ Options for [tirBarToSVG](/docs/api/core/render#tirbartosvg).
 
 ### TIROptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface TIROptions
 ```
 
 **Import:** `@glucoseiq/core`
 
-Options for clinical Time-in-Range (TIR) analytics.
+Options for Time-in-Range (TIR) analytics.
 
 | Property | Type | Description |
 | --- | --- | --- |
@@ -1434,13 +1436,13 @@ Options for clinical Time-in-Range (TIR) analytics.
 
 ### TIRResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface TIRResult
 ```
 
 **Import:** `@glucoseiq/core`
 
-Result object for clinical Time-in-Range (TIR) analytics.
+Result object for Time-in-Range (TIR) analytics.
 Percentages for in-range, below-range, and above-range readings.
 
 **See** — [https://care.diabetesjournals.org/content/42/8/1593](https://care.diabetesjournals.org/content/42/8/1593)
@@ -1456,7 +1458,7 @@ Percentages for in-range, below-range, and above-range readings.
 
 ### TIRSummary
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface TIRSummary
 ```
 
@@ -1466,8 +1468,8 @@ Summary statistics for TIR calculation.
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly dataQuality` | `'excellent' \| 'good' \| 'fair' \| 'poor'` | Data quality assessment |
-| `readonly totalDuration` | `number` | Total duration of data analyzed (minutes) |
+| `readonly dataQuality` | `'excellent' \| 'good' \| 'fair' \| 'poor'` | Coverage grade based on observed span and at least 70% occupied slots. |
+| `readonly totalDuration` | `number` | Estimated occupied 5-minute timestamp-slot coverage (minutes). |
 | `readonly totalReadings` | `number` | Total number of glucose readings analyzed |
 
 
@@ -1475,7 +1477,7 @@ Summary statistics for TIR calculation.
 
 ### TITROptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface TITROptions
 ```
 
@@ -1494,7 +1496,7 @@ Options for [calculateTITR](/docs/api/core/time-in-range#calculatetitr). Thresho
 
 ### TITRResult
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface TITRResult
 ```
 
@@ -1516,33 +1518,35 @@ Result of [calculateTITR](/docs/api/core/time-in-range#calculatetitr).
 
 ### TargetAssessment
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface TargetAssessment
 ```
 
 **Import:** `@glucoseiq/core`
 
-Assessment of whether TIR metrics meet clinical targets.
-Based on International Consensus on Time in Range (2019).
+Assessment of raw TIR percentages against population goals.
+Custom range thresholds retain the percentage goals but are explicitly
+marked as configured rather than consensus ranges.
 
 **See** — [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly overallAssessment` | `TIRAssessment` | Overall assessment of glycemic control |
-| `readonly recommendations` | `readonly string[]` | Clinical recommendations based on metrics |
-| `readonly tarLevel1Acceptable` | `boolean` | TAR Level 1 &lt;25% (all populations) |
-| `readonly tarLevel2Acceptable` | `boolean` | TAR Level 2 &lt;5% (all populations) |
-| `readonly tbrLevel1Safe` | `boolean` | TBR Level 1 &lt;4% for standard, &lt;1% for older adults |
-| `readonly tbrLevel2Safe` | `boolean` | TBR Level 2 &lt;1% for standard, &lt;0.5% for older adults |
-| `readonly tirMeetsGoal` | `boolean` | TIR ≥70% for standard population, ≥50% for older adults |
+| `readonly overallAssessment` | `TIRAssessment` | Overall assessment label derived from the configured targets |
+| `readonly recommendations` | `readonly string[]` | Informational notes derived from the metrics |
+| `readonly targetBasis` | `'consensus-ranges' \| 'configured-ranges'` | Whether percentage goals were applied to consensus ranges or caller-configured ranges. |
+| `readonly tarLevel1Acceptable` | `boolean` | Whether cumulative raw TAR is &lt;25% for standard or &lt;50% for older/high-risk populations. |
+| `readonly tarLevel2Acceptable` | `boolean` | Whether raw Level 2 TAR is &lt;5% for standard or &lt;10% for older/high-risk populations. |
+| `readonly tbrLevel1Safe` | `boolean` | Whether cumulative raw TBR is &lt;4% for standard or &lt;1% for older/high-risk populations. |
+| `readonly tbrLevel2Safe` | `boolean` | Whether raw Level 2 TBR is &lt;1%. |
+| `readonly tirMeetsGoal` | `boolean` | Whether raw TIR exceeds 70% for standard or 50% for older/high-risk populations. |
 
 
 ---
 
 ### TrendTileOptions
 
-```ts
+```ts fragment="generated API declaration or signature"
 interface TrendTileOptions
 ```
 
@@ -1561,7 +1565,7 @@ Options for [trendTileToSVG](/docs/api/core/render#trendtiletosvg).
 
 ### CGMSource
 
-```ts
+```ts fragment="generated API declaration or signature"
 type CGMSource = 'dexcom' | 'libre' | 'nightscout' | 'unknown'
 ```
 
@@ -1574,7 +1578,7 @@ Known CGM data source vendors.
 
 ### CGMTrend
 
-```ts
+```ts fragment="generated API declaration or signature"
 type CGMTrend = 'rapidRising' | 'rising' | 'slightlyRising' | 'flat' | 'slightlyFalling' | 'falling' | 'rapidFalling' | 'unknown'
 ```
 
@@ -1593,7 +1597,7 @@ Normalized across vendors into a common set.
 
 ### ClockModel
 
-```ts
+```ts fragment="generated API declaration or signature"
 type ClockModel = 'direct' | 'relay'
 ```
 
@@ -1606,7 +1610,7 @@ How a source's clock relates to the sensor's.
 
 ### DexcomTrendString
 
-```ts
+```ts fragment="generated API declaration or signature"
 type DexcomTrendString = 'DoubleUp' | 'SingleUp' | 'FortyFiveUp' | 'Flat' | 'FortyFiveDown' | 'SingleDown' | 'DoubleDown' | 'None' | 'NotComputable' | 'RateOutOfRange'
 ```
 
@@ -1619,7 +1623,7 @@ Trend strings returned by the Dexcom Share API.
 
 ### GlucoseIQErrorCode
 
-```ts
+```ts fragment="generated API declaration or signature"
 type GlucoseIQErrorCode = 'EMPTY_DATASET' | 'INVALID_GLUCOSE_VALUE' | 'INVALID_A1C_VALUE' | 'INVALID_INSULIN_VALUE' | 'INVALID_UNIT' | 'INVALID_OPTION' | 'INVALID_TIMEZONE' | 'PARSE_FAILED' | 'CSV_COLUMN_NOT_FOUND' | 'TIMESTAMP_UNPARSEABLE'
 ```
 
@@ -1632,7 +1636,7 @@ Stable machine-readable error codes.
 
 ### GlucoseIQRating
 
-```ts
+```ts fragment="generated API declaration or signature"
 type GlucoseIQRating = 'excellent' | 'good' | 'fair' | 'needs attention' | 'insufficient'
 ```
 
@@ -1645,14 +1649,14 @@ Qualitative rating derived from the Glucose IQ score.
 
 ### GlucoseUnit
 
-```ts
+```ts fragment="generated API declaration or signature"
 type GlucoseUnit = typeof MG_DL | typeof MMOL_L
 ```
 
 **Import:** `@glucoseiq/core`
 
-Supported clinical glucose units.
-Used for all clinical analytics and conversions.
+Supported glucose units.
+Used for analytics and conversions.
 
 **See** — [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
 
@@ -1661,7 +1665,7 @@ Used for all clinical analytics and conversions.
 
 ### LibreTrendValue
 
-```ts
+```ts fragment="generated API declaration or signature"
 type LibreTrendValue = 1 | 2 | 3 | 4 | 5
 ```
 
@@ -1674,7 +1678,7 @@ Trend values returned by Libre LinkUp (numeric 1-5).
 
 ### NightscoutDirection
 
-```ts
+```ts fragment="generated API declaration or signature"
 type NightscoutDirection = 'DoubleUp' | 'SingleUp' | 'FortyFiveUp' | 'Flat' | 'FortyFiveDown' | 'SingleDown' | 'DoubleDown' | 'NONE' | 'NOT COMPUTABLE' | 'RATE OUT OF RANGE' | string & {}
 ```
 
@@ -1687,7 +1691,7 @@ Nightscout direction string for trend arrows.
 
 ### PercentileMethod
 
-```ts
+```ts fragment="generated API declaration or signature"
 type PercentileMethod = 'nearest-rank' | 'linear'
 ```
 
@@ -1702,7 +1706,7 @@ Percentile estimation method.
 
 ### TIRAssessment
 
-```ts
+```ts fragment="generated API declaration or signature"
 type TIRAssessment = 'excellent' | 'good' | 'needs improvement' | 'concerning'
 ```
 
@@ -1715,14 +1719,14 @@ Overall glycemic control assessment based on TIR metrics.
 
 ### TIRPopulation
 
-```ts
+```ts fragment="generated API declaration or signature"
 type TIRPopulation = 'standard' | 'older-adults' | 'high-risk'
 ```
 
 **Import:** `@glucoseiq/core`
 
 Population type for TIR target assessment.
-Different populations have different clinical goals.
+Different populations use different published target sets.
 
 **See** — [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
 
@@ -1731,7 +1735,7 @@ Different populations have different clinical goals.
 
 ### TrendVocabulary
 
-```ts
+```ts fragment="generated API declaration or signature"
 type TrendVocabulary = 'full' | 'coarse' | 'none'
 ```
 

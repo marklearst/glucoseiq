@@ -30,7 +30,8 @@ export type CGMSource = 'dexcom' | 'libre' | 'nightscout' | 'unknown'
 
 /**
  * Extended glucose reading that preserves vendor metadata.
- * Superset of GlucoseReading — can be passed directly to all analytics functions.
+ * A `GlucoseReading` superset usable by APIs that accept reading objects,
+ * subject to each API's unit, ordering, and sufficiency contract.
  */
 export interface NormalizedCGMReading extends GlucoseReading {
   /** Trend direction from the CGM device */

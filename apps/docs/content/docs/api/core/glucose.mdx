@@ -7,7 +7,7 @@ description: "Validation, guards, alignment, labels, and formatting."
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 calculateHOMAIR(glucose: number, insulin: number): { interpretation: string; value: number }
 ```
 
@@ -38,7 +38,7 @@ Used for estimating insulin resistance. Not a diagnostic tool.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 checkGlycemicAlignment(a1c: number, glucose: number, insulin: number): { disclaimer: string; estimatedAverageGlucose: number; flags: string[]; homaIR: { interpretation: string; value: number }; recommendation: string }
 ```
 
@@ -71,12 +71,12 @@ Used for high-level insight and trend alignment, not for diagnosis.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 formatDate(iso: string, timeZone?: string): string
 ```
 
 Formats a UTC ISO 8601 timestamp to a local-readable date/time string.
-Used for clinical charting, logs, and reports. Supports optional IANA time zone.
+Used for charts, logs, and analytics summaries. Supports an optional IANA time zone.
 
 **Returns** — Localized date/time string (e.g., 'Mar 20, 2024, 06:00 AM')
 
@@ -96,12 +96,12 @@ Used for clinical charting, logs, and reports. Supports optional IANA time zone.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 formatGlucose(val: number, unit: GlucoseUnit, options: { digits?: number; suffix?: boolean } = {}): string
 ```
 
-Formats a clinical glucose value with unit and optional rounding.
-Used for clinical reporting, charting, and data export.
+Formats a glucose value with unit and optional rounding.
+Used for analytics output, charting, and data export.
 
 **Returns** — Formatted glucose string (e.g., '5.5 mmol/L', '120 mg/dL')
 
@@ -120,12 +120,12 @@ Used for clinical reporting, charting, and data export.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 formatPercentage(val: number, digits: number = 1): string
 ```
 
-Formats a value as a clinical percentage string (e.g., '85.0%').
-Used for reporting TIR, CV, and other clinical metrics.
+Formats a value as a percentage string (e.g., '85.0%').
+Used for displaying TIR, CV, and other metrics.
 
 **Returns** — Formatted percentage string (e.g., '85.0%')
 
@@ -141,7 +141,7 @@ Used for reporting TIR, CV, and other clinical metrics.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 getGlucoseLabel(val: number, unit: GlucoseUnit = MG_DL, thresholds?: { hyper?: { mgdl?: number; mmoll?: number }; hypo?: { mgdl?: number; mmoll?: number } }): 'normal' | 'low' | 'high'
 ```
 
@@ -165,13 +165,12 @@ Used for charting, alerts, and reporting.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 isEstimateGMIOptions(input: unknown): input is EstimateGMIOptions
 ```
 
-Clinical type guard for EstimateGMIOptions.
-Validates that the input matches the required shape for GMI estimation options (numeric value, string unit).
-Useful for ensuring safe handling of clinical glucose data and interoperability with analytics functions.
+Type guard for `EstimateGMIOptions`.
+Requires a positive finite value and one of the two supported glucose units.
 
 **Returns** — True if input is a valid EstimateGMIOptions object.
 
@@ -186,7 +185,7 @@ Useful for ensuring safe handling of clinical glucose data and interoperability 
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 isHyper(val: number, unit: GlucoseUnit = MG_DL, thresholds?: { mgdl?: number; mmoll?: number }): boolean
 ```
 
@@ -210,7 +209,7 @@ Used for detecting high glucose events.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 isHypo(val: number, unit: GlucoseUnit = MG_DL, thresholds?: { mgdl?: number; mmoll?: number }): boolean
 ```
 
@@ -234,12 +233,12 @@ Used for detecting low glucose events.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 isValidGlucoseString(input: unknown): input is string
 ```
 
-Validates a clinical glucose string (e.g., "100 mg/dL", "5.5 mmol/L").
-Ensures the string is in a recognized clinical format for glucose values, supporting safe parsing and conversion.
+Validates a glucose string (e.g., "100 mg/dL", "5.5 mmol/L").
+Requires a positive finite value and a supported unit.
 
 **Returns** — True if input is a valid glucose string for clinical use.
 
@@ -256,7 +255,7 @@ Ensures the string is in a recognized clinical format for glucose values, suppor
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 isValidGlucoseValue(value: unknown, unit: unknown): boolean
 ```
 
@@ -277,7 +276,7 @@ Ensures value is a positive finite number and unit is supported.
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 isValidInsulin(value: unknown): value is number
 ```
 
@@ -299,19 +298,22 @@ Ensures value is a positive finite number and within plausible physiological ran
 
 **Import:** `@glucoseiq/core`
 
-```ts
+```ts fragment="generated API declaration or signature"
 parseGlucoseString(input: string): { unit: GlucoseUnit; value: number }
 ```
 
 Parses a glucose string (e.g., "100 mg/dL", "5.5 mmol/L") into value and unit.
-Used for robust input validation and data ingestion.
+Accepts only a positive finite value and a supported glucose unit.
 
 **Returns** — Object with numeric value and validated unit
 
 **Throws** — If input string is invalid or not in expected format
 
-```ts
-parseGlucoseString("100 mg/dL") // { value: 100, unit: "mg/dL" }
+```ts typecheck
+import { parseGlucoseString } from '@glucoseiq/core'
+
+const input: string = '100 mg/dL'
+const reading = parseGlucoseString(input) // { value: 100, unit: 'mg/dL' }
 ```
 
 **See** — [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)

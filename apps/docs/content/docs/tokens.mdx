@@ -17,7 +17,7 @@ npm install @glucoseiq/tokens
 
 Pass a value in **mg/dL** to `classifyGlucoseZone`:
 
-```ts
+```ts typecheck
 import { classifyGlucoseZone, zoneColor } from '@glucoseiq/tokens'
 
 const zone = classifyGlucoseZone(186) // 'high'
@@ -43,12 +43,15 @@ model.
   to mg/dL with `mmolLToMgDl` from `@glucoseiq/core` before classifying it.
 </Callout>
 
+The classifier throws a `RangeError` when the value is non-positive or not
+finite.
+
 ## Build a themed legend
 
 `ZONE_PALETTE` contains a color for every zone in both supported themes.
 Position or text should carry the meaning alongside color.
 
-```ts
+```ts typecheck
 import {
   GLUCOSE_ZONES,
   ZONE_PALETTE,
@@ -71,7 +74,7 @@ to `dark`.
 `cssVariables` returns declarations rather than a complete rule, so you choose
 where the theme lives:
 
-```ts
+```ts typecheck
 import { cssVariables } from '@glucoseiq/tokens'
 
 const style = `:root { ${cssVariables('dark')} }`
@@ -100,7 +103,7 @@ an application needs multiple themes at once.
 `TREND_GLYPHS` covers the eight normalized trend states used by
 `@glucoseiq/core` connectors and live analysis:
 
-```ts
+```ts typecheck
 import { TREND_GLYPHS, type TrendKey } from '@glucoseiq/tokens'
 
 function trendLabel(trend: TrendKey) {

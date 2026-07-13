@@ -68,9 +68,17 @@ function distribution(values: number[]): DistributionStats {
  * @returns Distributions of TIR, GMI, CV, and mean glucose across the cohort
  *
  * @example
- * ```ts
- * const cohort = aggregateCohort([patientA, patientB, patientC])
- * cohort.tir.median // 68.5 — median in-range % across the population
+ * ```ts typecheck
+ * import { aggregateCohort, type GlucoseReading } from '@glucoseiq/core'
+ *
+ * const patientA: GlucoseReading[] = [
+ *   { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ * ]
+ * const patientB: GlucoseReading[] = [
+ *   { value: 7.2, unit: 'mmol/L', timestamp: '2024-01-01T08:00:00Z' },
+ * ]
+ * const cohort = aggregateCohort([patientA, patientB])
+ * cohort.tir.median // 100 — both example readings are in range
  * ```
  *
  * @category Cohort

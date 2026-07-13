@@ -5,7 +5,7 @@ description: "Exported thresholds, goals, conversion factors, and capabilities."
 
 ### A1C_TO_EAG_CONSTANT
 
-```ts
+```ts fragment="generated API declaration or signature"
 const A1C_TO_EAG_CONSTANT: 46.7
 ```
 
@@ -14,14 +14,14 @@ const A1C_TO_EAG_CONSTANT: 46.7
 Constant for converting A1C to estimated average glucose (eAG).
 Used in eAG calculation per CDC/ADA guidelines.
 
-**See** — [https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html](https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html)
+**See** — [https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html)
 
 
 ---
 
 ### A1C_TO_EAG_MULTIPLIER
 
-```ts
+```ts fragment="generated API declaration or signature"
 const A1C_TO_EAG_MULTIPLIER: 28.7
 ```
 
@@ -30,20 +30,20 @@ const A1C_TO_EAG_MULTIPLIER: 28.7
 Multiplier for converting A1C to estimated average glucose (eAG).
 Used in eAG calculation per CDC/ADA guidelines.
 
-**See** — [https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html](https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html)
+**See** — [https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html)
 
 
 ---
 
 ### AllowedGlucoseUnits
 
-```ts
+```ts fragment="generated API declaration or signature"
 const AllowedGlucoseUnits: GlucoseUnit[]
 ```
 
 **Import:** `@glucoseiq/core`
 
-List of allowed clinical glucose units.
+List of allowed glucose units.
 Used for input validation and unit conversion.
 
 **See** — [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
@@ -53,7 +53,7 @@ Used for input validation and unit conversion.
 
 ### DEXCOM_CAPABILITIES
 
-```ts
+```ts fragment="generated API declaration or signature"
 const DEXCOM_CAPABILITIES: ConnectorCapabilities
 ```
 
@@ -66,7 +66,7 @@ Dexcom Share / G7-G8 feeds.
 
 ### GLUCOSE_COLOR_ELEVATED
 
-```ts
+```ts fragment="generated API declaration or signature"
 const GLUCOSE_COLOR_ELEVATED: '#FBC02D'
 ```
 
@@ -77,7 +77,7 @@ const GLUCOSE_COLOR_ELEVATED: '#FBC02D'
 
 ### GLUCOSE_COLOR_HIGH
 
-```ts
+```ts fragment="generated API declaration or signature"
 const GLUCOSE_COLOR_HIGH: '#F57C00'
 ```
 
@@ -88,7 +88,7 @@ const GLUCOSE_COLOR_HIGH: '#F57C00'
 
 ### GLUCOSE_COLOR_LOW
 
-```ts
+```ts fragment="generated API declaration or signature"
 const GLUCOSE_COLOR_LOW: '#D32F2F'
 ```
 
@@ -103,7 +103,7 @@ Color codes for glucose zones.
 
 ### GLUCOSE_COLOR_NORMAL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const GLUCOSE_COLOR_NORMAL: '#388E3C'
 ```
 
@@ -114,7 +114,7 @@ const GLUCOSE_COLOR_NORMAL: '#388E3C'
 
 ### GLUCOSE_COLOR_NORMAL_DOWN
 
-```ts
+```ts fragment="generated API declaration or signature"
 const GLUCOSE_COLOR_NORMAL_DOWN: '#2E7D32'
 ```
 
@@ -125,7 +125,7 @@ const GLUCOSE_COLOR_NORMAL_DOWN: '#2E7D32'
 
 ### GLUCOSE_COLOR_NORMAL_UP
 
-```ts
+```ts fragment="generated API declaration or signature"
 const GLUCOSE_COLOR_NORMAL_UP: '#4CAF50'
 ```
 
@@ -136,7 +136,7 @@ const GLUCOSE_COLOR_NORMAL_UP: '#4CAF50'
 
 ### GLUCOSE_ZONE_COLORS
 
-```ts
+```ts fragment="generated API declaration or signature"
 const GLUCOSE_ZONE_COLORS: { readonly ELEVATED: '#FBC02D'; readonly HIGH: '#F57C00'; readonly LOW: '#D32F2F'; readonly NORMAL: '#388E3C'; readonly NORMAL_DOWN: '#2E7D32'; readonly NORMAL_UP: '#4CAF50' }
 ```
 
@@ -151,7 +151,7 @@ Glucose zone color mapping for different statuses and trends.
 
 ### GMI_COEFFICIENTS
 
-```ts
+```ts fragment="generated API declaration or signature"
 const GMI_COEFFICIENTS: { readonly A1C_INTERCEPT: 3.31; readonly A1C_SLOPE: 0.02392; readonly MG_DL_INTERCEPT: 2.4; readonly MG_DL_SLOPE: 0.03; readonly MMOL_L_INTERCEPT: 3.5; readonly MMOL_L_SLOPE: 1.57 }
 ```
 
@@ -167,7 +167,7 @@ Used for estimating GMI from average glucose values.
 
 ### HOMA_IR_CUTOFFS
 
-```ts
+```ts fragment="generated API declaration or signature"
 const HOMA_IR_CUTOFFS: { readonly EARLY_RESISTANCE: 2.9; readonly NORMAL: 2; readonly VERY_SENSITIVE: 1 }
 ```
 
@@ -181,7 +181,7 @@ These are general categories, not diagnostic.
 
 ### HOMA_IR_DENOMINATOR
 
-```ts
+```ts fragment="generated API declaration or signature"
 const HOMA_IR_DENOMINATOR: 405
 ```
 
@@ -197,7 +197,7 @@ HOMA-IR = (glucose \[mg/dL] × insulin \[µIU/mL]) / HOMA_IR_DENOMINATOR
 
 ### HYPER_THRESHOLD_MGDL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const HYPER_THRESHOLD_MGDL: 180
 ```
 
@@ -213,7 +213,7 @@ Used for detecting high glucose events.
 
 ### HYPER_THRESHOLD_MMOLL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const HYPER_THRESHOLD_MMOLL: 10
 ```
 
@@ -229,7 +229,7 @@ Used for high glucose detection in international/metric contexts.
 
 ### HYPO_THRESHOLD_MGDL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const HYPO_THRESHOLD_MGDL: 70
 ```
 
@@ -245,7 +245,7 @@ Used for detecting low glucose events.
 
 ### HYPO_THRESHOLD_MMOLL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const HYPO_THRESHOLD_MMOLL: 3.9
 ```
 
@@ -261,7 +261,7 @@ Used for low glucose detection in international/metric contexts.
 
 ### LIBRE_CAPABILITIES
 
-```ts
+```ts fragment="generated API declaration or signature"
 const LIBRE_CAPABILITIES: ConnectorCapabilities
 ```
 
@@ -274,7 +274,7 @@ Libre LinkUp feeds.
 
 ### MGDL_MMOLL_CONVERSION
 
-```ts
+```ts fragment="generated API declaration or signature"
 const MGDL_MMOLL_CONVERSION: 18.0182
 ```
 
@@ -290,7 +290,7 @@ Used for unit conversion.
 
 ### MG_DL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const MG_DL: 'mg/dL'
 ```
 
@@ -306,7 +306,7 @@ Used for data interoperability and formatting.
 
 ### MMOL_L
 
-```ts
+```ts fragment="generated API declaration or signature"
 const MMOL_L: 'mmol/L'
 ```
 
@@ -321,7 +321,7 @@ String literal for mmol/L unit.
 
 ### NIGHTSCOUT_CAPABILITIES
 
-```ts
+```ts fragment="generated API declaration or signature"
 const NIGHTSCOUT_CAPABILITIES: ConnectorCapabilities
 ```
 
@@ -334,7 +334,7 @@ Nightscout community relays.
 
 ### PREGNANCY_TARGET_HIGH_MGDL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const PREGNANCY_TARGET_HIGH_MGDL: 140
 ```
 
@@ -350,7 +350,7 @@ Applies to Type 1, Type 2, and gestational diabetes.
 
 ### PREGNANCY_TARGET_HIGH_MMOLL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const PREGNANCY_TARGET_HIGH_MMOLL: 7.8
 ```
 
@@ -366,7 +366,7 @@ Applies to Type 1, Type 2, and gestational diabetes.
 
 ### PREGNANCY_TARGET_LOW_MGDL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const PREGNANCY_TARGET_LOW_MGDL: 63
 ```
 
@@ -382,7 +382,7 @@ Applies to Type 1, Type 2, and gestational diabetes.
 
 ### PREGNANCY_TARGET_LOW_MMOLL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const PREGNANCY_TARGET_LOW_MMOLL: 3.5
 ```
 
@@ -398,23 +398,39 @@ Applies to Type 1, Type 2, and gestational diabetes.
 
 ### TAR_LEVEL1_GOAL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const TAR_LEVEL1_GOAL: 25
 ```
 
 **Import:** `@glucoseiq/core`
 
-Maximum acceptable percentage for Level 1 hyperglycemia (181-250 mg/dL).
-Clinical goal: &lt;25% of readings in this range.
+Maximum acceptable cumulative percentage above 180 mg/dL.
+Published goal: &lt;25% of readings above range, including Level 2.
 
 **See** — [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
 
 
 ---
 
+### TAR_LEVEL1_GOAL_OLDER_ADULTS
+
+```ts fragment="generated API declaration or signature"
+const TAR_LEVEL1_GOAL_OLDER_ADULTS: 50
+```
+
+**Import:** `@glucoseiq/core`
+
+Maximum acceptable cumulative percentage above 180 mg/dL for older/high-risk adults.
+Current ADA goal: &lt;50% of readings above range, including Level 2.
+
+**See** — [ADA Standards of Care (2026)](https://diabetesjournals.org/care/article/49/Supplement_1/S132/163927)
+
+
+---
+
 ### TAR_LEVEL2_GOAL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const TAR_LEVEL2_GOAL: 5
 ```
 
@@ -428,16 +444,32 @@ Clinical goal: &lt;5% of readings in this range.
 
 ---
 
+### TAR_LEVEL2_GOAL_OLDER_ADULTS
+
+```ts fragment="generated API declaration or signature"
+const TAR_LEVEL2_GOAL_OLDER_ADULTS: 10
+```
+
+**Import:** `@glucoseiq/core`
+
+Maximum acceptable percentage above 250 mg/dL for older/high-risk adults.
+Published goal: &lt;10% of readings in this range.
+
+**See** — [International Consensus on Time in Range (2019)](https://pmc.ncbi.nlm.nih.gov/articles/PMC6973648/)
+
+
+---
+
 ### TBR_LEVEL1_GOAL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const TBR_LEVEL1_GOAL: 4
 ```
 
 **Import:** `@glucoseiq/core`
 
-Maximum acceptable percentage for Level 1 hypoglycemia (54-69 mg/dL).
-Clinical goal: &lt;4% of readings in this range.
+Maximum acceptable cumulative percentage below 70 mg/dL.
+Published goal: &lt;4% of readings below range, including Level 2.
 
 **See** — [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
 
@@ -446,14 +478,14 @@ Clinical goal: &lt;4% of readings in this range.
 
 ### TBR_LEVEL1_GOAL_OLDER_ADULTS
 
-```ts
+```ts fragment="generated API declaration or signature"
 const TBR_LEVEL1_GOAL_OLDER_ADULTS: 1
 ```
 
 **Import:** `@glucoseiq/core`
 
-Maximum acceptable percentage for Level 1 hypoglycemia for older/high-risk adults.
-More stringent goal: &lt;1% of readings in this range.
+Maximum acceptable cumulative percentage below 70 mg/dL for older/high-risk adults.
+More stringent goal: &lt;1% of readings below range, including Level 2.
 
 **See** — [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
 
@@ -462,7 +494,7 @@ More stringent goal: &lt;1% of readings in this range.
 
 ### TBR_LEVEL2_GOAL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const TBR_LEVEL2_GOAL: 1
 ```
 
@@ -478,30 +510,30 @@ Clinical goal: &lt;1% of readings in this range.
 
 ### TBR_LEVEL2_GOAL_OLDER_ADULTS
 
-```ts
-const TBR_LEVEL2_GOAL_OLDER_ADULTS: 0.5
+```ts fragment="generated API declaration or signature"
+const TBR_LEVEL2_GOAL_OLDER_ADULTS: 1
 ```
 
 **Import:** `@glucoseiq/core`
 
-Maximum acceptable percentage for Level 2 hypoglycemia for older/high-risk adults.
-More stringent goal: &lt;0.5% of readings in this range.
+Maximum acceptable percentage below 54 mg/dL for older/high-risk adults.
+Current ADA goal: &lt;1% of readings in this range.
 
-**See** — [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+**See** — [ADA Standards of Care (2026)](https://diabetesjournals.org/care/article/49/Supplement_1/S132/163927)
 
 
 ---
 
 ### TIR_GOAL_OLDER_ADULTS
 
-```ts
+```ts fragment="generated API declaration or signature"
 const TIR_GOAL_OLDER_ADULTS: 50
 ```
 
 **Import:** `@glucoseiq/core`
 
 Target percentage for time-in-range for older/high-risk adults.
-More lenient goal: ≥50% of readings in target range.
+More lenient goal: &gt;50% of readings in target range.
 
 **See** — [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
 
@@ -510,14 +542,14 @@ More lenient goal: ≥50% of readings in target range.
 
 ### TIR_GOAL_STANDARD
 
-```ts
+```ts fragment="generated API declaration or signature"
 const TIR_GOAL_STANDARD: 70
 ```
 
 **Import:** `@glucoseiq/core`
 
 Target percentage for time-in-range (70-180 mg/dL).
-Clinical goal: ≥70% of readings in target range.
+Published goal: &gt;70% of readings in target range.
 
 **See** — [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
 
@@ -526,7 +558,7 @@ Clinical goal: ≥70% of readings in target range.
 
 ### TIR_HIGH_THRESHOLD_MGDL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const TIR_HIGH_THRESHOLD_MGDL: 180
 ```
 
@@ -542,7 +574,7 @@ Target range ends at this value.
 
 ### TIR_HIGH_THRESHOLD_MMOLL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const TIR_HIGH_THRESHOLD_MMOLL: 10
 ```
 
@@ -558,7 +590,7 @@ Target range ends at this value.
 
 ### TIR_LOW_THRESHOLD_MGDL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const TIR_LOW_THRESHOLD_MGDL: 70
 ```
 
@@ -574,7 +606,7 @@ Target range begins at this value.
 
 ### TIR_LOW_THRESHOLD_MMOLL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const TIR_LOW_THRESHOLD_MMOLL: 3.9
 ```
 
@@ -590,7 +622,7 @@ Target range begins at this value.
 
 ### TIR_VERY_HIGH_THRESHOLD_MGDL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const TIR_VERY_HIGH_THRESHOLD_MGDL: 250
 ```
 
@@ -606,7 +638,7 @@ Readings above this value indicate significant hyperglycemia.
 
 ### TIR_VERY_HIGH_THRESHOLD_MMOLL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const TIR_VERY_HIGH_THRESHOLD_MMOLL: 13.9
 ```
 
@@ -622,7 +654,7 @@ Readings above this value indicate significant hyperglycemia.
 
 ### TIR_VERY_LOW_THRESHOLD_MGDL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const TIR_VERY_LOW_THRESHOLD_MGDL: 54
 ```
 
@@ -638,7 +670,7 @@ Readings below this value indicate significant hypoglycemia.
 
 ### TIR_VERY_LOW_THRESHOLD_MMOLL
 
-```ts
+```ts fragment="generated API declaration or signature"
 const TIR_VERY_LOW_THRESHOLD_MMOLL: 3
 ```
 
@@ -654,7 +686,7 @@ Readings below this value indicate significant hypoglycemia.
 
 ### TREND_ARROWS
 
-```ts
+```ts fragment="generated API declaration or signature"
 const TREND_ARROWS: { readonly FALLING: '↘'; readonly RAPIDFALL: '↓'; readonly RAPIDRISE: '↑'; readonly RISING: '↗'; readonly STEADY: '→' }
 ```
 

@@ -15,7 +15,7 @@ npm install --save-dev @glucoseiq/testing
 
 ## Generate a series
 
-```ts
+```ts typecheck
 import { generateCGMSeries } from '@glucoseiq/testing'
 
 const readings = generateCGMSeries({
@@ -24,7 +24,9 @@ const readings = generateCGMSeries({
   start: '2025-01-01T00:00:00Z',
 })
 
-readings[0]
+const firstReading = readings.at(0)
+if (!firstReading) throw new Error('Expected generated readings')
+firstReading
 // {
 //   value: 96,
 //   unit: 'mg/dL',
@@ -52,18 +54,24 @@ seeded noise, and optional nocturnal hypoglycemia. Values are clamped to
 ## Test an analysis
 
 Generated readings use the `GlucoseReading` contract from `@glucoseiq/core`,
-so they can go directly into any analytic:
+so they can go directly into reading-based analytics such as `analyzeGlucose`:
 
-```ts
+```ts typecheck
 import { analyzeGlucose } from '@glucoseiq/core'
 import { generateCGMSeries } from '@glucoseiq/testing'
 
 const readings = generateCGMSeries({ days: 14, seed: 19 })
 const report = analyzeGlucose(readings)
 
-expect(report.valid).toBe(true)
-expect(report.dataSufficiency.totalReadings).toBe(14 * 288)
-expect(report.agpProfile?.bins).toHaveLength(288)
+if (!report.valid || !report.agpProfile) {
+  throw new Error('Expected a valid analysis with an AGP-style profile')
+}
+if (report.dataSufficiency.totalReadings !== 14 * 288) {
+  throw new Error('Unexpected generated reading count')
+}
+if (report.agpProfile.bins.length !== 288) {
+  throw new Error('Unexpected percentile-bin count')
+}
 ```
 
 Use a fixed `start` in tests that group by calendar date or local time. The
@@ -73,7 +81,7 @@ default starts at midnight UTC.
 
 The `scenarios` collection provides four named, deterministic fixtures:
 
-```ts
+```ts typecheck
 import { scenarios } from '@glucoseiq/testing'
 
 const steady = scenarios.steadyDay()
@@ -92,13 +100,15 @@ const withDropout = scenarios.gappyTrace()
 Scenarios return fresh arrays, so a test can safely derive a variant without
 changing the next fixture:
 
-```ts
+```ts typecheck
+import { scenarios } from '@glucoseiq/testing'
+
 const sparseHypo = scenarios.hypoNight().filter((_, index) => index % 2 === 0)
 ```
 
 ## Produce mmol/L fixtures
 
-```ts
+```ts typecheck
 import { generateCGMSeries } from '@glucoseiq/testing'
 
 const readings = generateCGMSeries({
@@ -107,7 +117,9 @@ const readings = generateCGMSeries({
   seed: 23,
 })
 
-readings[0].unit // 'mmol/L'
+const firstReading = readings.at(0)
+if (!firstReading) throw new Error('Expected generated readings')
+firstReading.unit // 'mmol/L'
 ```
 
 The underlying curve is generated in mg/dL and converted to one decimal place

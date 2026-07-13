@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     template: '%s | GlucoseIQ',
   },
   description:
-    'Zero-dependency TypeScript toolkit for CGM & diabetes analytics: AGP, Time-in-Range, cited variability & risk metrics, meal response, live trend, and render-ready SVG charts.',
+    'TypeScript toolkit powered by a zero-runtime-dependency core for CGM analytics, percentile bands, Time-in-Range, variability, meal response, live trends, and optional SVG renderers.',
 }
 
 export default function Layout({ children }: { children: ReactNode }) {

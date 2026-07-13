@@ -1,11 +1,9 @@
 /**
  * @file src/csv.ts
  *
- * Generic CSV → glucose readings parser. Point it at any CGM export (Dexcom
- * Clarity, LibreView, Nightscout, Tidepool, …) by naming the timestamp and
- * value columns; it handles quoted fields, custom delimiters, and skips rows
- * that don't parse. Pure, dependency-free, and format-agnostic (no fragile
- * hard-coded vendor layouts).
+ * Mapped header-row delimited data parser. Name the timestamp and value
+ * columns explicitly; it handles quoted fields, custom one-character
+ * delimiters, and skips rows that do not parse. Pure and dependency-free.
  */
 
 import type { GlucoseReading, GlucoseUnit } from './types'
@@ -78,7 +76,13 @@ function cell(fields: string[], index: number): string {
  * @throws {ParseError} If a named column is not present in the header
  *
  * @example
- * ```ts
+ * ```ts typecheck
+ * import { parseGlucoseCSV } from '@glucoseiq/core'
+ *
+ * const csv: string = [
+ *   'Timestamp (YYYY-MM-DDThh:mm:ss),Glucose Value (mg/dL)',
+ *   '2024-01-01T08:00:00Z,120',
+ * ].join('\n')
  * const readings = parseGlucoseCSV(csv, {
  *   timestampColumn: 'Timestamp (YYYY-MM-DDThh:mm:ss)',
  *   valueColumn: 'Glucose Value (mg/dL)',
