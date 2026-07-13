@@ -30,6 +30,9 @@ const tirSvg = tirBarToSVG(readings, { width: 230, height: 300 })
 // Live-model strip: the last few readings, newest first (Health-app style).
 const recent = [...readings].slice(-4).reverse()
 const trend = computeGlucoseTrend(readings.slice(-12))
+const trendLabel = trend.trend
+  .replace(/([a-z])([A-Z])/gu, '$1 $2')
+  .toLowerCase()
 const lastDay = readings.slice(-288)
 const dayLow = Math.min(...lastDay.map((r) => r.value))
 const dayHigh = Math.max(...lastDay.map((r) => r.value))
@@ -280,9 +283,12 @@ export default function HomePage(): JSX.Element {
           </div>
           <Tile label="Today" labelColor="var(--giq-red)">
             <div className="giq-trio">
-              <span className="lo">{dayLow}↓</span><span className="sep">·</span>
-              <span className="hi">{dayHigh}↑</span><span className="sep">·</span>
-              <span className="cur">{current}{ARROW[trend.trend]}</span>
+              <span className="lo">{dayLow}<span aria-hidden="true">↓</span></span><span className="sep">·</span>
+              <span className="hi">{dayHigh}<span aria-hidden="true">↑</span></span><span className="sep">·</span>
+              <span className="cur">
+                {current}<span aria-hidden="true">{ARROW[trend.trend]}</span>
+                <span className="sr-only">, trend {trendLabel}</span>
+              </span>
             </div>
             <div className="giq-tile-sub">low · high · now (mg/dL)</div>
           </Tile>
@@ -311,11 +317,18 @@ export default function HomePage(): JSX.Element {
           <div className="giq-panel">
             <h2>AGP-style percentile bands · 14 days</h2>
             <div dangerouslySetInnerHTML={{ __html: agpSvg }} />
+            <p className="sr-only">
+              AGP-style percentile chart for 14 days. Time in range is{' '}
+              {report.timeInRange!.inRange.percentage}% and glucose variability is {report.cv}%.
+            </p>
           </div>
           <div className="giq-row">
             <div className="giq-panel" style={{ flex: '0 1 300px' }}>
               <h2>Time in Range</h2>
               <div dangerouslySetInnerHTML={{ __html: tirSvg }} />
+              <p className="sr-only">
+                Time in range is {report.timeInRange!.inRange.percentage}%.
+              </p>
             </div>
             <div className="giq-panel">
               <h2>Latest readings</h2>
@@ -362,11 +375,17 @@ export default function HomePage(): JSX.Element {
           <h2 className="giq-h2">One engine. Six packages.</h2>
           <p className="giq-h2-sub">Use exactly the slice you need — the core never carries what you don’t.</p>
           <div className="giq-panel" style={{ padding: '4px 8px' }}>
-            <table className="giq-pkgs"><tbody>
-              {PACKAGES.map((p) => (
-                <tr key={p.name}><td>{p.name}</td><td>{p.desc}</td></tr>
-              ))}
-            </tbody></table>
+            <table className="giq-pkgs">
+              <caption className="sr-only">GlucoseIQ packages and their roles</caption>
+              <thead className="sr-only">
+                <tr><th scope="col">Package</th><th scope="col">Role</th></tr>
+              </thead>
+              <tbody>
+                {PACKAGES.map((p) => (
+                  <tr key={p.name}><td>{p.name}</td><td>{p.desc}</td></tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
 

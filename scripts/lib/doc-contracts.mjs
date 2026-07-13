@@ -1018,6 +1018,7 @@ export function createPublicInventory({
     linkOnlyFiles: files.filter((path) =>
       path === 'CHANGELOG.md' ||
       path === 'docs/globals.md' ||
+      path === 'docs/LAUNCH_RUNBOOK.md' ||
       /^docs\/(?:functions|interfaces|type-aliases|variables)\/.+\.md$/u.test(path)
     ),
   }

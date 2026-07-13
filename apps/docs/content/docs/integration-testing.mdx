@@ -1,0 +1,114 @@
+---
+title: Integration Testing
+description: Verify GlucoseIQ at data, package, type-resolution, rendering, and deployed-application boundaries.
+---
+
+Unit coverage inside an analytics package is only one layer. A production
+application should also test the source adapter, packed package, compiler,
+renderer, and deployed host that carry the result to a person.
+
+## 1. Pin deterministic data
+
+Use `@glucoseiq/testing` for repeatable software tests. Keep the seed, start
+timestamp, interval, and unit explicit when a result depends on them.
+
+```ts typecheck
+import { analyzeGlucose } from '@glucoseiq/core'
+import { generateCGMSeries } from '@glucoseiq/testing'
+
+const readings = generateCGMSeries({
+  days: 14,
+  intervalMin: 5,
+  seed: 17,
+  start: '2025-01-01T00:00:00Z',
+  unit: 'mg/dL',
+})
+const report = analyzeGlucose(readings, { timeZone: 'UTC' })
+
+if (!report.valid || !report.timeInRange || !report.agpProfile) {
+  throw new Error('Expected a valid deterministic analysis')
+}
+if (report.dataSufficiency.totalReadings !== 14 * 288) {
+  throw new Error('Unexpected fixture size')
+}
+```
+
+Synthetic fixtures verify software behavior, not clinical validity. Add
+appropriately governed reference datasets when the product's intended use
+requires them.
+
+## 2. Test the ingestion boundary
+
+Each source adapter needs coverage for:
+
+- supported and unsupported unit literals
+- zero, negative, non-finite, and implausible values
+- invalid, duplicate, unsorted, and offset timestamps
+- missing fields and malformed records
+- pagination overlap and stable source identifiers
+- authentication, rate-limit, timeout, and retry behavior in the host layer
+
+Connector tests should assert the normalized `GlucoseReading` contract and the
+typed error code, not only a rendered string.
+
+## 3. Test the user-visible failure model
+
+Exercise empty, sparse, stale, duplicate, mixed-unit, and conflicting data.
+Assert that the application presents freshness, coverage, gaps, and unavailable
+states without turning missing evidence into zero.
+
+For live views, test both flows independently:
+
+1. the transport adds or replaces readings; and
+2. the staleness clock advances while no reading arrives.
+
+Passing `refreshMs` to `useGlucoseLive` only drives the second flow. It does not
+poll a source.
+
+## 4. Test packed packages and declarations
+
+Source-workspace imports can hide packaging mistakes. Before release, install
+the packed tarballs into clean temporary consumers and verify:
+
+- all ten public entrypoints in ESM and CommonJS
+- strict TypeScript resolution in NodeNext and Bundler modes
+- `.d.mts` for ESM and `.d.ts` for CommonJS
+- React 18 and React 19 peer installations
+- the packed React client directive
+- CLI installation, success, and failure exits
+- all 107 compatibility exports
+- no surviving `workspace:` dependency ranges
+
+This repository owns that matrix:
+
+```bash
+pnpm test:packages
+```
+
+## 5. Test renderers in the host
+
+Core renderer fixtures protect deterministic SVG output, but the host still
+owns layout, typography, accessibility, sanitization boundaries, and export
+conversion. Verify:
+
+- the adjacent textual summary contains the chart's important values
+- zone and trend meaning does not depend on color alone
+- zoom and narrow layouts do not clip labels
+- the consuming screen has an appropriate accessible name and reading order
+- email, PDF, image, or native conversion preserves the required content
+
+Do not replace host-level tests with an SVG snapshot alone.
+
+## 6. Test the deployed route
+
+Run a small production smoke suite against the real deployment:
+
+- load the application over HTTPS
+- exercise one valid and one invalid data flow
+- verify server credentials do not appear in browser assets or responses
+- confirm cache behavior does not serve one user's data to another
+- test refresh, back/forward navigation, and a direct deep link
+- verify error monitoring contains no raw health payloads or secrets
+
+Use [Deployment](/docs/deployment) for the production boundary and
+[Safety and Limitations](/docs/safety) for the claims checklist.

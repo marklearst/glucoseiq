@@ -9,4 +9,42 @@ GlucoseIQ publishes focused packages for core analytics, framework bindings, des
 
 The zero-runtime-dependency analytics engine, including metrics, connectors, interoperability helpers, SVG renderers, public types, constants, and coded errors.
 
-The core reference is generated from the package's TypeScript declarations and TSDoc. Its checked-in files are byte-for-byte drift checked against the source model.
+The documentation generator builds the core reference from TypeScript
+declarations and TSDoc, then checks the committed files byte for byte against
+the source model.
+
+## [@glucoseiq/react](/docs/api/react)
+
+Client-only hooks, live view models, and optional React wrappers around the
+core SVG renderers. The reference lists its public exports, component props, and
+memoization boundary.
+
+## [@glucoseiq/tokens](/docs/api/tokens)
+
+The five-zone model, fixed presentation thresholds, palettes, brand values,
+trend glyphs, and CSS-variable helper.
+
+## [@glucoseiq/testing](/docs/api/testing)
+
+The deterministic generator contract, option validation, output limit, and
+four named synthetic scenario factories.
+
+## [@glucoseiq/cli](/docs/api/cli)
+
+Executable flags, mapped delimited-data behavior, JSON schema, stream rules,
+exit codes, and the injectable `run` API.
+
+## `diabetic-utils`
+
+Version 2 is the compatibility bridge to `@glucoseiq/core` and preserves the
+107 exports from `diabetic-utils` 1.5. New applications should use scoped
+packages directly. Existing applications should follow the
+[migration guide](/docs/migration); the compatible analytics contracts are in
+the [core reference](/docs/api/core).
+
+## Choose a reference
+
+Use [Choose a Package](/docs/packages) when the package boundary is not yet
+clear. Use [Runtime Support](/docs/runtime-support) for Node, module,
+declaration, and React compatibility, and [Safety and Limitations](/docs/safety)
+before presenting an analytics result to a person.

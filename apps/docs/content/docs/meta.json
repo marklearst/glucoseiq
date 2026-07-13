@@ -3,8 +3,9 @@
   "pages": [
     "---Start here---",
     "index",
+    "packages",
     "dashboard",
-    "---Learn GlucoseIQ---",
+    "---Learn the engine---",
     "core-concepts",
     "data-model",
     "data-quality",
@@ -18,6 +19,11 @@
     "testing",
     "cli",
     "interoperability",
+    "---Ship and operate---",
+    "safety",
+    "runtime-support",
+    "integration-testing",
+    "deployment",
     "---Reference---",
     "api",
     "migration"

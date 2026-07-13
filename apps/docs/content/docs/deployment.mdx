@@ -1,0 +1,92 @@
+---
+title: Deployment
+description: Deploy GlucoseIQ applications with explicit server, client, credential, rendering, and verification boundaries.
+---
+
+GlucoseIQ does not prescribe a hosting platform. The important deployment
+decision is where authenticated transport ends and normalized glucose data
+begins.
+
+## Recommended data flow
+
+1. A trusted server or data layer obtains credentials and fetches the source
+   payload.
+2. A connector or application adapter validates and normalizes the payload.
+3. The server applies authorization, retention, and logging policy.
+4. The UI receives only the fields it needs as `GlucoseReading[]` or an
+   application-specific view model.
+5. Core analytics or React hooks derive render-ready data.
+
+Do not place vendor secrets in public environment variables, client bundles,
+URLs, analytics events, or error messages. Connector functions do not create a
+security boundary for the host.
+
+## Server-rendered applications
+
+Use `@glucoseiq/core` in server-only modules. The package has no runtime
+dependencies and does not require a DOM. Serialize only the result needed by a
+client component, and decide deliberately whether raw readings should cross
+that boundary.
+
+Do not import `@glucoseiq/react` from a server-only module. Its root is a Client
+Component package. A framework such as Next.js can pass serializable data into
+a client component that owns the React hooks and optional SVG wrappers.
+
+## Browser applications
+
+Browser bundles can use selected core functions and the React adapter, but the
+application still needs a Node 24 or newer supported build environment. Keep
+reading arrays and options objects stable between React renders when their
+contents have not changed.
+
+Core SVG renderers return strings. Embed only output produced by the trusted
+renderer boundary, pair charts with a textual summary, and verify the complete
+host application at its deployed URL.
+
+## File and command deployments
+
+The `glucoseiq` executable reads one requested input file into memory and
+writes only an explicitly requested SVG path. Container and job hosts should
+set file-size, path, CPU, memory, timeout, and retention limits appropriate to
+their workload. Use `--json` for automation and check the process exit code.
+
+## Deploy this documentation workspace to Vercel
+
+For the GlucoseIQ documentation project, use the repository-aware monorepo
+configuration:
+
+| Setting | Value |
+| --- | --- |
+| Project | `glucoseiq` |
+| Repository | `marklearst/glucoseiq` |
+| Root directory | `apps/docs` |
+| Framework | Next.js |
+| Node.js | 24.x |
+| Build command | `cd ../.. && turbo run build --filter=docs` |
+| Install command | Automatic pnpm workspace detection |
+
+Verify a pull-request preview before promoting the transition. Vercel's
+[Turborepo deployment guide](https://vercel.com/docs/monorepos/turborepo)
+describes the monorepo root and filtered-build model.
+
+For the production domain, first confirm the registrar reports the domain as
+active. Then add both `glucoseiq.health` and `www.glucoseiq.health` to the
+project, make the apex canonical, and redirect `www` to the apex. Copy the
+exact A, CNAME, or verification values reported for this project; do not reuse
+generic DNS examples. See Vercel's
+[custom-domain guide](https://vercel.com/docs/domains/set-up-custom-domain).
+
+## Production verification
+
+Before directing users to a deployment:
+
+- install and build with Node 24 using the lockfile
+- run unit, coverage, package-consumer, documentation, and type-resolution gates
+- verify HTTPS, direct routes, canonical URLs, robots policy, and sitemap
+- verify valid, invalid, empty, stale, and low-coverage user states
+- confirm secrets and raw health payloads are absent from logs and client assets
+- check accessibility in the actual host, including the chart's text alternative
+- record the deployed commit and a rollback target
+
+The checked-in launch runbook tracks the repository maintainer sequence
+separately from this consumer guide.

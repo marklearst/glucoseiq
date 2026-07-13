@@ -1,0 +1,72 @@
+---
+title: Tokens API
+description: Public zones, palettes, glyphs, brand values, and helpers exported by @glucoseiq/tokens.
+---
+
+`@glucoseiq/tokens` has one root entrypoint and no runtime dependencies. Its
+exports are presentation primitives; they do not replace configurable core
+analytics.
+
+## Zone model
+
+| Export | Type | Contract |
+| --- | --- | --- |
+| `GlucoseZone` | Type | `'veryLow' \| 'low' \| 'inRange' \| 'high' \| 'veryHigh'` |
+| `GLUCOSE_ZONES` | Readonly array | All five zones, ordered low to high |
+| `ZONE_THRESHOLDS_MGDL` | Readonly object | Fixed consensus boundaries in mg/dL |
+| `classifyGlucoseZone` | Function | Classifies one positive finite mg/dL value |
+
+The threshold object contains `veryLowMax: 54`, `lowMax: 70`,
+`inRangeMax: 180`, and `highMax: 250`. The first two bounds are exclusive; the
+in-range and high maxima are inclusive. `classifyGlucoseZone` throws
+`RangeError` for zero, negative, non-finite, or `NaN` input.
+
+## Theme and color exports
+
+| Export | Type | Contract |
+| --- | --- | --- |
+| `Theme` | Type | `'dark' \| 'light'` |
+| `ZONE_PALETTE` | Record | One hex color for every zone in both themes |
+| `zoneColor` | Function | Returns one zone color; theme defaults to `dark` |
+| `BRAND` | Readonly object | `black`, `drop`, `surface`, `border`, and `muted` colors |
+| `cssVariables` | Function | Returns CSS declarations; theme defaults to `dark` |
+
+`cssVariables` emits `--giq-zone-*`, `--giq-bg`, `--giq-drop`,
+`--giq-surface`, `--giq-border`, and `--giq-muted` declarations. It does not
+include a selector.
+
+```ts typecheck
+import {
+  GLUCOSE_ZONES,
+  classifyGlucoseZone,
+  cssVariables,
+  zoneColor,
+  type Theme,
+} from '@glucoseiq/tokens'
+
+function legend(theme: Theme) {
+  return GLUCOSE_ZONES.map((zone) => ({
+    zone,
+    color: zoneColor(zone, theme),
+  }))
+}
+
+const currentZone = classifyGlucoseZone(112)
+const lightLegend = legend('light')
+const scopedRule = `.glucose-panel { ${cssVariables('dark')} }`
+void { currentZone, lightLegend, scopedRule }
+```
+
+## Trend exports
+
+| Export | Type | Contract |
+| --- | --- | --- |
+| `TREND_GLYPHS` | Readonly object | Glyphs for the eight normalized trend states |
+| `TrendKey` | Type | Keys of `TREND_GLYPHS` |
+
+The keys are `rapidRising`, `rising`, `slightlyRising`, `flat`,
+`slightlyFalling`, `falling`, `rapidFalling`, and `unknown`.
+
+Always place a text label or another non-color cue beside a palette value or
+trend glyph. The package does not claim that color or a glyph alone satisfies
+an application's accessibility requirements.

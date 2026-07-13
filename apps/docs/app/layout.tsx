@@ -2,15 +2,9 @@ import './global.css'
 import { RootProvider } from 'fumadocs-ui/provider/next'
 import type { ReactNode } from 'react'
 import type { Metadata } from 'next'
+import { createRootMetadata } from '@/lib/site-metadata'
 
-export const metadata: Metadata = {
-  title: {
-    default: 'GlucoseIQ — glucose intelligence on every screen',
-    template: '%s | GlucoseIQ',
-  },
-  description:
-    'TypeScript toolkit powered by a zero-runtime-dependency core for CGM analytics, percentile bands, Time-in-Range, variability, meal response, live trends, and optional SVG renderers.',
-}
+export const metadata: Metadata = createRootMetadata()
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (

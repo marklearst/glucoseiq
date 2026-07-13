@@ -113,6 +113,11 @@ and failure-state model.
 
 ## Use the ready-made SVG components
 
+Each SVG includes a concise image label. Pair it with an adjacent text summary
+that states the values and trend a reader needs to understand. A visible
+`figcaption` also serves people who cannot distinguish a chart's colors or
+shapes.
+
 ```tsx typecheck
 import type { GlucoseReading, TIRBarOptions } from '@glucoseiq/core'
 import { AgpChart, TirBar, TrendTile } from '@glucoseiq/react'
@@ -124,20 +129,44 @@ const agpOptions = {
   title: 'Last 14 days',
 } as const
 
-export function Charts({ readings }: { readings: GlucoseReading[] }) {
+interface ChartSummaries {
+  current: string
+  timeInRange: string
+  agp: string
+}
+
+interface ChartsProps {
+  readings: GlucoseReading[]
+  summaries: ChartSummaries
+}
+
+export function Charts({ readings, summaries }: ChartsProps) {
   return (
     <>
-      <TrendTile readings={readings} />
-      <TirBar readings={readings} options={tirOptions} />
-      <AgpChart
-        readings={readings}
-        options={agpOptions}
-        className="dashboard-chart"
-      />
+      <figure>
+        <TrendTile readings={readings} />
+        <figcaption>{summaries.current}</figcaption>
+      </figure>
+      <figure>
+        <TirBar readings={readings} options={tirOptions} />
+        <figcaption>{summaries.timeInRange}</figcaption>
+      </figure>
+      <figure>
+        <AgpChart
+          readings={readings}
+          options={agpOptions}
+          className="dashboard-chart"
+        />
+        <figcaption>{summaries.agp}</figcaption>
+      </figure>
     </>
   )
 }
 ```
+
+Build the summary strings from the same report or live model as the SVG. Include
+the numeric values and labels that color, position, or a trend glyph would
+otherwise carry alone.
 
 Each component memoizes a zero-dependency renderer from `@glucoseiq/core` and
 inlines the returned SVG inside a `div`. `className` and `style` apply to that

@@ -46,7 +46,7 @@ function expectedInventoryFromTracked(trackedFiles) {
   const packageRoot = 'packages/(?:core|react|tokens|testing|cli|diabetic-utils)'
   const packageSource = new RegExp(`^${packageRoot}/src/.+\\.(?:ts|tsx)$`, 'u')
   const packageReadme = new RegExp(`^${packageRoot}/README\\.md$`, 'u')
-  const archive = /^(?:CHANGELOG\.md|docs\/globals\.md|docs\/(?:functions|interfaces|type-aliases|variables)\/.+\.md)$/u
+  const archive = /^(?:CHANGELOG\.md|docs\/(?:globals|LAUNCH_RUNBOOK)\.md|docs\/(?:functions|interfaces|type-aliases|variables)\/.+\.md)$/u
 
   return {
     readmes: trackedFiles.filter(
@@ -91,6 +91,12 @@ test('public contract inventory is complete and protected sources are absent', (
     trackedFiles.includes('docs/README.md') &&
       existsSync(join(repoRoot, 'docs/README.md')),
     'docs/README.md must be a tracked legacy landing page'
+  )
+  assert.ok(
+    trackedFiles.includes('docs/LAUNCH_RUNBOOK.md') &&
+      existsSync(join(repoRoot, 'docs/LAUNCH_RUNBOOK.md')) &&
+      inventory.linkOnlyFiles.includes('docs/LAUNCH_RUNBOOK.md'),
+    'docs/LAUNCH_RUNBOOK.md must be a tracked link-only launch document'
   )
   for (const path of Object.values(inventory).flat()) {
     assert.ok(!path.startsWith('packages/core/docs-md/'))
@@ -305,6 +311,97 @@ test('the visible homepage sample is explicitly marked and standalone', () => {
   assert.ok(result.snippet.source.includes("from '@glucoseiq/core'"))
   assert.equal(result.snippet.language, 'ts')
   assert.equal(result.diagnostics.length, 0, formatSnippetDiagnostics(result.diagnostics))
+})
+
+test('homepage and UI examples pair visual shorthand with semantic text', () => {
+  const homepage = readTracked('apps/docs/app/(home)/page.tsx')
+  assert.match(homepage, /<caption className="sr-only">[^<]+<\/caption>/u)
+  assert.match(homepage, /<thead className="sr-only">/u)
+  assert.equal(homepage.match(/<th scope="col">/gu)?.length, 2)
+  assert.match(
+    homepage,
+    /<span aria-hidden="true">\{ARROW\[trend\.trend\]\}<\/span>/u
+  )
+  assert.match(homepage, /<span className="sr-only">[^<]*\{trendLabel\}<\/span>/u)
+
+  const live = readTracked('apps/docs/content/docs/live.mdx')
+  assert.match(
+    live,
+    /<span aria-hidden="true">\{arrows\[live\.trend\.trend\]\}<\/span>/u
+  )
+  assert.match(live, /style=\{\{[^}]*clipPath: 'inset\(50%\)'[^}]*\}\}/u)
+  assert.match(
+    live,
+    /<span style=\{\{[^}]+\}\}>[^<]*\{trendLabel\}<\/span>/u
+  )
+
+  const react = readTracked('apps/docs/content/docs/react.mdx')
+  assert.equal(react.match(/<figcaption>\{summaries\./gu)?.length, 3)
+  assert.match(react, /adjacent text summary/u)
+})
+
+test('the launch runbook preserves phase, artifact, and OIDC safety gates', () => {
+  const runbook = readTracked('docs/LAUNCH_RUNBOOK.md')
+
+  const bashFences = [...runbook.matchAll(/```bash\n([\s\S]*?)```/gu)]
+  assert.ok(bashFences.length > 0, 'the runbook must contain checked Bash blocks')
+  for (const [index, match] of bashFences.entries()) {
+    assert.match(
+      match[1],
+      /^set -euo pipefail\n/u,
+      `Bash block ${index + 1} must fail fast`
+    )
+  }
+  assert.match(runbook, /Run\s+every command block in the same Bash shell/u)
+  assert.match(
+    runbook,
+    /test "\$\(node -p 'process\.versions\.node\.split\("\."\)\[0\]'\)" = "24"/u
+  )
+  assert.match(runbook, /test "\$\(pnpm --version\)" = "11\.12\.0"/u)
+  assert.match(runbook, /test "\$\(npm --version\)" = "11\.17\.0"/u)
+
+  assert.match(runbook, /Transition candidate[\s\S]*pnpm changeset status/u)
+  assert.match(
+    runbook,
+    /Generated release pull request[\s\S]*test ! -e \.changeset\/launch-glucoseiq-one\.md/u
+  )
+  assert.match(runbook, /pnpm test:size/u)
+  assert.doesNotMatch(runbook, /core root ESM gzip/u)
+
+  assert.match(runbook, /branch_name=\$\(git branch --show-current\)/u)
+  assert.match(runbook, /git grep[\s\S]*"\$commit"/u)
+  assert.match(
+    runbook,
+    /find packages -path '\*\/dist\/\*\.map' -type f -print0/u
+  )
+
+  assert.match(runbook, /trap 'rm -rf -- "\$tmp"' EXIT/u)
+  assert.match(runbook, /mv -- diabetic-utils glucoseiq/u)
+  assert.match(runbook, /confirmed E404 after the propagation window/u)
+  assert.match(runbook, /Unexpected registry failure/u)
+
+  const oneWorktree = runbook.indexOf(
+    'test "$(git worktree list --porcelain | rg -c \'^worktree \')" -eq 1'
+  )
+  const emptyTarget = runbook.indexOf('test ! -e glucoseiq')
+  const moveCheckout = runbook.indexOf('mv -- diabetic-utils glucoseiq')
+  const switchMain = runbook.indexOf('git switch main')
+  const assertMain = runbook.indexOf('test "$(git branch --show-current)" = "main"')
+  const fastForward = runbook.indexOf('git merge --ff-only origin/main')
+  const finalClean = runbook.lastIndexOf('test -z "$(git status --porcelain)"')
+  assert.ok(oneWorktree >= 0 && oneWorktree < moveCheckout)
+  assert.ok(emptyTarget >= 0 && emptyTarget < moveCheckout)
+  assert.ok(switchMain > moveCheckout && assertMain > switchMain)
+  assert.ok(fastForward > assertMain && finalClean > fastForward)
+
+  const removeToken = runbook.indexOf('Remove every workflow reference to `NPM_TOKEN`')
+  const deleteToken = runbook.indexOf('Delete the GitHub repository secret')
+  const verifyOidc = runbook.indexOf('Run the next legitimate OIDC release')
+  const revokeToken = runbook.indexOf('Revoke the retained one-day token')
+  assert.ok(removeToken >= 0, 'the workflow token must be removed before OIDC verification')
+  assert.ok(deleteToken > removeToken, 'the GitHub secret must be deleted after workflow removal')
+  assert.ok(verifyOidc > deleteToken, 'OIDC verification must run without a GitHub token fallback')
+  assert.ok(revokeToken > verifyOidc, 'the retained npm credential is revoked after OIDC succeeds')
 })
 
 test('every classified public program enters the compiler job set', () => {

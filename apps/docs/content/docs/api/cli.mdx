@@ -1,0 +1,91 @@
+---
+title: CLI API
+description: Executable flags, output schema, exits, and library exports from @glucoseiq/cli.
+---
+
+`@glucoseiq/cli` exposes the `glucoseiq` executable and a typed `run` function.
+Both use the same command contract.
+
+## Command
+
+```bash
+glucoseiq report <file.csv> [options]
+```
+
+The input is header-row delimited data. The command maps one timestamp column
+and one glucose-value column; it does not infer a vendor format.
+
+## Flags
+
+| Flag | Value | Default | Behavior |
+| --- | --- | --- | --- |
+| `--timestamp-col` | Column name | `Timestamp` | Exact timestamp-header mapping |
+| `--value-col` | Column name | `Glucose Value (mg/dL)` | Exact value-header mapping |
+| `--unit` | `mg/dL` or `mmol/L` | `mg/dL` | Unit assigned to parsed values |
+| `--delimiter` | One UTF-16 code unit | `,` | Rejects double quote, NUL, CR, and LF |
+| `--timezone` | IANA zone | `UTC` | AGP-style profile and renderer time zone |
+| `--json` | Boolean | Off | Writes one `{ report, glucoseIQ }` JSON document |
+| `--agp-svg` | Output path | None | Writes a self-contained AGP-style SVG |
+| `--help` | Boolean | Off | Writes command help |
+
+Quoted fields and doubled quotes are supported within one physical line.
+Quoted fields cannot span physical lines.
+
+## JSON schema
+
+`--json` writes one object to standard output:
+
+| Property | Serialized contract |
+| --- | --- |
+| `report` | `AnalyzeGlucoseResult` from `@glucoseiq/core` |
+| `glucoseIQ` | `GlucoseIQScore` from `@glucoseiq/core` |
+
+JSON serialization converts non-finite numeric members to `null`. Treat the
+JSON form as the machine contract; the human summary is for terminal reading.
+
+When `--json` and `--agp-svg` are combined, the SVG is still written and the
+human file-success line is suppressed so standard output remains one JSON
+document.
+
+## Exit codes and streams
+
+| Case | Exit | Standard output | Standard error |
+| --- | --- | --- | --- |
+| Successful report | `0` | Human summary or JSON | Empty |
+| Explicit `--help` | `0` | Help | Empty |
+| No arguments | `1` | Help | Empty |
+| Invalid command, flag, option, file, data, or SVG destination | `1` | Empty | One sanitized line |
+
+Failures do not write a stack trace. Control, format, and physical line
+characters in failure text are escaped or truncated so one failure remains one
+terminal line.
+
+## Library entrypoint
+
+The root exports `run` and `CliIO`:
+
+```ts typecheck
+import { run, type CliIO } from '@glucoseiq/cli'
+
+const stdout: string[] = []
+const stderr: string[] = []
+const io: CliIO = {
+  out(line) {
+    stdout.push(line)
+  },
+  err(line) {
+    stderr.push(line)
+  },
+}
+
+const exitCode: number = run(['--help'], io)
+void { exitCode, stdout, stderr }
+```
+
+The library form returns the exit code without changing `process.exitCode`.
+The executable shim assigns the returned code to `process.exitCode` and maps
+the two IO callbacks to the process streams.
+
+The CLI reads the requested file into memory and writes only the explicitly
+requested SVG path. The host remains responsible for trusted paths, file-size
+limits, retention, and access control.
