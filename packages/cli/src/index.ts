@@ -8,6 +8,7 @@
  */
 
 import { readFileSync, writeFileSync } from 'node:fs'
+import { parseArgs } from 'node:util'
 import {
   parseGlucoseCSV,
   analyzeGlucose,
@@ -39,103 +40,164 @@ Options:
 
 Informational only — not medical advice.`
 
-/** Parses --flag value pairs and positionals. @internal */
-function parseArgs(argv: string[]): { positionals: string[]; flags: Map<string, string | true> } {
-  const positionals: string[] = []
-  const flags = new Map<string, string | true>()
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]
-    if (arg.startsWith('--')) {
-      const name = arg.slice(2)
-      const next = argv[i + 1]
-      if (next !== undefined && !next.startsWith('--')) {
-        flags.set(name, next)
-        i++
-      } else {
-        flags.set(name, true)
-      }
-    } else {
-      positionals.push(arg)
-    }
+const CLI_OPTIONS = {
+  'timestamp-col': { type: 'string' },
+  'value-col': { type: 'string' },
+  unit: { type: 'string' },
+  delimiter: { type: 'string' },
+  timezone: { type: 'string' },
+  json: { type: 'boolean' },
+  'agp-svg': { type: 'string' },
+  help: { type: 'boolean' },
+} as const
+
+const ERROR_FALLBACK = 'Unexpected CLI failure.'
+const PHYSICAL_LINE_BOUNDARY = /[\r\n\u2028\u2029]/u
+const UNSAFE_OUTPUT = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu
+
+/** Escapes terminal, format, and line controls without executing conversion hooks. @internal */
+function escapeUnsafe(text: string): string {
+  return text.replace(
+    UNSAFE_OUTPUT,
+    (character) => `\\u{${character.codePointAt(0)!.toString(16)}}`,
+  )
+}
+
+/** Converts an unknown value to text without allowing hostile conversion hooks to escape. @internal */
+function stringOrFallback(value: unknown, fallback: string): string {
+  try {
+    return String(value)
+  } catch {
+    return fallback
   }
-  return { positionals, flags }
+}
+
+/** Converts an operational failure into one stable stderr line. @internal */
+function errorLine(error: unknown): string {
+  let value: unknown = error
+  try {
+    if (error instanceof Error) value = error.message
+  } catch {
+    return ERROR_FALLBACK
+  }
+
+  const message = stringOrFallback(value, ERROR_FALLBACK)
+  const firstLine = message.split(PHYSICAL_LINE_BOUNDARY, 1)[0]
+  return escapeUnsafe(firstLine).trim() || ERROR_FALLBACK
+}
+
+/** Produces a terminal-safe path for successful human output. @internal */
+function displayPath(path: string): string {
+  return escapeUnsafe(path)
+}
+
+/** Emits exactly one sanitized failure line and returns the failure status. @internal */
+function fail(io: CliIO, error: unknown): 1 {
+  const line = errorLine(error)
+  try {
+    io.err(line)
+  } catch {
+    // The injected sink is already failing; do not recurse or attempt a duplicate diagnostic.
+  }
+  return 1
+}
+
+/** Narrows a validated CLI unit to the public core unit type. @internal */
+function isGlucoseUnit(value: string): value is GlucoseUnit {
+  return value === 'mg/dL' || value === 'mmol/L'
 }
 
 /**
  * Runs the CLI. Returns a process exit code.
  */
 export function run(argv: string[], io: CliIO): number {
-  const { positionals, flags } = parseArgs(argv)
-
-  if (flags.has('help') || positionals.length === 0) {
-    io.out(HELP)
-    return positionals.length === 0 && !flags.has('help') ? 1 : 0
-  }
-
-  const [command, file] = positionals
-  if (command !== 'report' || !file) {
-    io.err(`Unknown command: ${positionals.join(' ')} (try --help)`)
-    return 1
-  }
-
-  let text: string
   try {
-    text = readFileSync(file, 'utf8')
-  } catch {
-    io.err(`Cannot read file: ${file}`)
-    return 1
-  }
-
-  let readings
-  try {
-    readings = parseGlucoseCSV(text, {
-      timestampColumn: String(flags.get('timestamp-col') ?? 'Timestamp'),
-      valueColumn: String(flags.get('value-col') ?? 'Glucose Value (mg/dL)'),
-      unit: (flags.get('unit') as GlucoseUnit | undefined) ?? 'mg/dL',
-      delimiter: String(flags.get('delimiter') ?? ','),
+    const { positionals, values } = parseArgs({
+      args: argv,
+      options: CLI_OPTIONS,
+      strict: true,
+      allowPositionals: true,
     })
-  } catch (err) {
-    /* c8 ignore next -- parseGlucoseCSV only throws Error subclasses; String(err) is a defensive fallback */
-    const message = err instanceof Error ? err.message : String(err)
-    io.err(message)
-    return 1
-  }
 
-  const timeZone = flags.get('timezone')
-  const report = analyzeGlucose(readings, {
-    timeZone: typeof timeZone === 'string' ? timeZone : undefined,
-  })
-  if (!report.valid) {
-    io.err('No valid readings found in the file.')
-    return 1
-  }
-  const iq = glucoseIQScore(readings)
+    if (values.help || positionals.length === 0) {
+      io.out(HELP)
+      return positionals.length === 0 && !values.help ? 1 : 0
+    }
 
-  if (flags.has('json')) {
-    io.out(JSON.stringify({ report, glucoseIQ: iq }, null, 2))
-  } else {
-    const tir = report.timeInRange!
-    io.out('GlucoseIQ report')
-    io.out('────────────────────────────────')
-    io.out(`Readings        ${report.dataSufficiency.totalReadings} over ${report.dataSufficiency.daysOfData} days`)
-    io.out(`Glucose IQ      ${iq.score} (${iq.rating}, zone ${iq.zone})`)
-    io.out(`Mean / GMI      ${report.meanGlucose} mg/dL · GMI ${report.gmi}%`)
-    io.out(`Variability     SD ${report.sd} · CV ${report.cv}%`)
-    io.out(`Time in range   ${tir.inRange.percentage}% (70-180) · tight ${report.tightRange!.inRange}% (70-140)`)
-    io.out(`Below range     ${tir.low.percentage}% low · ${tir.veryLow.percentage}% very low`)
-    io.out(`Above range     ${tir.high.percentage}% high · ${tir.veryHigh.percentage}% very high`)
-    io.out(`Episodes        ${report.episodes!.summary.hypoCount} hypo · ${report.episodes!.summary.hyperCount} hyper`)
-    io.out('────────────────────────────────')
-    io.out('Informational only — not medical advice.')
-  }
+    const [command, file] = positionals
+    if (command !== 'report') {
+      return fail(io, `Unknown command: ${positionals.join(' ')} (try --help)`)
+    }
+    if (positionals.length !== 2) {
+      return fail(io, 'Expected exactly: glucoseiq report <file.csv> (try --help)')
+    }
 
-  const svgOut = flags.get('agp-svg')
-  if (typeof svgOut === 'string') {
-    writeFileSync(svgOut, agpChartToSVG(readings, {
-      timeZone: typeof timeZone === 'string' ? timeZone : undefined,
-    }))
-    io.out(`AGP chart written to ${svgOut}`)
-  }
+    const unit = values.unit ?? 'mg/dL'
+    if (!isGlucoseUnit(unit)) {
+      return fail(io, 'Invalid unit: expected "mg/dL" or "mmol/L".')
+    }
 
-  return 0
+    const delimiter = values.delimiter ?? ','
+    if (delimiter.length !== 1) {
+      return fail(io, 'Invalid delimiter: expected exactly one character.')
+    }
+
+    let text: string
+    try {
+      text = readFileSync(file, 'utf8')
+    } catch {
+      return fail(io, `Cannot read file: ${file}`)
+    }
+
+    const readings = parseGlucoseCSV(text, {
+      timestampColumn: values['timestamp-col'] ?? 'Timestamp',
+      valueColumn: values['value-col'] ?? 'Glucose Value (mg/dL)',
+      unit,
+      delimiter,
+    })
+
+    const timeZone = values.timezone
+    const report = analyzeGlucose(readings, { timeZone })
+    if (!report.valid) {
+      return fail(io, 'No valid readings found in the file.')
+    }
+    const iq = glucoseIQScore(readings)
+    const outputLines: string[] = []
+
+    if (values.json) {
+      outputLines.push(JSON.stringify({ report, glucoseIQ: iq }, null, 2))
+    } else {
+      const tir = report.timeInRange!
+      outputLines.push(
+        'GlucoseIQ report',
+        '────────────────────────────────',
+        `Readings        ${report.dataSufficiency.totalReadings} over ${report.dataSufficiency.daysOfData} days`,
+        `Glucose IQ      ${iq.score} (${iq.rating}, zone ${iq.zone})`,
+        `Mean / GMI      ${report.meanGlucose} mg/dL · GMI ${report.gmi}%`,
+        `Variability     SD ${report.sd} · CV ${report.cv}%`,
+        `Time in range   ${tir.inRange.percentage}% (70-180) · tight ${report.tightRange!.inRange}% (70-140)`,
+        `Below range     ${tir.low.percentage}% low · ${tir.veryLow.percentage}% very low`,
+        `Above range     ${tir.high.percentage}% high · ${tir.veryHigh.percentage}% very high`,
+        `Episodes        ${report.episodes!.summary.hypoCount} hypo · ${report.episodes!.summary.hyperCount} hyper`,
+        '────────────────────────────────',
+        'Informational only — not medical advice.',
+      )
+    }
+
+    const svgOut = values['agp-svg']
+    if (svgOut !== undefined) {
+      const svg = agpChartToSVG(readings, { timeZone })
+      try {
+        writeFileSync(svgOut, svg)
+      } catch {
+        return fail(io, `Cannot write AGP SVG: ${svgOut}`)
+      }
+      if (!values.json) outputLines.push(`AGP chart written to ${displayPath(svgOut)}`)
+    }
+
+    io.out(outputLines.join('\n'))
+    return 0
+  } catch (error) {
+    return fail(io, error)
+  }
 }
