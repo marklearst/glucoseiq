@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { formatGlucose, formatPercentage, formatDate } from '../src/formatters'
 import { MG_DL, MMOL_L } from '../src/constants'
+import { TimestampError } from '../src/errors'
 
 describe('Formatters', () => {
   it('formats glucose values with units', () => {
@@ -31,7 +32,7 @@ describe('Formatters', () => {
   })
 
   it('throws on invalid ISO timestamps', () => {
-    expect(() => formatDate('not-a-date')).toThrow(RangeError)
+    expect(() => formatDate('not-a-date')).toThrow(TimestampError)
     expect(() => formatDate('')).toThrow('Invalid ISO timestamp')
   })
 })

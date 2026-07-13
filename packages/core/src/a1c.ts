@@ -1,5 +1,7 @@
 // @file src/a1c.ts
 
+import { DomainError } from './errors'
+
 /**
  * Formats a clinical A1C value as a percent string (e.g., "7.2%").
  * Used for clinical reporting and display.
@@ -76,7 +78,7 @@ export function isA1CInTarget(
  */
 export function a1cDelta(current: number, previous: number): number {
   if (!isValidA1C(current) || !isValidA1C(previous))
-    throw new Error('Invalid A1C value')
+    throw new DomainError('Invalid A1C value', 'INVALID_A1C_VALUE')
   return +(current - previous).toFixed(2)
 }
 
