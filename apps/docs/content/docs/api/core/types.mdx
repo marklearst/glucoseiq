@@ -305,7 +305,7 @@ Options for [parseGlucoseCSV](/docs/api/core/ingestion#parseglucosecsv).
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly delimiter?` | `string` | Field delimiter (default ','). |
+| `readonly delimiter?` | `string` | Field delimiter (default `,`). Must be exactly one UTF-16 code unit other than double quote, NUL, CR, or LF. |
 | `readonly timestampColumn` | `string` | Header name of the timestamp column. |
 | `readonly unit?` | `GlucoseUnit` | Unit of the values (default 'mg/dL'). |
 | `readonly valueColumn` | `string` | Header name of the glucose value column. |

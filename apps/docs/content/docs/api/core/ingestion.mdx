@@ -13,7 +13,14 @@ parseGlucoseCSV(text: string, options: CSVParseOptions): GlucoseReading[]
 
 Parses CSV text into glucose readings.
 
+Empty and blank-only documents return an empty array. A header-only document
+also returns an empty array after validating both mapped columns. Quoted
+fields and doubled quotes are supported, but physical newlines inside a
+quoted field are not.
+
 **Returns** — Parsed readings (rows with an unparseable value or timestamp are skipped)
+
+**Throws** — If the delimiter is invalid
 
 **Throws** — If a named column is not present in the header
 

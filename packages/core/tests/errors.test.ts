@@ -26,6 +26,9 @@ import { parseGlucoseCSV } from '../src/csv'
 import { parseGlucoseString } from '../src/glucose'
 import { parseDexcomDate } from '../src/connectors/dexcom'
 import { normalizeLibreEntry } from '../src/connectors/libre'
+import { agpChartToSVG } from '../src/render/agp-svg'
+import { tirBarToSVG } from '../src/render/tir-bar'
+import { trendTileToSVG } from '../src/render/trend-tile'
 
 function expectCodedError(
   call: () => unknown,
@@ -275,6 +278,69 @@ describe('typed throws across the library', () => {
         code: 'INVALID_OPTION',
         message:
           'parseGlucoseCSV: delimiter must be exactly one character other than double quote, NUL, CR, or LF',
+      },
+    },
+    {
+      name: 'agpChartToSVG rejects invalid widths',
+      call: () => agpChartToSVG([], { width: 0 }),
+      expected: {
+        type: DomainError,
+        code: 'INVALID_OPTION',
+        message: 'agpChartToSVG: width must be a finite positive number',
+      },
+    },
+    {
+      name: 'agpChartToSVG rejects invalid heights',
+      call: () => agpChartToSVG([], { height: 0 }),
+      expected: {
+        type: DomainError,
+        code: 'INVALID_OPTION',
+        message: 'agpChartToSVG: height must be a finite positive number',
+      },
+    },
+    {
+      name: 'agpChartToSVG rejects invalid titles',
+      call: () => agpChartToSVG([], { title: null as unknown as string }),
+      expected: {
+        type: DomainError,
+        code: 'INVALID_OPTION',
+        message: 'agpChartToSVG: title must be a string',
+      },
+    },
+    {
+      name: 'tirBarToSVG rejects invalid widths',
+      call: () => tirBarToSVG([], { width: 0 }),
+      expected: {
+        type: DomainError,
+        code: 'INVALID_OPTION',
+        message: 'tirBarToSVG: width must be a finite positive number',
+      },
+    },
+    {
+      name: 'tirBarToSVG rejects invalid heights',
+      call: () => tirBarToSVG([], { height: 0 }),
+      expected: {
+        type: DomainError,
+        code: 'INVALID_OPTION',
+        message: 'tirBarToSVG: height must be a finite positive number',
+      },
+    },
+    {
+      name: 'trendTileToSVG rejects invalid widths',
+      call: () => trendTileToSVG([], { width: 0 }),
+      expected: {
+        type: DomainError,
+        code: 'INVALID_OPTION',
+        message: 'trendTileToSVG: width must be a finite positive number',
+      },
+    },
+    {
+      name: 'trendTileToSVG rejects invalid heights',
+      call: () => trendTileToSVG([], { height: 0 }),
+      expected: {
+        type: DomainError,
+        code: 'INVALID_OPTION',
+        message: 'trendTileToSVG: height must be a finite positive number',
       },
     },
     {

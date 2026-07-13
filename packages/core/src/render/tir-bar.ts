@@ -14,6 +14,11 @@
 import type { GlucoseReading } from '../types'
 import { MG_DL, MGDL_MMOLL_CONVERSION } from '../constants'
 import { calculateEnhancedTIR } from '../tir-enhanced'
+import {
+  addFinite,
+  resolveSvgDimension,
+  roundToTenth,
+} from './svg-options'
 
 /** Options for {@link tirBarToSVG}. */
 export interface TIRBarOptions {
@@ -53,6 +58,7 @@ function noDataFrame(
  * @param readings - Glucose readings (mg/dL or mmol/L)
  * @param options - Dimensions and theme
  * @returns A self-contained SVG document string
+ * @throws {DomainError} If width or height is not a finite positive number
  *
  * @example
  * ```ts
@@ -63,8 +69,18 @@ function noDataFrame(
  * @public
  */
 export function tirBarToSVG(readings: GlucoseReading[], options?: TIRBarOptions): string {
-  const width = options?.width ?? 180
-  const height = options?.height ?? 320
+  const width = resolveSvgDimension(
+    options?.width,
+    180,
+    'tirBarToSVG',
+    'width'
+  )
+  const height = resolveSvgDimension(
+    options?.height,
+    320,
+    'tirBarToSVG',
+    'height'
+  )
   const theme = options?.theme ?? 'dark'
   const bg = theme === 'light' ? '#ffffff' : '#0a0a0a'
   const text = theme === 'light' ? '#475569' : '#94a3b8'
@@ -92,7 +108,7 @@ export function tirBarToSVG(readings: GlucoseReading[], options?: TIRBarOptions)
   const margin = { top: 16, bottom: 16 }
   const barX = 16
   const barW = 44
-  const plotH = height - margin.top - margin.bottom
+  const plotH = Math.max(0, height - margin.top - margin.bottom)
   const total = zones.reduce((s, z) => s + z.pct, 0)
   if (!Number.isFinite(total) || total <= 0) {
     return noDataFrame(width, height, bg, text)
@@ -109,14 +125,14 @@ export function tirBarToSVG(readings: GlucoseReading[], options?: TIRBarOptions)
     const h = (z.pct / total) * plotH
     const segH = Math.max(0, h - 2) // 2px surface gap between segments
     parts.push(
-      `<rect x="${barX}" y="${Math.round(y * 10) / 10}" width="${barW}" height="${Math.round(segH * 10) / 10}" rx="2" fill="${z.color}"/>`
+      `<rect x="${barX}" y="${roundToTenth(y)}" width="${barW}" height="${roundToTenth(segH)}" rx="2" fill="${z.color}"/>`
     )
     if (z.pct > 0) {
       parts.push(
-        `<text x="${barX + barW + 8}" y="${Math.round((y + h / 2 + 3) * 10) / 10}" fill="${text}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" text-anchor="start">${z.label} ${z.pct}%</text>`
+        `<text x="${barX + barW + 8}" y="${roundToTenth(addFinite(addFinite(y, h / 2), 3))}" fill="${text}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" text-anchor="start">${z.label} ${z.pct}%</text>`
       )
     }
-    y += h
+    y = addFinite(y, h)
   }
 
   parts.push('</svg>')

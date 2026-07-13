@@ -14,6 +14,8 @@ import type { GlucoseReading } from '../types'
 import type { CGMTrend } from '../connectors/types'
 import { latestReading, computeGlucoseTrend } from '../live'
 import { getGlucoseLabel } from '../glucose'
+import { isUsableReading } from '../reading-policy'
+import { resolveSvgDimension } from './svg-options'
 
 /** Options for {@link trendTileToSVG}. */
 export interface TrendTileOptions {
@@ -48,12 +50,51 @@ const ZONE_LABEL: Record<'low' | 'normal' | 'high', string> = {
   high: 'HIGH',
 }
 
+/** Copies caller readings into a plain, stable series without coercion. */
+function snapshotUsableReadings(
+  readings: GlucoseReading[]
+): GlucoseReading[] | null {
+  try {
+    const items: unknown[] = Array.from(readings as unknown[])
+    const snapshot: GlucoseReading[] = []
+
+    for (const item of items) {
+      if (item === null || typeof item !== 'object') continue
+
+      const candidate = item as Record<string, unknown>
+      const value = candidate.value
+      const unit = candidate.unit
+      const timestamp = candidate.timestamp
+
+      if (
+        typeof value !== 'number' ||
+        typeof unit !== 'string' ||
+        typeof timestamp !== 'string'
+      ) {
+        continue
+      }
+
+      const reading = {
+        value,
+        unit,
+        timestamp,
+      } as GlucoseReading
+      if (isUsableReading(reading)) snapshot.push(reading)
+    }
+
+    return snapshot
+  } catch {
+    return null
+  }
+}
+
 /**
  * Renders a current-glucose trend tile as an SVG string.
  *
  * @param readings - Glucose readings with ISO 8601 timestamps
  * @param options - Dimensions and theme
  * @returns A self-contained SVG document string
+ * @throws {DomainError} If width or height is not a finite positive number
  *
  * @example
  * ```ts
@@ -67,8 +108,18 @@ export function trendTileToSVG(
   readings: GlucoseReading[],
   options?: TrendTileOptions
 ): string {
-  const width = options?.width ?? 240
-  const height = options?.height ?? 140
+  const width = resolveSvgDimension(
+    options?.width,
+    240,
+    'trendTileToSVG',
+    'width'
+  )
+  const height = resolveSvgDimension(
+    options?.height,
+    140,
+    'trendTileToSVG',
+    'height'
+  )
   const theme = options?.theme ?? 'dark'
   const bg = theme === 'light' ? '#ffffff' : '#0a0a0a'
   const muted = theme === 'light' ? '#475569' : '#94a3b8'
@@ -78,8 +129,9 @@ export function trendTileToSVG(
     `<rect width="${width}" height="${height}" fill="${bg}"/>`,
   ]
 
-  const latest = latestReading(readings)
-  if (latest === null) {
+  const snapshot = snapshotUsableReadings(readings)
+  const latest = snapshot === null ? null : latestReading(snapshot)
+  if (snapshot === null || latest === null) {
     parts.push(
       `<text x="${width / 2}" y="${height / 2}" fill="${muted}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" text-anchor="middle">No data</text>`
     )
@@ -89,7 +141,7 @@ export function trendTileToSVG(
 
   const label = getGlucoseLabel(latest.value, latest.unit)
   const accent = ACCENT[label]
-  const arrow = ARROWS[computeGlucoseTrend(readings).trend]
+  const arrow = ARROWS[computeGlucoseTrend(snapshot).trend]
 
   parts.push(
     `<text x="20" y="82" fill="${accent}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="52" font-weight="700" text-anchor="start">${latest.value}</text>`
