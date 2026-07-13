@@ -26,6 +26,7 @@
   "bugs": { "url": "https://github.com/marklearst/glucoseiq/issues" },
   "scripts": {
     "build": "tsup",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "clean": "rm -rf dist",

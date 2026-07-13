@@ -239,7 +239,7 @@ describe('MAGE Implementation', () => {
         [100, 101, 100, 101, 100], // Small variations
       ];
 
-      edgeCases.forEach((data, index) => {
+      edgeCases.forEach((data) => {
         const mage = glucoseMAGE(data);
         expect(Number.isFinite(mage) || Number.isNaN(mage)).toBe(true);
       });
@@ -278,7 +278,7 @@ describe('MAGE Implementation', () => {
     it('should handle realistic CGM sampling frequencies', () => {
       // Simulate 5-minute CGM readings over 4 hours (48 readings)
       const cgmData = [];
-      let baseGlucose = 120;
+      const baseGlucose = 120;
       
       for (let i = 0; i < 48; i++) {
         // Add some realistic variability

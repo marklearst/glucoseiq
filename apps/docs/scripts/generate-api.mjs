@@ -228,6 +228,7 @@ export function replaceManagedOutputTransactional(
           throw new AggregateError(
             [swapError, rollbackError],
             `Unable to install generated API output or restore ${output}. Recovery paths: staged tree ${stagedTree}; prior backup ${backupPath}`,
+            { cause: rollbackError },
           )
         }
       }

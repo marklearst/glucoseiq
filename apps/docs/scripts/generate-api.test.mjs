@@ -2977,7 +2977,7 @@ test('the repository contains exactly the managed core tree and no superseded fl
     assert.equal(existsSync(join(apiRoot, `${slug}.mdx`)), false, slug)
   }
   const rootMeta = JSON.parse(readFileSync(join(apiRoot, 'meta.json'), 'utf8'))
-  assert.equal(rootMeta.pages[0], 'core')
+  assert.deepEqual(rootMeta.pages.slice(0, 2), ['index', 'core'])
   const rootIndex = readFileSync(join(apiRoot, 'index.mdx'), 'utf8')
   assert.match(rootIndex, /\/docs\/api\/core/)
   assert.doesNotMatch(

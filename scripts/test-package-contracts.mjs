@@ -436,8 +436,8 @@ try {
         options,
       )),
       quoted: capture(() => parseGlucoseCSV(
-        '\"Time, local\",\"Val\"\"ue\"\\n\"2024-01-01T08:00:00Z\",\"125\"',
-        { timestampColumn: 'Time, local', valueColumn: 'Val\"ue' },
+        '"Time, local","Val""ue"\\n"2024-01-01T08:00:00Z","125"',
+        { timestampColumn: 'Time, local', valueColumn: 'Val"ue' },
       )),
       custom: capture(() => parseGlucoseCSV(
         't;v\\n2024-01-01T08:00:00Z;130',

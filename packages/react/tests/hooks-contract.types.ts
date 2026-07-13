@@ -2,7 +2,7 @@ import type { GlucoseReading } from '@glucoseiq/core'
 import { useGlucoseAnalysis, useGlucoseIQScore } from '../src/hooks'
 
 /** Compile-only assertions for the React hook option contract. */
-export function assertHookOptionContract(readings: GlucoseReading[]): void {
+export function useHookOptionContract(readings: GlucoseReading[]): void {
   useGlucoseAnalysis(readings, { includeProfile: false })
   useGlucoseIQScore(readings)
 

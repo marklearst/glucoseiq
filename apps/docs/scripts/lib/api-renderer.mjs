@@ -552,6 +552,8 @@ function symbolKey(target) {
 }
 
 function sanitizedLinkLabel(label) {
+  // ASCII controls are intentionally matched so hostile labels cannot alter Markdown structure.
+  // eslint-disable-next-line no-control-regex
   return String(label).replace(/[\u0000-\u001f\u007f]+/gu, ' ')
 }
 
@@ -568,6 +570,8 @@ function markdownLink(label, destination, codeStyle, owner) {
     .replaceAll(']', '\\]')
   const safeLabel = codeStyle ? codeSpan(sanitizedLabel) : escapedLabel
   const rawDestination = String(destination)
+  // ASCII controls are intentionally matched so hostile destinations fail closed.
+  // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f]/u.test(rawDestination)) {
     throw new Error(`Unsafe Markdown link destination at ${owner}: ${rawDestination}`)
   }

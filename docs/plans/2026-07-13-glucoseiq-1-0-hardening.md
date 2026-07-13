@@ -1829,11 +1829,16 @@ stage unrelated docs, renderer, generated API, or protected legacy-worktree chan
 - Modify: every workspace `package.json`
 - Modify: `pnpm-lock.yaml`
 - Modify: `.github/workflows/ci.yml`
+- Modify: `packages/core/tsup.config.ts`
+- Modify: lint-identified docs generators, compile-only package tests, and root contract scripts
+- Modify: this plan when the red-gate findings expand the verified Task 11 scope
 
 **Interfaces:**
 
 - `pnpm lint`, `pnpm typecheck`, and `pnpm test:size` become required local and CI gates.
 - The core size gate measures every reachable production ESM chunk exactly once and enforces 20,000 gzip bytes.
+- Static ESM analysis uses the pinned `es-module-lexer@1.7.0` development dependency rather than a hand-written JavaScript parser.
+- The core build emits self-contained entrypoints so the complete root payload stays below the budget without weakening it.
 - Lint dependencies remain development-only.
 
 - [ ] **Step 1: Add size-graph tests before the implementation**
@@ -1852,6 +1857,8 @@ Expected: the measurement module does not exist.
 
 Start at `packages/core/dist/index.mjs`. Parse relative static import and export specifiers, resolve them inside `packages/core/dist`, traverse with a `Set`, sort the final paths, concatenate each file buffer once with a newline, and pass the result to `gzipSync`. Print the relative file inventory and byte count. Exit nonzero above `20_000`.
 
+Use `es-module-lexer` for grammar-aware static import discovery. Resolve the selected root and every reachable edge through real paths, accept a selected root reached through a directory symlink, and reject entry or import symlinks that escape the selected root.
+
 Add:
 
 ```json
@@ -1862,7 +1869,7 @@ Add:
 
 - [ ] **Step 4: Add workspace typecheck tasks**
 
-Add `"typecheck": "tsc --noEmit"` to all seven workspaces and a cached `typecheck` task to `turbo.json` that depends on dependency typechecks. Update direct `@types/node` ranges to `^24.13.3` where Node types are used.
+Add `"typecheck": "tsc --noEmit"` to all seven workspaces and a cached `typecheck` task to `turbo.json` that depends on dependency builds and typechecks. Update direct `@types/node` ranges to `^24.13.3` in every workspace whose checked sources or tests import Node built-ins. This keeps `pnpm typecheck` valid on a clean checkout as well as after the documented build.
 
 - [ ] **Step 5: Add the pinned lint stack**
 
@@ -1870,6 +1877,7 @@ Install these root development dependencies:
 
 ```sh
 pnpm add -Dw eslint@10.7.0 @eslint/js@10.0.1 typescript-eslint@8.63.0 eslint-plugin-react-hooks@7.1.1 globals@17.7.0
+pnpm add -Dw es-module-lexer@1.7.0
 ```
 
 Create a flat config for JavaScript, TypeScript, and TSX. Ignore build output, coverage, `.next`, generated Fumadocs source, legacy generated `docs/`, and temporary directories. Enable ESLint recommended, TypeScript recommended, and React Hooks recommended rules. Disable style-only rules and allow explicit `any` only in malformed-input test fixtures.
@@ -1887,7 +1895,12 @@ pnpm typecheck
 pnpm lint
 pnpm test:size
 node --test scripts/measure-core-bundle.test.mjs
-git add eslint.config.mjs scripts/measure-core-bundle.mjs scripts/measure-core-bundle.test.mjs package.json turbo.json packages/*/package.json apps/docs/package.json pnpm-lock.yaml .github/workflows/ci.yml
+git add .github/workflows/ci.yml eslint.config.mjs package.json turbo.json pnpm-lock.yaml
+git add apps/docs/package.json apps/docs/scripts/generate-api.mjs apps/docs/scripts/generate-api.test.mjs apps/docs/scripts/lib/api-renderer.mjs
+git add packages/*/package.json packages/core/tsup.config.ts packages/core/tests/{interop,mage,types}.test.ts packages/react/tests/hooks-contract.types.ts
+git add scripts/measure-core-bundle.mjs scripts/measure-core-bundle.test.mjs scripts/doc-snippet-contracts.unit.test.mjs
+git add scripts/lib/{doc-contracts,doc-snippets,package-contracts}.mjs scripts/release-metadata.test.mjs scripts/test-launch-changeset.mjs scripts/test-package-contracts.mjs
+git add docs/plans/2026-07-13-glucoseiq-1-0-hardening.md
 git commit -m "ci: enforce types lint and bundle size"
 ```
 
