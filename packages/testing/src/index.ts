@@ -61,17 +61,32 @@ function mulberry32(seed: number): () => number {
  * ```
  */
 export function generateCGMSeries(options?: GenerateOptions): GlucoseReading[] {
-  const days = options?.days ?? 1
-  const intervalMin = options?.intervalMin ?? 5
-  const seed = options?.seed ?? 42
-  const start = options?.start ?? '2024-01-01T00:00:00Z'
+  if (options === null || (options !== undefined && typeof options !== 'object')) {
+    throw new RangeError('options must be an object')
+  }
+
+  const days = options === undefined || options.days === undefined ? 1 : options.days
+  const intervalMin =
+    options === undefined || options.intervalMin === undefined ? 5 : options.intervalMin
+  const seed = options === undefined || options.seed === undefined ? 42 : options.seed
+  const start =
+    options === undefined || options.start === undefined
+      ? '2024-01-01T00:00:00Z'
+      : options.start
   const startMs = typeof start === 'string' ? Date.parse(start) : NaN
-  const basal = options?.basal ?? 110
-  const mealTimes = options?.mealTimes ?? [420, 780, 1140]
-  const mealAmplitude = options?.mealAmplitude ?? 70
-  const noise = options?.noise ?? 8
-  const nocturnalHypoDays = options?.nocturnalHypoDays ?? []
-  const unit = options?.unit ?? 'mg/dL'
+  const basal = options === undefined || options.basal === undefined ? 110 : options.basal
+  const mealTimes =
+    options === undefined || options.mealTimes === undefined
+      ? [420, 780, 1140]
+      : options.mealTimes
+  const mealAmplitude =
+    options === undefined || options.mealAmplitude === undefined ? 70 : options.mealAmplitude
+  const noise = options === undefined || options.noise === undefined ? 8 : options.noise
+  const nocturnalHypoDays =
+    options === undefined || options.nocturnalHypoDays === undefined
+      ? []
+      : options.nocturnalHypoDays
+  const unit = options === undefined || options.unit === undefined ? 'mg/dL' : options.unit
 
   if (!Number.isInteger(days) || days <= 0) {
     throw new RangeError('days must be a positive integer')

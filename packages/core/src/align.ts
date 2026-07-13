@@ -26,6 +26,12 @@ function assertFiniteOption(name: string, value: number, allowZero = false): voi
   }
 }
 
+function assertValidGridTimestamp(value: number): void {
+  if (!Number.isFinite(value) || Number.isNaN(new Date(value).getTime())) {
+    throw new DomainError('alignToGrid grid timestamps must be valid dates', 'INVALID_OPTION')
+  }
+}
+
 /** A resampled grid point. */
 export interface GridPoint {
   /** ISO 8601 timestamp of the grid slot. */
@@ -87,6 +93,8 @@ export function alignToGrid(
   const intervalMs = intervalMin * 60000
   const startSlot = Math.round((points[0].t * 60000) / intervalMs) * intervalMs
   const endSlot = Math.round((points[points.length - 1].t * 60000) / intervalMs) * intervalMs
+  assertValidGridTimestamp(startSlot)
+  assertValidGridTimestamp(endSlot)
   const slotCount = Math.floor((endSlot - startSlot) / intervalMs) + 1
   if (!Number.isSafeInteger(slotCount) || slotCount > MAX_GRID_POINTS) {
     throw new DomainError(
@@ -94,6 +102,8 @@ export function alignToGrid(
       'INVALID_OPTION'
     )
   }
+  const lastSlot = startSlot + (slotCount - 1) * intervalMs
+  assertValidGridTimestamp(lastSlot)
 
   const grid: GridPoint[] = []
   const tolerance = intervalMin / 2

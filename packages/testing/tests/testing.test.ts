@@ -27,6 +27,25 @@ describe('generateCGMSeries', () => {
     expect(a.map((r) => r.value)).not.toEqual(b.map((r) => r.value))
   })
 
+  it('uses defaults for omitted and explicitly undefined options', () => {
+    const expected = generateCGMSeries()
+    expect(generateCGMSeries(undefined)).toEqual(expected)
+    expect(
+      generateCGMSeries({
+        days: undefined,
+        intervalMin: undefined,
+        seed: undefined,
+        start: undefined,
+        basal: undefined,
+        mealTimes: undefined,
+        mealAmplitude: undefined,
+        noise: undefined,
+        nocturnalHypoDays: undefined,
+        unit: undefined,
+      })
+    ).toEqual(expected)
+  })
+
   it('produces days × 288 five-minute readings by default', () => {
     const r = generateCGMSeries({ days: 2 })
     expect(r).toHaveLength(576)
@@ -71,6 +90,72 @@ describe('generateCGMSeries', () => {
       return d.getUTCDate() === 2 && d.getUTCHours() >= 2 && d.getUTCHours() < 4
     })
     expect(day1Night.some((x) => x.value < 70)).toBe(true)
+  })
+
+  it.each([
+    {
+      name: 'days',
+      options: { days: null as never },
+      message: 'days must be a positive integer',
+    },
+    {
+      name: 'intervalMin',
+      options: { intervalMin: null as never },
+      message: 'intervalMin must be finite, positive, and no greater than 1440',
+    },
+    {
+      name: 'seed',
+      options: { seed: null as never },
+      message: 'seed must be a safe integer',
+    },
+    {
+      name: 'start',
+      options: { start: null as never },
+      message: 'start must be a valid timestamp',
+    },
+    {
+      name: 'basal',
+      options: { basal: null as never },
+      message: 'basal must be positive and finite',
+    },
+    {
+      name: 'mealTimes',
+      options: { mealTimes: null as never },
+      message: 'mealTimes entries must be finite and between 0 and 1439',
+    },
+    {
+      name: 'mealAmplitude',
+      options: { mealAmplitude: null as never },
+      message: 'mealAmplitude must be non-negative and finite',
+    },
+    {
+      name: 'noise',
+      options: { noise: null as never },
+      message: 'noise must be non-negative and finite',
+    },
+    {
+      name: 'nocturnalHypoDays',
+      options: { nocturnalHypoDays: null as never },
+      message: 'nocturnalHypoDays entries must be non-negative integers',
+    },
+    {
+      name: 'unit',
+      options: { unit: null as never },
+      message: 'unit must be mg/dL or mmol/L',
+    },
+  ] satisfies {
+    name: string
+    options: GenerateOptions
+    message: string
+  }[])('rejects explicit null for $name', ({ options, message }) => {
+    expectOptionRangeError(options, message)
+  })
+
+  it.each([
+    { name: 'null', options: null },
+    { name: 'number', options: 42 },
+  ])('rejects $name top-level options', ({ options }) => {
+    expectOptionRangeError(options as never, 'options must be an object')
   })
 
   it.each([
