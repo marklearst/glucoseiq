@@ -1056,6 +1056,7 @@ git commit -m "fix: validate delimited input options"
 - Modify: `packages/core/tests/tir-bar.test.ts`
 - Modify: `packages/core/tests/trend-tile.test.ts`
 - Modify: `packages/core/tests/errors.test.ts`
+- Modify: `scripts/test-package-contracts.mjs`
 - Regenerate: `apps/docs/content/docs/api/core/**`
 
 **Interfaces:**
@@ -1075,7 +1076,9 @@ git commit -m "fix: validate delimited input options"
 
 - A present AGP title must be a primitive string or throw `DomainError` /
   `INVALID_OPTION` with the exact message `agpChartToSVG: title must be a string`.
-  Primitive strings remain XML-escaped.
+  Primitive strings remain XML-escaped, and XML 1.0-forbidden code points are replaced
+  with U+FFFD so caller text cannot make the document malformed. An empty title remains
+  byte-identical to an omitted title.
 - Existing valid default and normal-size output remains byte-for-byte stable. Small
   positive canvases produce finite coordinates and finite, nonnegative length and radius
   attributes. `Number.MAX_VALUE` is accepted without producing a non-finite attribute.
@@ -1085,8 +1088,10 @@ git commit -m "fix: validate delimited input options"
   value and trend from the same immutable snapshot. A getter that throws during the
   snapshot produces the existing finite `No data` frame. Invalid captured readings are
   skipped under the established reading policy; `No data` is returned only when no
-  usable snapshot remains. Later accessor changes are never read and cannot affect or
-  inject into output.
+  usable snapshot remains. Non-object and sparse entries are skipped, unrelated
+  enumerable properties are never read, and conversion hooks on invalid field values
+  are never invoked. Later accessor changes are never read and cannot affect or inject
+  into output.
 
 - [ ] **Step 1: Add dimension and injection red tests**
 
@@ -1097,27 +1102,33 @@ Assert the exact `DomainError`, `INVALID_OPTION` code, and renderer-specific mes
 and prove conversion hooks are never called. Add getter fixtures proving each raw
 dimension is read once and defaulting occurs only for `undefined`.
 
-For small positive canvases below fixed margins, assert every emitted numeric geometry
-attribute is finite and every length-like `width`, `height`, `r`, `rx`, and `ry`
+For small positive canvases, including `Number.MIN_VALUE` and values below fixed
+margins, assert every emitted numeric geometry attribute is finite and every
+length-like `width`, `height`, `r`, `rx`, and `ry`
 attribute is nonnegative. Negative positional `x` or `y` values remain valid SVG and do
-not require clamping. Exercise `Number.MAX_VALUE` for each dimension and reject every
-non-finite derived attribute. Preserve exact output fixtures for established valid
-dimensions and defaults.
+not require clamping. Exercise `Number.MAX_VALUE` and `Number.MAX_VALUE / 2` on
+data-bearing paths for each dimension; inspect scalar attributes, `viewBox`, paths, and
+point lists for non-finite derived values. Preserve exact output fixtures for
+established valid dimensions and defaults. Prove dimension validation precedes any
+reading or profile access and uses deterministic width-first ordering.
 
 - [ ] **Step 2: Add title and hostile-reading red tests**
 
-Test an AGP title object whose conversion hooks throw, other present non-string values,
-an accessor that changes value, and primitive titles containing all XML metacharacters.
-Assert non-strings produce the exact typed error without invoking conversion hooks and
-strings remain escaped.
+Test an AGP title object whose `replace` method and conversion hooks expose markup or
+throw, other present non-string values, an accessor that changes value, and primitive
+titles containing all XML metacharacters and XML-forbidden code points. Assert
+non-strings produce the exact typed error without invoking any hooks, valid strings
+remain escaped, invalid XML characters become U+FFFD, and empty-string output stays
+byte-identical to an omitted title.
 
 For the trend tile, use multiple readings with getters that count, mutate after their
 first read, or throw for value, unit, and timestamp. Assert every captured field is read
 once, both latest selection and trend derivation use the captured values, later hostile
 strings never appear, and a throwing capture yields the existing `No data` frame. Add a
 mixed invalid/valid snapshot regression proving invalid readings are skipped while a
-usable reading still renders. Include ordinary readings to prove the value, unit, zone,
-and trend arrow still render normally.
+usable reading still renders. Include non-object and sparse entries, an unrelated
+enumerable throwing getter, and hostile field conversion hooks. Include ordinary
+readings to prove the value, unit, zone, and trend arrow still render normally.
 
 - [ ] **Step 3: Run the RED renderer matrix**
 
@@ -1140,12 +1151,22 @@ arithmetic overflow-safe for extreme finite values, and clamp only inner length-
 plot dimensions to zero when fixed margins exceed a small positive canvas.
 
 Snapshot the AGP title once and reject present non-string values before rendering. Keep
-the existing XML escaping for primitive strings. In the trend renderer, snapshot the
-entire series once inside a guarded boundary, validate the plain snapshot, and use only
-that snapshot for latest selection and trend derivation. Return the existing no-data
-frame when capture throws or no usable snapshot remains; otherwise retain the existing
-policy of skipping invalid readings. Do not add caller-controlled colors or change
-output for established valid inputs.
+the existing XML escaping for primitive strings and replace XML 1.0-forbidden code
+points with U+FFFD. In the trend renderer, snapshot the entire series once inside a
+guarded boundary, copying only `value`, `unit`, and `timestamp`; validate primitive
+field types before reusable validators can format them, and use only the resulting
+plain snapshot for latest selection and trend derivation. Return the existing no-data
+frame when a declared field getter throws or no usable snapshot remains; otherwise
+retain the existing policy of skipping invalid, non-object, and sparse readings. Do not
+add caller-controlled colors or change output for established valid inputs.
+
+In `scripts/test-package-contracts.mjs`, assert that packed ESM and CommonJS imports of
+`@glucoseiq/core/render` expose exactly `agpChartToSVG`, `tirBarToSVG`, and
+`trendTileToSVG`. Parse both packed `.d.mts` and `.d.ts` render declarations and assert
+their exact exported surface is those three functions plus `AGPChartOptions`,
+`TIRBarOptions`, and `TrendTileOptions`; reject any reference or export containing
+`svg-options`. This pins both runtime and type-only private-helper boundaries rather
+than merely requiring a nonempty entrypoint.
 
 - [ ] **Step 5: Synchronize public source contracts and generated API**
 
@@ -1177,8 +1198,97 @@ Resolve findings and rerun the complete ladder. Use the following subject as the
 complete commit message, with an empty body and no trailers:
 
 ```sh
-git add packages/core/src/render packages/core/src/csv.ts packages/core/tests/agp-svg.test.ts packages/core/tests/tir-bar.test.ts packages/core/tests/trend-tile.test.ts packages/core/tests/errors.test.ts apps/docs/content/docs/api/core
+git add packages/core/src/render/svg-options.ts packages/core/src/render/agp-svg.ts packages/core/src/render/tir-bar.ts packages/core/src/render/trend-tile.ts packages/core/src/csv.ts packages/core/tests/agp-svg.test.ts packages/core/tests/tir-bar.test.ts packages/core/tests/trend-tile.test.ts packages/core/tests/errors.test.ts scripts/test-package-contracts.mjs apps/docs/content/docs/api/core
 git commit -m "fix: harden svg renderer inputs"
+```
+
+---
+
+### Task 8B: Correct the default A1C category boundaries
+
+**Files:**
+
+- Modify: `packages/core/src/a1c.ts`
+- Modify: `packages/core/tests/a1c.test.ts`
+- Modify: `scripts/test-package-contracts.mjs`
+- Modify: `apps/docs/content/docs/migration.mdx`
+- Modify: `CHANGELOG.md`
+- Regenerate: `apps/docs/content/docs/api/core/**`
+
+**Interfaces:**
+
+- The default classifier follows the current
+  [CDC diagnostic ranges](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html): values below 5.7%
+  are `normal`, values from 5.7% up to but not including 6.5% are `prediabetes`, and
+  values at or above 6.5% are `diabetes`.
+- Preserve the public function signature and the existing inclusive semantics of an
+  explicitly supplied `normalMax` or `prediabetesMax`; this avoids silently changing
+  custom research cutoffs while correcting only the defective defaults.
+- Treat `undefined` and runtime `null` custom bounds as omitted, matching the existing
+  nullish-default behavior. Any other supplied runtime value, including zero or `NaN`,
+  retains the current JavaScript comparison semantics; this task does not invent a new
+  validation error.
+- Keep invalid-input behavior and every public export unchanged. This is an intentional
+  pre-1.0 correctness fix inherited by the `diabetic-utils` 2.0 bridge; the untouched
+  1.5 release remains available under the `legacy` dist-tag.
+
+- [ ] **Step 1: Add exact boundary RED tests**
+
+Assert 5.7 is `prediabetes`, the greatest representative value below 6.5 remains
+`prediabetes`, and 6.5 is `diabetes`. Retain checks just below 5.7 and above 6.5. Add
+custom-threshold equality tests proving explicitly supplied maxima remain inclusive.
+Cover each bound independently: custom normal with omitted prediabetes, omitted normal
+with custom prediabetes, both custom, explicit `undefined`, and runtime `null`. These
+mixed cases prevent an implementation based only on property presence from changing
+the current nullish behavior.
+
+Extend the packed ESM and CommonJS consumer matrix with the same default boundary
+contract through both `@glucoseiq/core` and the `diabetic-utils` 2.0 bridge so minified
+tarball behavior cannot diverge from source. Keep the historical 1.5 fixture and legacy
+documentation unchanged.
+
+- [ ] **Step 2: Run the RED category contract**
+
+```sh
+pnpm --filter @glucoseiq/core exec vitest run tests/a1c.test.ts
+pnpm test:packages
+```
+
+Expected: 5.7 is currently classified as `normal` and 6.5 as `prediabetes`.
+
+- [ ] **Step 3: Implement the GREEN default semantics**
+
+Distinguish omitted defaults from caller-supplied inclusive maxima. Use strict
+comparisons only for the CDC defaults and `<=` only for explicit custom maxima. Remove
+the duplicated adjacent JSDoc, document the exact ranges and custom semantics, and cite
+the canonical CDC A1C page. Record the corrected defaults in the launch changelog and
+migration guide without implying that the preserved 1.5 artifact changed.
+
+Regenerate and drift-check the managed API reference:
+
+```sh
+pnpm --filter docs docs:api
+pnpm --filter docs docs:api:check
+```
+
+- [ ] **Step 4: Verify, review, and commit**
+
+```sh
+pnpm --filter @glucoseiq/core test:coverage
+pnpm --filter @glucoseiq/core build
+pnpm --filter docs docs:api:check
+pnpm --filter docs build
+pnpm test:packages
+git diff --check
+```
+
+Have an independent reviewer verify the CDC boundary mapping, unchanged custom cutoff
+semantics, packed behavior, generated API drift, and public type/export stability. Use
+the following complete commit message with an empty body and no trailers:
+
+```sh
+git add packages/core/src/a1c.ts packages/core/tests/a1c.test.ts scripts/test-package-contracts.mjs apps/docs/content/docs/migration.mdx CHANGELOG.md apps/docs/content/docs/api/core
+git commit -m "fix: correct a1c category boundaries"
 ```
 
 ---
@@ -1188,32 +1298,77 @@ git commit -m "fix: harden svg renderer inputs"
 **Files:**
 
 - Modify: `README.md`
+- Modify: `CHANGELOG.md`
+- Modify: `package.json`
+- Modify: `pnpm-lock.yaml`
 - Modify: `packages/core/README.md`
 - Modify: `packages/react/README.md`
 - Modify: `packages/tokens/README.md`
 - Modify: `packages/testing/README.md`
 - Modify: `packages/cli/README.md`
 - Modify: `packages/diabetic-utils/README.md`
+- Modify: `packages/testing/package.json`
+- Modify: `packages/testing/src/index.ts`
+- Modify: `packages/tokens/package.json`
+- Modify: `packages/tokens/src/index.ts`
 - Modify: `packages/react/package.json`
+- Modify: `packages/react/src/hooks.ts`
 - Modify: `packages/cli/package.json`
+- Modify: `packages/cli/src/index.ts`
+- Modify: `packages/core/src/a1c.ts`
+- Modify: `packages/core/src/align.ts`
+- Modify: `packages/core/src/analyze.ts`
+- Modify: `packages/core/src/cohort.ts`
+- Modify: `packages/core/src/constants.ts`
+- Modify: `packages/core/src/conversions.ts`
+- Modify: `packages/core/src/formatters.ts`
+- Modify: `packages/core/src/glucose.ts`
 - Modify: `packages/core/src/index.ts`
 - Modify: `packages/core/src/connectors/index.ts`
 - Modify: `packages/core/src/live.ts`
+- Modify: `packages/core/src/mage.ts`
 - Modify: `packages/core/src/score.ts`
 - Modify: `packages/core/src/csv.ts`
+- Modify: `packages/core/src/tir.ts`
+- Modify: `packages/core/src/tir-enhanced.ts`
+- Modify: `packages/core/src/variability.ts`
 - Modify: `packages/core/src/metrics/agp-profile.ts`
+- Modify: `packages/core/src/metrics/auc.ts`
+- Modify: `packages/core/src/metrics/episodes.ts`
+- Modify: `packages/core/src/metrics/meal.ts`
+- Modify: `packages/core/src/render/agp-svg.ts`
+- Modify: `packages/core/src/render/index.ts`
+- Modify: `packages/core/src/render/tir-bar.ts`
+- Modify: `packages/core/src/render/trend-tile.ts`
 - Modify: `apps/docs/app/(home)/page.tsx`
+- Modify: `apps/docs/app/layout.tsx`
+- Modify: `apps/docs/content/docs/agp.mdx`
+- Modify: `apps/docs/content/docs/cli.mdx`
+- Modify: `apps/docs/content/docs/connectors.mdx`
+- Modify: `apps/docs/content/docs/core-concepts.mdx`
+- Modify: `apps/docs/content/docs/dashboard.mdx`
 - Modify: `apps/docs/content/docs/index.mdx`
 - Modify: `apps/docs/content/docs/data-model.mdx`
 - Modify: `apps/docs/content/docs/data-quality.mdx`
+- Modify: `apps/docs/content/docs/interoperability.mdx`
+- Modify: `apps/docs/content/docs/live.mdx`
 - Modify: `apps/docs/content/docs/metrics.mdx`
 - Modify: `apps/docs/content/docs/migration.mdx`
 - Modify: `apps/docs/content/docs/react.mdx`
-- Modify: `apps/docs/content/docs/cli.mdx`
+- Modify: `apps/docs/content/docs/testing.mdx`
 - Modify: `apps/docs/content/docs/tokens.mdx`
+- Modify: `apps/docs/package.json`
+- Modify: `apps/docs/scripts/lib/api-renderer.mjs`
+- Modify: `apps/docs/scripts/generate-api.test.mjs`
+- Regenerate: `apps/docs/content/docs/api/core/**`
+- Create: `docs/README.md`
+- Modify: `docs/index.md`
 - Create: `scripts/doc-snippet-contracts.test.mjs`
+- Create: `scripts/doc-snippet-contracts.unit.test.mjs`
 - Create: `scripts/test-doc-snippets.mjs`
-- Modify: `package.json`
+- Create: `scripts/lib/doc-contracts.mjs`
+- Create: `scripts/lib/doc-snippets.mjs`
+- Modify: `scripts/test-package-contracts.mjs`
 
 **Interfaces:**
 
@@ -1221,52 +1376,145 @@ git commit -m "fix: harden svg renderer inputs"
 - Numeric-array APIs require one homogeneous unit and the matching unit option where available.
 - The score is a project-defined wellness heuristic derived from GRI, not a diagnostic or validated clinical score.
 - CSV accepts a header-row delimited file with explicitly mapped timestamp and value columns.
+- Every public TypeScript or TSX example is either independently compiled or explicitly
+  classified as a reviewed fragment with a nonempty reason.
+- Documentation examples compile against the actual built package declarations and both
+  the React 18 peer floor and React 19, with no ambient test or Node types leaking in.
 
 - [ ] **Step 1: Add prose and snippet contract tests**
 
-Create `doc-snippet-contracts.test.mjs` to fail on these stale claims in tracked README, source, manifest, home-page, and narrative-doc files:
+Discover public inputs from `git ls-files` and explicitly exclude
+`packages/core/docs-md/**` plus generated or historical claim-only paths before reading
+or statting them. Normalize Markdown emphasis, entities, raw
+HTML/MDX, JSX text, comments, and collapsed whitespace before applying narrowly scoped
+claim rules. Add RED fixtures for split or disguised versions of:
 
-```js
-const forbiddenClaims = [
-  /clinician-grade/i,
-  /clinical report/i,
-  /any CGM export/i,
-  /mixed freely/i,
-  /normalized correctly everywhere/i,
-  /headless\s+<[^>]+>\s+components/i,
-  /@glucoseiq\/forecast/,
-]
-```
+- clinician-grade or clinical-report claims;
+- arbitrary vendor export support;
+- universal normalization, formula, citation, or research-grade claims;
+- realistic or clinically representative synthetic data;
+- the nonexistent forecast package;
+- unqualified “runs anywhere” and direct email, PDF, README, or watch-runtime promises;
+- unverified colorblind-safe claims.
 
-Exclude generated API pages from this prose scan. Add assertions that every published README contains `Node 24`, its package guide’s absolute URL, and no repository-relative links that will break in a tarball.
+Do not reject legitimate terms such as clinical thresholds, clinical systems, or
+research use. Exclude managed API pages and historical generated 1.5 prose from current
+claim enforcement, while still checking their links.
 
-- [ ] **Step 2: Mark and compile curated TypeScript examples**
+Parse Markdown/MDX links, reference definitions, images, and raw HTML/MDX URL
+attributes. Reject unsafe schemes and tarball-breaking relative non-fragment URLs in
+published READMEs. Map every `https://glucoseiq.health/...` link back to a tracked docs
+route. Require all six published READMEs to contain Node `>=24`, installation, a strict
+typed first-use example, option and invalid-input behavior, safety limits, absolute
+guide/migration/API links, license, and changelog links. Add a tracked legacy landing
+page so preserved 1.5 API breadcrumbs resolve without rewriting historical API prose.
 
-Mark standalone fences with `ts typecheck` in Getting Started, Data Model, Connectors, React, Tokens, Testing, and Interoperability. `test-doc-snippets.mjs` must extract only those fences to an OS temporary project and invoke the existing compiler with:
+Before changing any README, extend `scripts/test-package-contracts.mjs` to read each of
+the six actual tarball README files and apply the same first-use, URL, route, and unsafe
+scheme contracts. Source-only checks are insufficient because npm consumers receive the
+packed artifact.
+
+- [ ] **Step 2: Run the harness-unit RED before implementation**
+
+Create both repository contract tests and `doc-snippet-contracts.unit.test.mjs`, with
+the latter containing only synthetic fixtures for claim
+normalization, MDX/link extraction, fence metadata, module-specifier rejection,
+declaration containment, diagnostics, workers, timeouts, and cleanup. Import the
+intended pure helpers from `scripts/lib`. After the tests are authored, add only
+export-complete helper stubs that throw a stable internal `Not implemented` error; do
+not add functional behavior. Do not change package dependencies, classify repository
+examples, or edit public prose yet.
 
 ```sh
-tsc --noEmit --strict --skipLibCheck false --target ES2022 --module ESNext --moduleResolution Bundler --jsx react-jsx
+node --test scripts/doc-snippet-contracts.unit.test.mjs
 ```
 
-The temporary project must install no packages. Resolve workspace packages through paths to their built declarations. Do not add ambient `any` shims.
+Expected: the suite collects successfully and fails behavioral assertions against the
+nonfunctional stubs, rather than failing because of syntax or missing imports.
 
-Add the root script:
+- [ ] **Step 3: Implement the harness only, then establish the full-corpus RED**
 
-```json
-"test:docs": "node --test scripts/doc-snippet-contracts.test.mjs && node scripts/test-doc-snippets.mjs"
-```
+Add exact docs-owned dev dependencies for `@mdx-js/mdx@3.1.1`, TypeScript `5.8.3`,
+`react-types-18` as `npm:@types/react@18.3.31`, and `react-types-19` as
+`npm:@types/react@19.2.17`. Keep the aliases outside the `@types/*` namespace so they
+cannot enter the docs app's ambient type discovery. Assert that the two resolved roots are distinct
+and have the expected exact majors. Map `react`, `react/jsx-runtime`, and
+`react/jsx-dev-runtime` from each alias; never install dependencies inside the temporary
+project.
 
-- [ ] **Step 3: Run the red documentation tests**
+Implement the pure helpers and runner so every public `ts`, `tsx`, or `typescript`
+fence must carry exactly one of:
+
+- `typecheck`, meaning it is standalone and compiled independently;
+- `fragment="nonempty reviewed reason"`, accepted only from an explicit path/line
+  allowlist maintained by the contract test.
+
+Reject malformed, duplicate, hidden, empty, unclosed, or unclassified fences. Discover
+source `@example` blocks dynamically across all six published packages rather than
+hard-coding a count. Extract the visible home-page code sample so JSX source cannot
+bypass the gate. Require at least one compiling example in the root README and each of
+the six package READMEs; the CLI README must exercise its typed `run` API.
+
+Define the current public snippet inventory explicitly as the root README, all six
+published package READMEs, every current Fumadocs narrative and managed API page, the
+visible home-page sample, and all source `@example` blocks across the six published
+packages. Exclude launch plans, changesets, pull-request templates, and archived 1.5
+generated reference files under `docs/functions`, `docs/interfaces`, `docs/variables`,
+and `docs/type-aliases` from compilation; keep their links under integrity checks.
+Never discover or inspect `packages/core/docs-md/**`.
+
+Resolve the exact ten public ESM declaration entrypoints from the six package
+manifests. Require regular, nonsymlink `.d.mts` files contained by their package roots;
+aggregate missing entries with a clear build-first diagnostic. Compile each fence in
+its own contained temporary directory with strict Bundler, ESNext, ES2022, DOM,
+`noUncheckedIndexedAccess`, `skipLibCheck: false`, and `types: []`. Use the TypeScript
+AST to reject suppression directives, ambient declarations, triple-slash references,
+relative/absolute/file imports, undeclared packages, and every module-specifier form
+including dynamic and import-type expressions. Use a bounded four-worker pool with
+timeouts, bounded child output, deterministic sorted diagnostics, safe cleanup, and no
+shell interpolation. Unit fixtures cover BOM, CRLF/frontmatter line mapping,
+React-19-only APIs failing the React 18 pass, missing declarations, compile failures,
+timeouts, spawn failures, and execution from outside the repository.
+
+Make `pnpm test:docs` build all six public package declarations first, then run the
+contract and compiler harnesses. A direct harness run after `pnpm clean` must fail with
+the explicit declaration prerequisite; the normal root script must never validate
+against stale build output.
+
+First make only the synthetic unit suite green. Then run the completed harness against
+the unchanged repository before classifying or correcting any public content:
 
 ```sh
+node --test scripts/doc-snippet-contracts.unit.test.mjs
 node --test scripts/doc-snippet-contracts.test.mjs
 pnpm build
 node scripts/test-doc-snippets.mjs
+pnpm test:packages
 ```
 
-Expected: stale claims and nullable flagship examples fail.
+Expected: helper fixtures pass, while the repository checks fail on stale claims,
+unclassified fences, absent source and packed package README contracts, and unsafe
+nullable examples.
+
+Then prove the declaration prerequisite independently:
+
+```sh
+pnpm clean
+node scripts/test-doc-snippets.mjs
+```
+
+Expected: a nonzero, aggregated diagnostic names all ten missing public `.d.mts`
+entrypoints and performs no compilation. After recording that fail-closed result, run
+the six-package declaration build (or `pnpm test:docs`, which performs it) before any
+green snippet run.
 
 - [ ] **Step 4: Correct the public contracts**
+
+Only after the unchanged-corpus RED is recorded, mark generated API
+declaration/signature fences as reviewed fragments in the API renderer; convert every
+dynamically discovered public source `@example` to a standalone `typecheck` example;
+and classify every authored docs/README fence. Keep the fragment allowlist small,
+reasoned, and line-stable. Regenerate the managed API after source examples change.
 
 Use these terms across source and documentation:
 
@@ -1278,6 +1526,15 @@ Use these terms across source and documentation:
 
 Remove the legacy core banner, stale version text, old analytics name, and nonexistent forecasting package reference. Replace the broken AGP citation with a stable primary-source or DOI URL.
 
+Describe the renderer as an AGP-style percentile-band series, not a complete
+standardized AGP report. Explain that email, PDF, README, and watch hosts require
+host-specific embedding, conversion, or application integration. Treat 50% TITR as the
+library's configurable default benchmark rather than a universal 2019-consensus goal.
+Correct the metrics guide's positional-versus-option unit contracts and the
+`calculateGVIPGS` unit-bearing input. Replace stale CDC A1C links with the canonical
+testing page. Document the exact mapped CSV, delimiter, blank-line, skipped-row,
+header-only, typed-error, and unsupported quoted-physical-newline behavior.
+
 - [ ] **Step 5: Give each npm README a complete first-use contract**
 
 Each README must contain installation, Node `>=24`, a typed minimal example, valid options, invalid-input behavior, safety limits, absolute documentation and migration links, license, and changelog link. Add these package-specific details:
@@ -1285,8 +1542,20 @@ Each README must contain installation, Node `>=24`, a typed minimal example, val
 - React: client-only root, stable option object identity, React `>=18`, core for server use.
 - Tokens: mg/dL-only classifier and its `RangeError` behavior.
 - Testing: synthetic data warning, all generator options, 100,000-reading cap.
-- CLI: exact flags, units, delimiter rule, exit codes, JSON/SVG interaction, mapped CSV columns.
+- CLI: exact flags, units, delimiter rule, exit codes, mapped CSV columns, and the
+  `{ report, glucoseIQ }` JSON shape, including that non-finite JSON numbers serialize
+  as `null` and that JSON mode suppresses the SVG success line.
 - Compatibility bridge: `legacy` tag guidance and direct scoped-package migration.
+
+Repair stale changelog source links to the preserved `v1.4.0` tag before linking the
+package READMEs. Use canonical package guide URLs under `https://glucoseiq.health/docs`
+and include API, migration, MIT license, and changelog links that exist in packed
+tarballs or are absolute HTTPS URLs.
+
+During Task 9, link core to `/docs/api/core`; link the other scoped packages to the
+already tracked `/docs/api` overview plus their package-specific guide, and link the
+compatibility bridge to `/docs/api/core` plus `/docs/migration`. Task 10 may replace the
+overview links with package-specific API pages only after those routes exist.
 
 - [ ] **Step 6: Fix strict examples and run green checks**
 
@@ -1301,20 +1570,54 @@ if (!report.valid || !report.timeInRange || !report.risk || !report.episodes || 
 
 Hoist React option objects outside components or memoize them. Keep the visual layout unchanged.
 
-Run:
+First repeat the fail-closed prerequisite from a clean tree and confirm the direct
+harness exits nonzero with the aggregated ten-entrypoint diagnostic:
+
+```sh
+pnpm clean
+node scripts/test-doc-snippets.mjs
+```
+
+Then run the green ladder; `test:docs` must rebuild the six declarations before it
+invokes the same harness:
 
 ```sh
 pnpm test:docs
+pnpm --filter docs docs:api
+pnpm --filter docs docs:api:check
 pnpm --filter docs build
 pnpm test:packages
+REPO_ROOT=$PWD
+(cd /tmp && node "$REPO_ROOT/scripts/test-doc-snippets.mjs")
 ```
+
+Require the package-contract script to prove all six packed README files pass, not only
+their sources. Verify all dynamically discovered source `@example` blocks, managed API
+fences, narrative fences, package READMEs, and the home sample are represented in the
+classification count. Run `git diff --check` after API regeneration.
 
 - [ ] **Step 7: Commit the task**
 
 ```sh
-git add README.md packages apps/docs package.json scripts/doc-snippet-contracts.test.mjs scripts/test-doc-snippets.mjs
+test -z "$(git diff --name-only -- packages/core/docs-md/)"
+git add README.md CHANGELOG.md package.json pnpm-lock.yaml
+git add packages/{core,react,tokens,testing,cli,diabetic-utils}/README.md
+git add packages/{react,tokens,testing,cli}/package.json
+git add packages/react/src/hooks.ts packages/tokens/src/index.ts packages/testing/src/index.ts packages/cli/src/index.ts
+git add packages/core/src/{a1c,align,analyze,cohort,constants,conversions,csv,formatters,glucose,index,live,mage,score,tir,tir-enhanced,variability}.ts
+git add packages/core/src/connectors/index.ts packages/core/src/metrics/{agp-profile,auc,episodes,meal}.ts packages/core/src/render/{agp-svg,index,tir-bar,trend-tile}.ts
+git add apps/docs/package.json apps/docs/app/layout.tsx apps/docs/app/'(home)'/page.tsx
+git add apps/docs/content/docs/{agp,cli,connectors,core-concepts,dashboard,data-model,data-quality,index,interoperability,live,metrics,migration,react,testing,tokens}.mdx
+git add apps/docs/content/docs/api/core apps/docs/scripts/lib/api-renderer.mjs apps/docs/scripts/generate-api.test.mjs
+git add docs/README.md docs/index.md
+git add scripts/doc-snippet-contracts.test.mjs scripts/doc-snippet-contracts.unit.test.mjs scripts/test-doc-snippets.mjs scripts/lib/doc-contracts.mjs scripts/lib/doc-snippets.mjs scripts/test-package-contracts.mjs
+git diff --cached --check
 git commit -m "docs: clarify package and safety contracts"
 ```
+
+Before committing, compare `git diff --cached --name-only` with the Task 9 file
+allowlist and abort on any extra path. The protected `packages/core/docs-md/` path must
+remain unstaged and untouched even if it exists in the original worktree.
 
 ---
 
@@ -1344,6 +1647,7 @@ git commit -m "docs: clarify package and safety contracts"
 - Modify: `apps/docs/app/docs/[[...slug]]/page.tsx`
 - Modify: `apps/docs/content/docs/live.mdx`
 - Modify: `apps/docs/content/docs/react.mdx`
+- Modify: `scripts/doc-snippet-contracts.test.mjs`
 
 **Interfaces:**
 
@@ -1375,6 +1679,12 @@ Expected: metadata routes and the new documentation pages do not exist.
 
 Write consumer-facing pages for package selection, safety and limitations, runtime support, integration testing, and deployment. Add package references for React exports and props, token exports, testing options/scenarios, and CLI flags, output schema, and exit codes.
 
+Classify every TypeScript/TSX fence in the new or modified pages as an independently
+compiled `typecheck` example or an allowlisted fragment with a nonempty reason. Keep
+all new package-reference links within the Task 9 route-integrity contract. Update the
+reviewed-fragment allowlist only for genuine non-standalone API signatures; do not use
+it to hide fixable examples.
+
 Write `docs/LAUNCH_RUNBOOK.md` with checked-command and unchecked-human sections covering Vercel, registrar activation, apex and `www`, npm bootstrap, trusted publishers, Pages shutdown, repository metadata, registry verification, local-folder rename, and partial-publication recovery. Recovery must inventory published versions, retry missing packages, never unpublish a successful package, and use a corrective patch for a bad artifact.
 
 - [ ] **Step 4: Add canonical and discovery metadata**
@@ -1385,17 +1695,27 @@ Create `robots.ts` using `process.env.VERCEL_ENV === 'production'` to choose all
 
 - [ ] **Step 5: Improve semantics without changing appearance**
 
-Give the package table a caption, `<thead>`, and `<th scope="col">` cells. Add visually hidden trend text beside glyph-only examples. Document an adjacent textual-summary pattern for SVG charts and improve renderer `aria-label` text with data summaries.
+Give the package table a caption, `<thead>`, and `<th scope="col">` cells. Add visually hidden trend text beside glyph-only examples. Document an adjacent textual-summary pattern for SVG charts. Preserve the byte-locked renderer output and existing runtime `aria-label` strings during this launch task; richer data-dependent renderer labels require a later test-first public-output change with regenerated fixtures.
 
 - [ ] **Step 6: Verify and commit**
 
 ```sh
 node --test apps/docs/scripts/site-contracts.test.mjs
+pnpm test:docs
 pnpm --filter docs build
+pnpm test:packages
 git diff --check
-git add apps/docs docs/LAUNCH_RUNBOOK.md
+git add apps/docs/content/docs/{packages,safety,runtime-support,deployment,integration-testing}.mdx
+git add apps/docs/content/docs/api/{react,tokens,testing,cli,index}.mdx
+git add apps/docs/content/docs/{meta.json,live.mdx,react.mdx} apps/docs/content/docs/api/meta.json
+git add apps/docs/app/{robots.ts,sitemap.ts,layout.tsx} apps/docs/app/'(home)'/{layout.tsx,page.tsx} apps/docs/app/docs/'[[...slug]]'/page.tsx
+git add apps/docs/scripts/site-contracts.test.mjs docs/LAUNCH_RUNBOOK.md scripts/doc-snippet-contracts.test.mjs
+git diff --cached --check
 git commit -m "docs: complete the launch information architecture"
 ```
+
+Compare the staged path list with the exact Task 10 allowlist before committing; do not
+stage unrelated docs, renderer, generated API, or protected legacy-worktree changes.
 
 ---
 
