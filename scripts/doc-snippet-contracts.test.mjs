@@ -154,6 +154,22 @@ test('current public prose and package descriptions contain no prohibited claims
   assert.equal(diagnostics.length, 0, formatContractDiagnostics(diagnostics))
 })
 
+test('tracked public documentation contains no machine-local home paths', () => {
+  const documentationPaths = gitTrackedFiles().filter((path) =>
+    /(?:^|\/)README\.md$|\.mdx?$/u.test(path)
+  )
+  const localHomePath = /\/(?:Users|home)\/[A-Za-z0-9._-]+\/|[A-Za-z]:\\Users\\[A-Za-z0-9._-]+\\/u
+  const violations = documentationPaths.flatMap((path) =>
+    readTracked(path)
+      .split('\n')
+      .flatMap((line, index) =>
+        localHomePath.test(line) ? [`${path}:${index + 1}`] : []
+      )
+  )
+
+  assert.deepEqual(violations, [])
+})
+
 test('all public and historical links resolve under their distribution rules', () => {
   const inventory = createPublicInventory({ repoRoot })
   const trackedRoutes = createTrackedDocsRoutes(inventory)

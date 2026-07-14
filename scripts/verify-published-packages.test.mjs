@@ -9,6 +9,7 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
+import * as publishedVerifier from './verify-published-packages.mjs'
 import {
   LAUNCH_PACKAGES,
   createExpectedPublicationPlan,
@@ -524,6 +525,36 @@ test('direct verification derives a plan only when the workflow does not provide
   )
 })
 
+test('strict registry recovery refuses a workflow-supplied verification subset', () => {
+  assert.throws(
+    () => resolveDirectVerificationPlan({
+      env: {
+        CHANGESETS_VERIFICATION_PACKAGES: JSON.stringify([
+          { name: '@glucoseiq/core', version: '1.0.0' },
+        ]),
+      },
+      allowEnvironmentPlan: false,
+      derivePlan: () => assert.fail('an injected workflow plan must fail closed'),
+    }),
+    /Registry-evidence recovery must derive its package plan from the checked-out release commit/u,
+  )
+
+  let derivations = 0
+  const plan = resolveDirectVerificationPlan({
+    env: {},
+    allowEnvironmentPlan: false,
+    derivePlan: () => {
+      derivations += 1
+      return [{ name: '@glucoseiq/core', version: '1.0.0' }]
+    },
+  })
+  assert.equal(derivations, 1)
+  assert.deepEqual(
+    plan.map(({ name, version }) => ({ name, version })),
+    [{ name: '@glucoseiq/core', version: '1.0.0' }],
+  )
+})
+
 test('prefers a non-empty Changesets inventory after a partial publish failure', () => {
   const inventory = resolvePublicationInventory({
     actionOutcome: 'failure',
@@ -533,7 +564,7 @@ test('prefers a non-empty Changesets inventory after a partial publish failure',
     ]),
     expectedPackages: JSON.stringify([
       { name: '@glucoseiq/core', version: '1.0.0' },
-      { name: '@glucoseiq/react', version: '1.0.0' },
+      { name: 'diabetic-utils', version: '2.0.0' },
     ]),
   })
 
@@ -546,8 +577,16 @@ test('prefers a non-empty Changesets inventory after a partial publish failure',
     inventory.verificationPackages.map(({ name, version }) => ({ name, version })),
     [
       { name: '@glucoseiq/core', version: '1.0.0' },
-      { name: '@glucoseiq/react', version: '1.0.0' },
+      { name: 'diabetic-utils', version: '2.0.0' },
     ],
+  )
+  assert.equal(
+    inventory.reportedPackages.some(({ name }) => name === 'diabetic-utils'),
+    false,
+  )
+  assert.equal(
+    inventory.verificationPackages.some(({ name }) => name === 'diabetic-utils'),
+    true,
   )
 })
 
@@ -1578,6 +1617,64 @@ test('runs tarball, signature, release, and registry consumer checks in a safe d
   assert.ok(matrixIndex > lastReleaseIndex)
   assert.equal(matrixIndex, harness.events.length - 1)
   assert.ok(harness.commands.every(({ timeoutMs }) => timeoutMs === 9876))
+})
+
+test('registry-evidence-only mode verifies immutable npm evidence without requiring Git artifacts', async () => {
+  const harness = createHappyHarness()
+  const output = []
+
+  const result = await verifyPublishedPackages({
+    packageSpecs: LAUNCH_PACKAGES,
+    fetchImpl: harness.fetchImpl,
+    runCommand: harness.runCommand,
+    maxAttempts: 1,
+    registryEvidenceOnly: true,
+    logger: (line) => output.push(line),
+  })
+
+  assert.deepEqual(result.packages, LAUNCH_PACKAGES.map(({ name, version }) => `${name}@${version}`))
+  assert.equal(result.releaseSha, releaseSha)
+  assert.deepEqual(output, [
+    'Verified registry metadata for 6 launch packages.',
+    'Verified tarball integrity and contents for 6 launch packages.',
+    'Verified registry signatures and provenance for 6 launch packages.',
+    'Verified the exact-version registry consumer matrix.',
+    'GlucoseIQ registry-evidence verification passed for 6 packages.',
+  ])
+
+  assert.deepEqual(
+    harness.commands
+      .filter(({ command }) => command === 'git')
+      .map(({ args }) => args),
+    [['rev-parse', '--verify', 'HEAD^{commit}']],
+  )
+  assert.equal(harness.commands.some(({ command }) => command === 'gh'), false)
+  assert.equal(
+    harness.events.at(-1),
+    `command:${process.execPath}:scripts/test-package-contracts.mjs --source registry`,
+  )
+})
+
+test('published verifier arguments expose only the explicit registry-evidence mode', () => {
+  assert.deepEqual(
+    publishedVerifier.parsePublishedVerifierArguments([]),
+    { registryEvidenceOnly: false },
+  )
+  assert.deepEqual(
+    publishedVerifier.parsePublishedVerifierArguments(['--registry-evidence-only']),
+    { registryEvidenceOnly: true },
+  )
+
+  for (const args of [
+    ['--registry-evidence-only', '--registry-evidence-only'],
+    ['--unknown'],
+    ['registry-evidence-only'],
+  ]) {
+    assert.throws(
+      () => publishedVerifier.parsePublishedVerifierArguments(args),
+      /Usage: node scripts\/verify-published-packages\.mjs \[--registry-evidence-only\]/u,
+    )
+  }
 })
 
 test('binds unchanged package tags to their own provenance during an independent release', async () => {

@@ -44,7 +44,8 @@ const svg = agpChartToSVG(readings, { theme: 'dark' })
 tirBarToSVG(readings: GlucoseReading[], options?: TIRBarOptions): string
 ```
 
-Renders a Time-in-Range stacked bar as an SVG string.
+Renders a Time-in-Range stacked bar as an SVG string. Zone fills remain
+fixed; the surface theme changes only the background and text.
 
 **Returns** — A self-contained SVG document string
 

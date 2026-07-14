@@ -44,6 +44,14 @@ function runFixtureCommand(file, args, cwd) {
   })
 }
 
+function selectGeneratedVersionFixtureRevision(changes) {
+  return changes.some(
+    ({ status, path }) => status === 'D' && isChangesetReaderPath(path),
+  )
+    ? 'HEAD^1'
+    : 'HEAD'
+}
+
 function createGeneratedVersionFixture({
   generate = true,
   mutate,
@@ -58,6 +66,31 @@ function createGeneratedVersionFixture({
     ['clone', '--quiet', '--no-local', REPOSITORY_ROOT, repository],
     REPOSITORY_ROOT,
   )
+  const fixtureRevision = selectGeneratedVersionFixtureRevision(
+    parseNullDelimitedChanges(
+      runFixtureCommand(
+        'git',
+        [
+          'diff',
+          '--name-status',
+          '-z',
+          '--no-renames',
+          'HEAD^1',
+          'HEAD',
+          '--',
+          '.changeset',
+        ],
+        repository,
+      ),
+    ),
+  )
+  if (fixtureRevision !== 'HEAD') {
+    runFixtureCommand(
+      'git',
+      ['checkout', '--quiet', '--detach', fixtureRevision],
+      repository,
+    )
+  }
   if (prepareBase) {
     prepareBase(repository)
     runFixtureCommand('git', ['add', '-A', '--'], repository)
@@ -129,6 +162,23 @@ function runGeneratedVersionFixture(fixture, options = {}) {
   })
 }
 
+test('generated-version fixtures start from the pre-version commit', () => {
+  assert.equal(
+    selectGeneratedVersionFixtureRevision([
+      { status: 'D', path: '.changeset/release.md' },
+      { status: 'M', path: 'packages/core/package.json' },
+    ]),
+    'HEAD^1',
+  )
+  assert.equal(
+    selectGeneratedVersionFixtureRevision([
+      { status: 'M', path: '.changeset/release.md' },
+      { status: 'M', path: 'packages/core/src/index.ts' },
+    ]),
+    'HEAD',
+  )
+})
+
 function nullDelimited(...paths) {
   return Buffer.from(paths.length === 0 ? '' : `${paths.join('\0')}\0`)
 }
@@ -143,8 +193,32 @@ function createCommandFixture({
   mergeBaseOid = MERGE_BASE_OID,
   changedPaths = [],
   changes,
+  changesetContents = {},
   failCommand,
 } = {}) {
+  const changeRecords = changes ?? changedPaths.map((path) => ({ status: 'M', path }))
+  const packageNames = new Map([
+    ['packages/cli', '@glucoseiq/cli'],
+    ['packages/core', '@glucoseiq/core'],
+    ['packages/diabetic-utils', 'diabetic-utils'],
+    ['packages/react', '@glucoseiq/react'],
+    ['packages/testing', '@glucoseiq/testing'],
+    ['packages/tokens', '@glucoseiq/tokens'],
+  ])
+  const defaultReleases = [...new Set(changeRecords.flatMap(({ path }) =>
+    [...packageNames].flatMap(([directory, name]) =>
+      path.startsWith(`${directory}/`) ? [name] : []
+    )
+  ))]
+  if (defaultReleases.length === 0) defaultReleases.push('@glucoseiq/core')
+  const defaultChangeset = [
+    '---',
+    ...defaultReleases.map((name) => `"${name}": patch`),
+    '---',
+    '',
+    'Release fixture.',
+    '',
+  ].join('\n')
   const calls = []
   const execFile = (file, args, options) => {
     calls.push({ file, args, options })
@@ -152,10 +226,12 @@ function createCommandFixture({
     if (args[0] === 'symbolic-ref') return Buffer.from(`${branch}\n`)
     if (args[0] === 'rev-parse') return Buffer.from(`${baseOid}\n`)
     if (args[0] === 'merge-base') return Buffer.from(`${mergeBaseOid}\n`)
+    if (args[0] === 'cat-file') {
+      const path = args[2]?.replace(/^HEAD:/u, '')
+      return Buffer.from(changesetContents[path] ?? defaultChangeset)
+    }
     if (args[0] === 'diff') {
-      return statusDelimited(
-        ...(changes ?? changedPaths.map((path) => ({ status: 'M', path }))),
-      )
+      return statusDelimited(...changeRecords)
     }
     throw new Error(`unexpected command: ${file} ${args.join(' ')}`)
   }
@@ -233,6 +309,7 @@ test('requires a root Changeset Markdown file other than README', () => {
       'packages/core/src/metric.ts',
       '.changeset/new-metric.md',
     ],
+    changesetReleaseDirectories: ['packages/core'],
   })
 
   assert.equal(withoutChangeset.ok, false)
@@ -258,6 +335,7 @@ test('matches the Changesets reader filename rules exactly', () => {
   const valid = evaluateChangesetPolicy({
     branch: 'feat/new-metric',
     changedPaths: ['packages/core/src/metric.ts', '.changeset/UPPER.md'],
+    changesetReleaseDirectories: ['packages/core'],
   })
   assert.equal(valid.ok, true)
   assert.deepEqual(valid.changesets, ['.changeset/UPPER.md'])
@@ -297,12 +375,91 @@ test('does not count a deleted Changeset as release coverage', () => {
       { status: 'M', path: 'packages/core/src/metric.ts' },
       { status: 'A', path: '.changeset/new-metric.md' },
     ],
+    changesetReleaseDirectories: ['packages/core'],
   })
 
   assert.equal(deleted.ok, false)
   assert.deepEqual(deleted.changesets, [])
   assert.equal(added.ok, true)
   assert.deepEqual(added.changesets, ['.changeset/new-metric.md'])
+})
+
+test('rejects a Changeset that names a different public package', () => {
+  const fixture = createCommandFixture({
+    changes: [
+      { status: 'M', path: 'packages/react/src/hooks.ts' },
+      { status: 'A', path: '.changeset/core-only.md' },
+    ],
+    changesetContents: {
+      '.changeset/core-only.md': [
+        '---',
+        '"@glucoseiq/core": patch',
+        '---',
+        '',
+        'Release core only.',
+        '',
+      ].join('\n'),
+    },
+  })
+
+  assert.throws(
+    () => runChangesetPolicy({
+      execFile: fixture.execFile,
+      env: { GITHUB_HEAD_REF: 'feat/react-change' },
+      write: () => {},
+    }),
+    /packages\/react/u,
+  )
+})
+
+for (const { label, source } of [
+  {
+    label: 'malformed frontmatter',
+    source: '---\nthis is not valid frontmatter\n---\n\nBroken.\n',
+  },
+  {
+    label: 'an unknown package',
+    source: '---\n"@glucoseiq/unknown": patch\n---\n\nUnknown.\n',
+  },
+  {
+    label: 'a none release',
+    source: '---\n"@glucoseiq/core": none\n---\n\nNo release.\n',
+  },
+]) {
+  test(`fails closed when changed package coverage uses ${label}`, () => {
+    const fixture = createCommandFixture({
+      changes: [
+        { status: 'M', path: 'packages/core/src/index.ts' },
+        { status: 'A', path: '.changeset/core-change.md' },
+      ],
+      changesetContents: { '.changeset/core-change.md': source },
+    })
+
+    assert.throws(
+      () =>
+        runChangesetPolicy({
+          execFile: fixture.execFile,
+          env: { GITHUB_HEAD_REF: 'feat/core-change' },
+          write: () => {},
+        }),
+      /Changeset policy failed/u,
+    )
+  })
+}
+
+test('rejects deletion-only Changeset diffs outside an exact version commit', () => {
+  const fixture = createCommandFixture({
+    changes: [{ status: 'D', path: '.changeset/pending-release.md' }],
+  })
+
+  assert.throws(
+    () => runChangesetPolicy({
+      execFile: fixture.execFile,
+      env: { GITHUB_HEAD_REF: 'feat/drop-pending-release' },
+      write: () => {},
+    }),
+    /pending-release\.md/u,
+  )
 })
 
 test('sorts and deduplicates every release-affecting path deterministically', () => {
@@ -463,6 +620,10 @@ test('uses injected commands with no shell interpolation and diffs from the merg
           'HEAD',
           '--',
         ],
+      ],
+      [
+        'git',
+        ['cat-file', 'blob', 'HEAD:.changeset/new-metric.md'],
       ],
     ],
   )
@@ -1166,6 +1327,22 @@ test('fails safely when Git cannot resolve the branch, base, merge base, or diff
       failCommand,
     )
   }
+
+  const changesetRead = createCommandFixture({
+    changedPaths: [
+      'packages/core/src/index.ts',
+      '.changeset/core-change.md',
+    ],
+    failCommand: 'cat-file',
+  })
+  assert.throws(
+    () => runChangesetPolicy({
+      execFile: changesetRead.execFile,
+      env: { GITHUB_HEAD_REF: 'feat/changeset-read-failure' },
+      write: () => {},
+    }),
+    /Git cat-file failed/u,
+  )
 })
 
 test('explains the full-history requirement when the base or merge base is unavailable', () => {

@@ -104,9 +104,12 @@ function CurrentGlucose({ readings }: { readings: GlucoseReading[] }) {
 }
 ```
 
-`refreshMs` only advances the staleness clock. It does not poll a CGM source or
-add readings. Your application remains responsible for transport and for
-updating the array when data arrives.
+Omit `refreshMs` to disable interval refresh. When provided, it must be a whole
+number of milliseconds from `1` through `2_147_483_647`; invalid values throw
+`DomainError` with code `INVALID_OPTION` before a timer is scheduled. A valid
+value only advances the staleness clock. It does not poll a CGM source or add
+readings. Your application remains responsible for transport and for updating
+the array when data arrives.
 
 See [Build a Live Glucose Surface](/docs/live) for a complete polling boundary
 and failure-state model.

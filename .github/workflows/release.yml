@@ -369,7 +369,7 @@ jobs:
           )
           appendFileSync(
             process.env.GITHUB_OUTPUT,
-            `reported_packages=${JSON.stringify(reportedPackages)}\nverification_packages=${JSON.stringify(verificationPackages)}\nincludes_compatibility=${reportedPackages.some(({ name }) => name === 'diabetic-utils')}\nsource=${inventory.source}\n`,
+            `reported_packages=${JSON.stringify(reportedPackages)}\nverification_packages=${JSON.stringify(verificationPackages)}\nincludes_compatibility=${verificationPackages.some(({ name }) => name === 'diabetic-utils')}\nsource=${inventory.source}\n`,
           )
           NODE
 
