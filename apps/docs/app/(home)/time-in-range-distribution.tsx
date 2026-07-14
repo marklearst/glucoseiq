@@ -75,7 +75,6 @@ export function TimeInRangeDistribution({
           return (
             <span
               className={`${styles.tirSegment} ${styles[zone.className]}`}
-              data-motion-part="tir-segment"
               key={zone.key}
               style={{
                 flexBasis: `${exactPercentage}%`,

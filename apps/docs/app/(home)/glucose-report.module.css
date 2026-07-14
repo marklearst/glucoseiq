@@ -1,14 +1,9 @@
-.reportEntrance,
 .reportSection,
 .reportFigure,
 .reportGrid,
 .supportDeck,
 .reportPanel {
   min-width: 0;
-}
-
-.reportEntrance {
-  width: 100%;
 }
 
 .reportSection {
@@ -278,12 +273,6 @@
   overflow: visible;
 }
 
-.traceTarget,
-.traceMask {
-  transform-box: fill-box;
-  transform-origin: left center;
-}
-
 .traceTarget {
   fill: rgb(48 209 88 / 5%);
 }
@@ -346,10 +335,6 @@
   transform: translateY(calc(-100% - 12px));
 }
 
-.traceMask {
-  transform: scaleX(1);
-}
-
 .traceLine {
   fill: none;
   stroke-linecap: round;
@@ -366,8 +351,6 @@
 
 .traceLatestPoint {
   color: var(--home-green);
-  transform-box: fill-box;
-  transform-origin: center;
 }
 
 .traceLatestPoint[data-zone='low'] {
@@ -435,10 +418,6 @@
   stroke: #fff;
   stroke-linecap: round;
   stroke-width: 16;
-}
-
-.gmiEndCap {
-  opacity: 1;
 }
 
 .gmiSweep {
@@ -533,7 +512,6 @@
 
 .tirSegment {
   min-width: 0;
-  transform-origin: left center;
 }
 
 .tirVeryLow {
@@ -616,11 +594,6 @@
   stroke: rgb(48 209 88 / 22%);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
-}
-
-.profileColumn {
-  transform-box: fill-box;
-  transform-origin: center bottom;
 }
 
 .profileStem {
@@ -729,216 +702,6 @@
   color: rgb(174 174 178 / 78%);
   font-size: 0.8125rem;
   line-height: 1.5;
-}
-
-@keyframes reportShellIn {
-  0% {
-    opacity: 0.001;
-    filter: blur(1.5px);
-    transform: translate3d(0, 14px, 0) scale(0.985);
-  }
-
-  58% {
-    filter: blur(0);
-  }
-
-  100% {
-    opacity: 1;
-    filter: blur(0);
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
-
-@keyframes reportShellInNoBlur {
-  from {
-    opacity: 0.001;
-    transform: translate3d(0, 14px, 0) scale(0.985);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
-
-@keyframes reportRevealX {
-  from {
-    transform: scaleX(0);
-  }
-
-  to {
-    transform: scaleX(1);
-  }
-}
-
-@keyframes reportRevealClip {
-  from {
-    clip-path: inset(0 100% 0 0 round 999px);
-  }
-
-  to {
-    clip-path: inset(0 0 0 0 round 999px);
-  }
-}
-
-@keyframes reportFadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes reportAnalyticsIn {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 8px, 0);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes reportPointIn {
-  from {
-    opacity: 0;
-    transform: scale(0.82);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes reportLabelIn {
-  from {
-    opacity: 0;
-    transform: translate(8px, calc(-100% - 12px));
-  }
-
-  to {
-    opacity: 1;
-    transform: translate(0, calc(-100% - 12px));
-  }
-}
-
-@keyframes gmiReveal {
-  from {
-    stroke-dasharray: 0 var(--gmi-arc-length);
-  }
-
-  to {
-    stroke-dasharray:
-      var(--gmi-progress-length)
-      var(--gmi-arc-length);
-  }
-}
-
-@keyframes profileColumnIn {
-  from {
-    opacity: 0;
-    transform: translateY(6px) scaleY(0.82);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scaleY(1);
-  }
-}
-
-.reportEntrance[data-entrance-state='armed'] .reportFigure {
-  opacity: 0.001;
-  filter: blur(1.5px);
-  transform: translate3d(0, 14px, 0) scale(0.985);
-}
-
-.reportEntrance[data-entrance-state='armed'] .traceTarget,
-.reportEntrance[data-entrance-state='armed'] .traceLatestPoint,
-.reportEntrance[data-entrance-state='armed'] .traceLatestLabel {
-  opacity: 0;
-}
-
-.reportEntrance[data-entrance-state='armed'] .traceMask {
-  transform: scaleX(0);
-}
-
-.reportEntrance[data-entrance-state='armed'] .supportDeck > .reportPanel {
-  opacity: 0;
-  transform: translate3d(0, 8px, 0);
-}
-
-.reportEntrance[data-entrance-state='armed'] .gmiProgress {
-  stroke-dasharray: 0 var(--gmi-arc-length);
-}
-
-.reportEntrance[data-entrance-state='armed'] .gmiEndCap {
-  opacity: 0;
-}
-
-.reportEntrance[data-entrance-state='armed'] .tirRail {
-  clip-path: inset(0 100% 0 0 round 999px);
-}
-
-.reportEntrance[data-entrance-state='armed'] .profileColumn {
-  opacity: 0;
-  transform: translateY(6px) scaleY(0.82);
-}
-
-.reportEntrance[data-entrance-state='revealing'] .reportFigure {
-  animation: reportShellIn 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: opacity, transform;
-}
-
-.reportEntrance[data-entrance-state='revealing'] .traceTarget {
-  animation: reportFadeIn 280ms 80ms ease-out both;
-}
-
-.reportEntrance[data-entrance-state='revealing'] .traceMask {
-  animation: reportRevealX 850ms 240ms cubic-bezier(0.65, 0, 0.35, 1) both;
-}
-
-.reportEntrance[data-entrance-state='revealing'] .traceLatestPoint {
-  animation: reportPointIn 220ms 980ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.reportEntrance[data-entrance-state='revealing'] .traceLatestLabel {
-  animation: reportLabelIn 220ms 980ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.reportEntrance[data-entrance-state='revealing'] .supportDeck > .reportPanel {
-  animation: reportAnalyticsIn 420ms 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.reportEntrance[data-entrance-state='revealing'] .gmiProgress {
-  animation: gmiReveal 700ms 720ms cubic-bezier(0.65, 0, 0.35, 1) both;
-}
-
-.reportEntrance[data-entrance-state='revealing'] .gmiEndCap {
-  animation: reportFadeIn 80ms 1360ms ease-out both;
-}
-
-.reportEntrance[data-entrance-state='revealing'] .tirRail {
-  animation: reportRevealClip 460ms 720ms cubic-bezier(0.65, 0, 0.35, 1) both;
-}
-
-.reportEntrance[data-entrance-state='revealing'] .profileColumn {
-  animation: profileColumnIn 420ms var(--profile-delay)
-    cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@media (hover: none), (pointer: coarse), (max-width: 960px) {
-  .reportEntrance[data-entrance-state='armed'] .reportFigure {
-    filter: none;
-  }
-
-  .reportEntrance[data-entrance-state='revealing'] .reportFigure {
-    animation-name: reportShellInNoBlur;
-  }
 }
 
 @media (max-width: 1100px) {
@@ -1054,61 +817,4 @@
     display: none;
   }
 
-  .reportEntrance[data-entrance-state='armed'] .supportDeck > .reportPanel,
-  .reportEntrance[data-entrance-state='armed'] .profileColumn {
-    opacity: 1;
-    transform: none;
-  }
-
-  .reportEntrance[data-entrance-state='armed'] .gmiProgress {
-    stroke-dasharray:
-      var(--gmi-progress-length)
-      var(--gmi-arc-length);
-  }
-
-  .reportEntrance[data-entrance-state='armed'] .gmiEndCap {
-    opacity: 1;
-  }
-
-  .reportEntrance[data-entrance-state='armed'] .tirRail {
-    clip-path: inset(0 0 0 0 round 999px);
-  }
-
-  .reportEntrance[data-entrance-state='revealing'] .supportDeck > .reportPanel,
-  .reportEntrance[data-entrance-state='revealing'] .profileColumn,
-  .reportEntrance[data-entrance-state='revealing'] .gmiProgress,
-  .reportEntrance[data-entrance-state='revealing'] .gmiEndCap,
-  .reportEntrance[data-entrance-state='revealing'] .tirRail {
-    animation: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .reportEntrance .reportFigure,
-  .reportEntrance [data-motion-part],
-  .reportEntrance .supportDeck > .reportPanel,
-  .reportEntrance .profileColumn {
-    animation: none;
-    filter: none;
-    opacity: 1;
-    transform: none;
-  }
-
-  .reportEntrance .traceMask {
-    transform: scaleX(1);
-  }
-
-  .reportEntrance .tirRail {
-    clip-path: inset(0 0 0 0 round 999px);
-  }
-
-  .reportEntrance .traceLatestLabel {
-    transform: translateY(calc(-100% - 12px));
-  }
-
-  .reportEntrance .gmiProgress {
-    stroke-dasharray:
-      var(--gmi-progress-length)
-      var(--gmi-arc-length);
-  }
 }

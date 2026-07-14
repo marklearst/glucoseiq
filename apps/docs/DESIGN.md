@@ -35,9 +35,9 @@ width:
   outer: "1400px"
   content: "1120px"
 motion:
-  drop: "700ms fall from above the page with one restrained impact"
-  ring: "720ms clockwise reveal, delayed 760ms"
-  report: "One observer starts one bounded report entrance. The report stays in document flow and never takes over scrolling."
+  drop: "360ms ease-out fall from above the page to its final position"
+  ring: "The complete ring fades in during the same 360ms ease-out sequence"
+  report: "None. The complete report is in the first server HTML."
 ---
 
 # Design System: GlucoseIQ Documentation
@@ -125,7 +125,7 @@ The docs build runs `latestReading`, `computeGlucoseTrend`, `analyzeGlucose`, an
 
 The second row is one joined deck rather than three detached cards. The GMI view uses a clean 260-degree open scale from 5–10%+, with a quiet track, continuous gradient, and rounded end. It has no bead, pointer, notch, or decorative marker. Mean glucose belongs in this view. The time-in-range view shows the exact five-zone distribution and keeps every percentage readable outside color. The daily profile uses twelve two-hour columns: a thin 5th–95th percentile stem, a 25th–75th percentile capsule, and a median tick. CV belongs in this view.
 
-Target fields stay quiet and use only the 70 and 180 mg/dL boundaries. Sensor gaps remain open, isolated readings remain visible as points, and one caption states the sample size, generated span, time zone, and synthetic-data limitation. A faint report-level light field and a short focus reveal are allowed; each panel does not get its own glow.
+Target fields stay quiet and use only the 70 and 180 mg/dL boundaries. Sensor gaps remain open, isolated readings remain visible as points, and one caption states the sample size, generated span, time zone, and synthetic-data limitation. A faint report-level light field is allowed; each panel does not get its own glow.
 
 ### Code and Output
 
@@ -152,22 +152,22 @@ The package index uses a full-width list. Every row has a top or bottom hairline
 - The range distribution names all five zones, thresholds, and percentages.
 - The daily profile has a titled SVG description for its percentile stems, middle-50% capsules, median ticks, target field, CV, span, and time zone.
 - Glucose states pair color with labels, values, or chart position.
-- Content remains visible when animation support is unavailable.
-- The mark runs once on page load. Its outline starts `520px` above its resting position, falls beneath the navigation, takes one restrained impact, and settles before the ring begins.
-- The mask reveals the finished ring clockwise from 12 o’clock. A raised cap follows the leading edge and disappears when the ring closes. The animation does not loop.
-- Reduced motion renders the finished mark immediately and shortens interaction transitions.
+- The complete report is in the first server HTML. It does not wait for JavaScript or scrolling.
+- The mark runs once on page load. Its outline starts `520px` above its resting place and lands there in `360ms` with `ease-out`. It does not rotate or bounce.
+- The complete ring fades in during the same `360ms` sequence. It does not draw around the circle or use a moving tip.
+- Reduced motion shows the finished mark at once with no animation and shortens interaction transitions.
 - The mobile stack keeps outer page scrolling vertical. Code manages its own overflow.
 
-### Report Entrance
+### Report Rendering
 
-One observer starts one report sequence when the joined surface enters the viewport. The shell settles from a small rise and scale, the trace draws from left to right, and the analytical views follow with short offsets. The full sequence finishes in 1.5 seconds and never pauses, pins, or changes native scrolling.
+The server renders the whole report as part of the page. The report does not use a client wrapper, an observer, a timer, or a loading state.
 
-At `620px` and below, only the shell and trace animate; the lower views render in their finished state. Every entrance plays once per page load and then stays still. CSS owns the sequence; there is no animation runtime.
+The trace, GMI scale, range chart, and daily profile are complete from the start. Scrolling, resizing, turning a device, restoring a page, or turning off JavaScript does not change what appears.
 
-Without JavaScript, the server-rendered report is complete. Reduced motion renders each view in its finished state. Native scrolling remains unchanged.
+Normal motion and reduced motion show the same complete report. Native scrolling stays unchanged.
 
 ## 7. Use and Avoid
 
-Use the GlucoseIQ mark, one dark page, one four-view synthetic report, direct copy, thin rules, fixed control geometry, flat package rows, visible focus, and short report entrances that suit the current layout.
+Use the GlucoseIQ mark, one dark page, one complete four-view synthetic report, direct copy, thin rules, fixed control geometry, flat package rows, and visible focus.
 
 Avoid uniform card walls, fake product frames, decorative charts, broad claims, scroll-fed animation, or controls that change size during interaction.

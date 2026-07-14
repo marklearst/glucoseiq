@@ -15,7 +15,6 @@ export function GlucoseTrace({
   const titleId = `glucose-trace-title-${id}`
   const descriptionId = `glucose-trace-description-${id}`
   const traceGradientId = `glucose-trace-gradient-${id}`
-  const traceMaskId = `glucose-trace-mask-${id}`
   const targetHeight = geometry.target.lowY - geometry.target.highY
   const transitionWidth = 1.5
 
@@ -75,36 +74,17 @@ export function GlucoseTrace({
               />
               <stop offset="1" stopColor="#ff6961" />
             </linearGradient>
-            <mask
-              height={geometry.height}
-              id={traceMaskId}
-              maskUnits="userSpaceOnUse"
-              width={geometry.width}
-              x="0"
-              y="0"
-            >
-              <rect
-                className={styles.traceMask}
-                data-motion-part="trace-mask"
-                fill="white"
-                height={geometry.height}
-                width={geometry.width}
-                x="0"
-                y="0"
-              />
-            </mask>
           </defs>
 
           <rect
             className={styles.traceTarget}
-            data-motion-part="target-field"
             height={targetHeight}
             width={geometry.width}
             x="0"
             y={geometry.target.highY}
           />
 
-          <g mask={`url(#${traceMaskId})`}>
+          <g>
             {geometry.tracePaths.map((path, index) => (
               <path
                 className={styles.traceLine}
@@ -132,7 +112,6 @@ export function GlucoseTrace({
         <div
           aria-hidden="true"
           className={styles.traceThresholdOverlay}
-          data-motion-part="thresholds"
         >
           {THRESHOLDS.map((threshold) => {
             const y =
@@ -183,7 +162,6 @@ export function GlucoseTrace({
           <g transform={`translate(${geometry.latest.x} ${geometry.latest.y})`}>
             <g
               className={styles.traceLatestPoint}
-              data-motion-part="latest-point"
               data-zone={geometry.latest.zone}
             >
               <circle className={styles.traceLatestRing} r="5" />
@@ -194,7 +172,6 @@ export function GlucoseTrace({
         <span
           aria-hidden="true"
           className={styles.traceLatestLabel}
-          data-motion-part="latest-label"
           style={{
             top: `${(geometry.latest.y / geometry.height) * 100}%`,
           }}

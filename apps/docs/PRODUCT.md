@@ -43,7 +43,7 @@ The page should feel made by people who care about data, type, and interaction. 
 
 Avoid the familiar generated landing-page look: centered gradient headlines, walls of identical cards, fake terminals, persistent glass, tiny uppercase labels, and decorative product metrics disconnected from the library. Material and blur are allowed inside the report when they improve depth, but they cannot become the page's visual gimmick.
 
-Do not imitate an awards portfolio, a brokerage dashboard, or a patient-facing health app. The report gets one short entrance and remains in normal document flow. On phones, only the shell and trace move; the lower views arrive complete. The full report remains visible without JavaScript and with reduced motion. Other homepage sections stay still. Use working output instead of inflated claims.
+Do not imitate an awards portfolio, a brokerage dashboard, or a patient-facing health app. The server sends the complete report in the first page HTML. It has no scroll entrance, loading state, or client-only wrapper. The full report looks the same with normal motion, reduced motion, or JavaScript turned off. Other homepage sections stay still. Use working output instead of inflated claims.
 
 ## Design Principles
 
