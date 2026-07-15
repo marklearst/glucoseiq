@@ -1,10 +1,6 @@
 import type { AGPProfileResult } from '@glucoseiq/core/metrics'
 import { createDailyProfileGeometry } from '@/lib/glucose-profile'
-import { useId, type CSSProperties, type JSX } from 'react'
-import {
-  REPORT_ANALYTICS_DELAY_MS,
-  REPORT_CAPSULE_STAGGER_MS,
-} from './report-motion'
+import { useId, type JSX } from 'react'
 import styles from './glucose-report.module.css'
 
 interface DailyProfileProps {
@@ -99,20 +95,10 @@ export function DailyProfile({
               1.5,
               (column.capsuleBottom - column.capsuleTop) / 2,
             )
-            const columnStyle = {
-              '--profile-index': index,
-              '--profile-delay': `${
-                REPORT_ANALYTICS_DELAY_MS +
-                index * REPORT_CAPSULE_STAGGER_MS
-              }ms`,
-            } as CSSProperties
-
             return (
               <g
-                className={styles.profileColumn}
                 data-profile-column={index}
                 key={column.minuteOfDay}
-                style={columnStyle}
               >
                 <line
                   className={styles.profileStem}

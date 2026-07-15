@@ -9,7 +9,6 @@ import { InstallCommand } from '@/components/install-command'
 import { LogoMark } from '@/lib/logo'
 import { GlucoseReportSuite } from './glucose-report-suite'
 import { HighlightedCode } from './highlighted-code'
-import { ReportEntrance } from './report-entrance'
 import styles from './home.module.css'
 import type { JSX } from 'react'
 
@@ -141,20 +140,18 @@ export default function HomePage(): JSX.Element {
           </div>
         </header>
 
-        <ReportEntrance>
-          <GlucoseReportSuite
-            currentReading={displayedReading}
-            currentTrend={displayedTrend}
-            cv={report.cv}
-            days={14}
-            gmi={report.gmi}
-            meanGlucose={report.meanGlucose}
-            profile={completeProfile}
-            readings={readings}
-            timeInRange={completeTimeInRange}
-            totalReadings={report.dataSufficiency.totalReadings}
-          />
-        </ReportEntrance>
+        <GlucoseReportSuite
+          currentReading={displayedReading}
+          currentTrend={displayedTrend}
+          cv={report.cv}
+          days={14}
+          gmi={report.gmi}
+          meanGlucose={report.meanGlucose}
+          profile={completeProfile}
+          readings={readings}
+          timeInRange={completeTimeInRange}
+          totalReadings={report.dataSufficiency.totalReadings}
+        />
 
         <section
           aria-labelledby="report-heading"

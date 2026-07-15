@@ -102,7 +102,6 @@ export function GMIScale({
               <path
                 className={styles.gmiProgress}
                 d={arcPath}
-                data-motion-part="gmi-progress"
                 style={progressStyle}
               />
               <line
@@ -112,10 +111,7 @@ export function GMIScale({
                 y1={startPoint.y}
                 y2={startPoint.y}
               />
-              <g
-                className={styles.gmiEndCap}
-                data-motion-part="gmi-end-cap"
-              >
+              <g>
                 <line
                   className={styles.gmiRoundCap}
                   x1={progressPoint.x}
