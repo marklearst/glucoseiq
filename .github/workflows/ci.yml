@@ -49,6 +49,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Lint commit messages
+        if: github.event_name == 'pull_request'
+        run: pnpm lint:commits --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.event.pull_request.head.sha }}"
+
       - name: Audit dependencies
         run: pnpm test:security
 
