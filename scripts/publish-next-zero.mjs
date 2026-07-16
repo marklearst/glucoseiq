@@ -89,6 +89,12 @@ export function assertNextZeroPublicationPlan(packageSpecs, manifests) {
     if (spec?.name !== expected.name || spec.directory !== expected.directory || spec.version !== NEXT_ZERO_VERSION || spec.tag !== expected.tag) {
       throw new Error(`next.0 package specification ${index} must describe ${expected.name}@${NEXT_ZERO_VERSION}`)
     }
+    if (
+      Boolean(spec.coreDependency) !== Boolean(expected.coreDependency) ||
+      (expected.coreDependency && spec.coreVersion !== expected.coreVersion)
+    ) {
+      throw new Error(`${expected.name} must retain the immutable core dependency role and version`)
+    }
     const manifest = manifests?.get(spec.name)
     if (!manifest || manifest.name !== spec.name) throw new Error(`Missing manifest for ${spec.name}`)
     versions.set(spec.name, manifest.version)
@@ -141,9 +147,25 @@ async function inspectRegistry(spec, { fetchImpl, registry, timeoutMs }) {
   if (!packument.versions || typeof packument.versions !== 'object' || Array.isArray(packument.versions)) {
     throw new Error(`npm registry returned malformed version metadata for ${spec.name}`)
   }
-  if (!packument.versions[spec.version]) return { published: false }
   if (!packument['dist-tags'] || typeof packument['dist-tags'] !== 'object' || Array.isArray(packument['dist-tags'])) {
     throw new Error(`npm registry returned malformed dist-tags for ${spec.name}`)
+  }
+  if (
+    packument['dist-tags'].next !== undefined &&
+    packument['dist-tags'].next !== NEXT_ZERO_VERSION
+  ) {
+    throw new Error(`${spec.name} npm next tag must be ${NEXT_ZERO_VERSION}; received ${packument['dist-tags'].next ?? 'missing'}`)
+  }
+  const metadata = packument.versions[spec.version]
+  if (!metadata) return { published: false }
+  if (
+    !metadata ||
+    typeof metadata !== 'object' ||
+    Array.isArray(metadata) ||
+    metadata.name !== spec.name ||
+    metadata.version !== spec.version
+  ) {
+    throw new Error(`npm registry returned malformed exact version metadata for ${spec.name}`)
   }
   if (packument['dist-tags'].next !== NEXT_ZERO_VERSION) {
     throw new Error(`${spec.name} npm next tag must be ${NEXT_ZERO_VERSION}; received ${packument['dist-tags'].next ?? 'missing'}`)
