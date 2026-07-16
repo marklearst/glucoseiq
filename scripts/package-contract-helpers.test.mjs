@@ -5,7 +5,9 @@ import {
   assertLaunchVersionPolicy,
   assertValidPackageVersions,
   compareStableSemver,
+  createNextZeroPackageVersions,
   createLaunchPackageVersions,
+  assertExactNextZeroPackageVersions,
   parsePackageContractSource,
   requiresSourceReadmeParity,
   queryPublicLaunchVersions,
@@ -149,8 +151,34 @@ const launchVersions = new Map([
   ['@glucoseiq/testing', '1.0.0'],
   ['@glucoseiq/cli', '1.0.0'],
 ])
+const nextZeroVersions = new Map([
+  ['@glucoseiq/core', '1.0.0-next.0'],
+  ['@glucoseiq/react', '1.0.0-next.0'],
+  ['@glucoseiq/tokens', '1.0.0-next.0'],
+  ['@glucoseiq/testing', '1.0.0-next.0'],
+  ['@glucoseiq/cli', '1.0.0-next.0'],
+])
 
 assert.deepEqual(createLaunchPackageVersions(), launchVersions)
+// Catches a publisher accepting a later next build, a stable launch version, or
+// a package inventory that cannot be released as one coordinated prerelease.
+assert.deepEqual(createNextZeroPackageVersions(), nextZeroVersions)
+assert.doesNotThrow(() => assertExactNextZeroPackageVersions(nextZeroVersions))
+for (const [name, version] of [
+  ['@glucoseiq/core', '1.0.0-next.1'],
+  ['@glucoseiq/react', '1.0.0'],
+  ['@glucoseiq/tokens', '1.0.0-beta.0'],
+]) {
+  const versions = new Map(nextZeroVersions)
+  versions.set(name, version)
+  assert.throws(() => assertExactNextZeroPackageVersions(versions), /exact next\.0 version/u)
+}
+const driftedNextZeroVersions = new Map(nextZeroVersions)
+driftedNextZeroVersions.delete('@glucoseiq/cli')
+assert.throws(
+  () => assertExactNextZeroPackageVersions(driftedNextZeroVersions),
+  /must contain exactly five coordinated packages/u,
+)
 assert.equal(parsePackageContractSource([]), 'local')
 assert.equal(parsePackageContractSource(['--source', 'local']), 'local')
 assert.equal(parsePackageContractSource(['--source', 'candidate']), 'candidate')

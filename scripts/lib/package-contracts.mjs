@@ -8,10 +8,29 @@ const LAUNCH_PACKAGE_VERSION_ENTRIES = Object.freeze([
   Object.freeze(['@glucoseiq/testing', '1.0.0']),
   Object.freeze(['@glucoseiq/cli', '1.0.0']),
 ])
+const NEXT_ZERO_VERSION = '1.0.0-next.0'
+const NEXT_ZERO_PACKAGE_VERSION_ENTRIES = Object.freeze(
+  LAUNCH_PACKAGE_VERSION_ENTRIES.map(([name]) => Object.freeze([name, NEXT_ZERO_VERSION])),
+)
 const PACKAGE_CONTRACT_SOURCES = new Set(['local', 'candidate', 'registry'])
 
 export function createLaunchPackageVersions() {
   return new Map(LAUNCH_PACKAGE_VERSION_ENTRIES)
+}
+
+export function createNextZeroPackageVersions() {
+  return new Map(NEXT_ZERO_PACKAGE_VERSION_ENTRIES)
+}
+
+export function assertExactNextZeroPackageVersions(versions) {
+  if (!(versions instanceof Map) || versions.size !== NEXT_ZERO_PACKAGE_VERSION_ENTRIES.length) {
+    throw new Error('next.0 package versions must contain exactly five coordinated packages')
+  }
+  for (const [name, expected] of NEXT_ZERO_PACKAGE_VERSION_ENTRIES) {
+    if (versions.get(name) !== expected) {
+      throw new Error(`${name} must use the exact next.0 version ${expected}; received ${versions.get(name)}`)
+    }
+  }
 }
 
 export function parsePackageContractSource(args) {
@@ -52,11 +71,18 @@ export function assertPackedCoreDependency({
   if (!PACKAGE_CONTRACT_SOURCES.has(source)) {
     throw new Error(`Package-contract source must be local, candidate, or registry; received ${source}`)
   }
-  if (!STABLE_SEMVER.test(coreVersion)) {
+  const exactNextZero = coreVersion === NEXT_ZERO_VERSION
+  if (!exactNextZero && !STABLE_SEMVER.test(coreVersion)) {
     throw new Error(`${packageName} core version must be a stable semantic version`)
   }
 
   const expected = `^${coreVersion}`
+  if (exactNextZero) {
+    if (range !== expected) {
+      throw new Error(`${packageName} next.0 core dependency must equal ${expected}; received ${range}`)
+    }
+    return
+  }
   if (source !== 'registry') {
     if (range !== expected) {
       throw new Error(`${packageName} core dependency must equal ${expected}; received ${range}`)

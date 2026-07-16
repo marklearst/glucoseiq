@@ -23,6 +23,7 @@ import {
 } from './lib/doc-contracts.mjs'
 import {
   assertPackedCoreDependency,
+  assertExactNextZeroPackageVersions,
   assertValidPackageVersions,
   compareStableSemver,
   createLaunchPackageVersions,
@@ -213,7 +214,10 @@ const sourceManifests = new Map(
       manifest.files?.includes('CHANGELOG.md'),
       `${spec.name} source manifest must explicitly allow CHANGELOG.md`,
     )
-    if (requiresLaunchArtifacts) {
+    if (packageContractSource === 'candidate') {
+      // Checked after all manifests are loaded so a candidate cannot mix a
+      // stable package with a next.0 package.
+    } else if (requiresLaunchArtifacts) {
       assert.ok(
         compareStableSemver(manifest.version, launchPackageVersions.get(spec.name)) >= 0,
         `${spec.name} ${packageContractSource} version must be at least ${launchPackageVersions.get(spec.name)}`,
@@ -239,6 +243,11 @@ const sourceManifests = new Map(
 )
 
 assertValidPackageVersions(sourceManifests)
+if (packageContractSource === 'candidate') {
+  assertExactNextZeroPackageVersions(new Map(
+    [...sourceManifests].map(([name, manifest]) => [name, manifest.version]),
+  ))
+}
 const coreVersion = sourceManifests.get('@glucoseiq/core').version
 const sharedCoreErrors = {
   '#errors': {
