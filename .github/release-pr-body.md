@@ -1,6 +1,6 @@
 ## Summary
 
-Prepare the reviewed GlucoseIQ package candidate for publication. Keep this pull request in draft until every pre-publication gate through **Metadata and approval** has direct evidence. The trusted-publishing items remain mandatory after bootstrap, when the package pages exist.
+Prepare the exact GlucoseIQ `1.0.0-next.0` package candidate for publication under npm dist-tag `next`. Keep this pull request in draft until every pre-publication gate through **Metadata and approval** has direct evidence. The trusted-publishing items remain mandatory after bootstrap, when the package pages exist.
 
 ## Domain and documentation
 
@@ -11,9 +11,10 @@ Prepare the reviewed GlucoseIQ package candidate for publication. Keep this pull
 
 ## Package candidate
 
-- [ ] Review all package versions and changelogs against the approved release entries.
+- [ ] Review the five exact `1.0.0-next.0` package versions and changelogs against the approved release entry.
 - [ ] Review packed manifests and tarball contents, including declaration routes and internal dependency ranges.
 - [ ] Confirm the release branch is current with main and no newer Changesets remain before merge.
+- [ ] Confirm `.changeset/pre.json` records `launch-glucoseiq-one` as consumed and the candidate cannot create `next.1+`.
 - [ ] Confirm the clean consumer matrix passes for both React peer majors, both module systems, both TypeScript resolvers, the CLI.
 
 ## Bootstrap credential
