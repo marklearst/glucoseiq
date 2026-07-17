@@ -30,6 +30,7 @@ import {
   parsePackageContractSource,
   requiresSourceReadmeParity,
 } from './lib/package-contracts.mjs'
+import { RELEASE_PACKAGE_IDENTITIES } from './lib/release-contract.mjs'
 import { spawnPackageContractCommandSync } from './lib/package-command.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -44,13 +45,12 @@ const launchPackageVersions = createLaunchPackageVersions()
 const requiresLaunchArtifacts = packageContractSource !== 'local'
 const requiresReadmeParity = requiresSourceReadmeParity(packageContractSource)
 
-const packageSpecs = [
-  { directory: 'packages/core', name: '@glucoseiq/core', scoped: true },
-  { directory: 'packages/react', name: '@glucoseiq/react', scoped: true, coreDependency: true },
-  { directory: 'packages/tokens', name: '@glucoseiq/tokens', scoped: true },
-  { directory: 'packages/testing', name: '@glucoseiq/testing', scoped: true, coreDependency: true },
-  { directory: 'packages/cli', name: '@glucoseiq/cli', scoped: true, coreDependency: true },
-]
+const packageSpecs = RELEASE_PACKAGE_IDENTITIES.map((identity) => ({
+  directory: identity.directory,
+  name: identity.name,
+  scoped: true,
+  ...(identity.coreDependency ? { coreDependency: true } : {}),
+}))
 assert.deepEqual(
   [...readmeContracts.keys()].sort(),
   packageSpecs.map(({ name }) => name).sort(),

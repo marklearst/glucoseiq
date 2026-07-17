@@ -11,7 +11,18 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { assertPackedCoreDependency } from './lib/package-contracts.mjs'
+import {
+  LAUNCH_PACKAGE_SPECS,
+  NEXT_ZERO_NPM_TAG,
+  NEXT_ZERO_VERSION,
+  RELEASE_PACKAGE_IDENTITIES,
+} from './lib/release-contract.mjs'
 import { runChangesetPolicy } from './test-changeset-policy.mjs'
+
+export {
+  LAUNCH_PACKAGE_SPECS as LAUNCH_PACKAGES,
+  NEXT_ZERO_PACKAGE_SPECS as NEXT_ZERO_PACKAGES,
+} from './lib/release-contract.mjs'
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url))
 const repositoryRoot = resolve(scriptDirectory, '..')
@@ -35,59 +46,16 @@ const PROVENANCE_SOURCE = 'git+https://github.com/marklearst/glucoseiq@refs/head
 const GIT_SHA = /^[a-f0-9]{40}$/u
 const GIT_COMMIT_OID = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u
 
-const launchDefinitions = [
-  {
-    name: '@glucoseiq/core',
-    directory: 'packages/core',
-    minimumVersion: '1.0.0',
-  },
-  {
-    name: '@glucoseiq/react',
-    directory: 'packages/react',
-    minimumVersion: '1.0.0',
-    coreDependency: true,
-  },
-  {
-    name: '@glucoseiq/tokens',
-    directory: 'packages/tokens',
-    minimumVersion: '1.0.0',
-  },
-  {
-    name: '@glucoseiq/testing',
-    directory: 'packages/testing',
-    minimumVersion: '1.0.0',
-    coreDependency: true,
-  },
-  {
-    name: '@glucoseiq/cli',
-    directory: 'packages/cli',
-    minimumVersion: '1.0.0',
-    coreDependency: true,
-  },
-]
-
-export const LAUNCH_PACKAGES = Object.freeze(
-  launchDefinitions.map((definition) => Object.freeze({
-    ...definition,
-    version: definition.minimumVersion,
-    tag: `${definition.name}@${definition.minimumVersion}`,
-    ...(definition.coreDependency
-      ? { coreVersion: '1.0.0' }
-      : {}),
-  })),
-)
-
-export const NEXT_ZERO_PACKAGES = Object.freeze(
-  launchDefinitions.map((definition) => Object.freeze({
-    ...definition,
-    version: '1.0.0-next.0',
-    tag: `${definition.name}@1.0.0-next.0`,
-    ...(definition.coreDependency ? { coreVersion: '1.0.0-next.0' } : {}),
-  })),
-)
+const launchDefinitions = RELEASE_PACKAGE_IDENTITIES.map((identity) => Object.freeze({
+  name: identity.name,
+  directory: identity.directory,
+  minimumVersion: identity.minimumStableVersion,
+  ...(identity.coreDependency ? { coreDependency: true } : {}),
+}))
+const LAUNCH_PACKAGES = LAUNCH_PACKAGE_SPECS
 
 function isExactNextZeroVersion(version) {
-  return version === '1.0.0-next.0'
+  return version === NEXT_ZERO_VERSION
 }
 
 function stableSemverParts(version, label) {
@@ -767,8 +735,8 @@ function registryReadinessIssue(spec, packument) {
     assertPlainObject(packument['dist-tags'], `${spec.name} distribution tags`)
   }
   if (isExactNextZeroVersion(spec.version)) {
-    if (packument['dist-tags']?.next !== spec.version) {
-      return `${spec.name} next must be ${spec.version}; received ${packument['dist-tags']?.next ?? 'missing'}`
+    if (packument['dist-tags']?.[NEXT_ZERO_NPM_TAG] !== spec.version) {
+      return `${spec.name} ${NEXT_ZERO_NPM_TAG} must be ${spec.version}; received ${packument['dist-tags']?.[NEXT_ZERO_NPM_TAG] ?? 'missing'}`
     }
     if (packument['dist-tags']?.latest === spec.version) {
       return `${spec.name} latest must not be ${spec.version}`
@@ -948,9 +916,12 @@ function validateRegistryRecord(spec, packument, registry) {
     throw new Error(`${spec.name} registry record returned name ${packument.name ?? 'missing'}`)
   }
   assertPlainObject(packument['dist-tags'], `${spec.name} distribution tags`)
-  if (isExactNextZeroVersion(spec.version) && packument['dist-tags'].next !== spec.version) {
+  if (
+    isExactNextZeroVersion(spec.version) &&
+    packument['dist-tags'][NEXT_ZERO_NPM_TAG] !== spec.version
+  ) {
     throw new Error(
-      `${spec.name} next must be ${spec.version}; received ${packument['dist-tags'].next ?? 'missing'}`,
+      `${spec.name} ${NEXT_ZERO_NPM_TAG} must be ${spec.version}; received ${packument['dist-tags'][NEXT_ZERO_NPM_TAG] ?? 'missing'}`,
     )
   }
   if (isExactNextZeroVersion(spec.version) && packument['dist-tags'].latest === spec.version) {
