@@ -492,6 +492,7 @@ registry evidence is bound to the exact release commit.
 ```bash
 set -euo pipefail
 
+registry='https://registry.npmjs.org'
 expected=(
   '@glucoseiq/core@1.0.0-next.0'
   '@glucoseiq/react@1.0.0-next.0'
@@ -502,15 +503,31 @@ expected=(
 
 for spec in "${expected[@]}"; do
   printf '\n%s\n' "$spec"
-  npm view "$spec" version engines exports bin peerDependencies dependencies dist --json
+  npm view "$spec" version engines exports bin peerDependencies dependencies dist \
+    --registry "$registry" --json
+done
+
+packages=(
+  '@glucoseiq/core'
+  '@glucoseiq/react'
+  '@glucoseiq/tokens'
+  '@glucoseiq/testing'
+  '@glucoseiq/cli'
+)
+
+for package in "${packages[@]}"; do
+  dist_tags=$(npm view "$package" dist-tags --registry "$registry" --json)
+  jq -e --arg next_version '1.0.0-next.0' \
+    '.next == $next_version and .latest != $next_version' \
+    <<<"$dist_tags" >/dev/null
 done
 
 ```
 
 Verify that no registry dependency contains `workspace:`, every scoped package
 is public, core-dependent packages use `@glucoseiq/core:^1.0.0-next.0`, the npm
-`next` tag is exactly `1.0.0-next.0`, `latest` was not moved to this prerelease,
-and the React peer remains `>=18`.
+`next` tag is exactly `1.0.0-next.0`, the unversioned registry metadata does
+not point `latest` to this prerelease, and the React peer remains `>=18`.
 
 ### C2. Verify provenance and signatures
 
@@ -880,7 +897,7 @@ NODE
   test "$confirmation" = "$tag"
 
   gh release create "$tag" --repo "$repository" --verify-tag \
-    --title "$tag" --notes-file "$notes"
+    --title "$tag" --notes-file "$notes" --prerelease
 done
 ```
 
