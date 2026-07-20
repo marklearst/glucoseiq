@@ -366,12 +366,18 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
 
       - name: Remove Git tag authentication helper
+        id: git-auth-cleanup
         if: ${{ always() }}
-        run: rm -f "$RUNNER_TEMP/glucoseiq-git-askpass"
+        run: |
+          set -euo pipefail
+          rm -f "$RUNNER_TEMP/glucoseiq-git-askpass"
+          rm -f "$HOME/.netrc"
+          test ! -e "$RUNNER_TEMP/glucoseiq-git-askpass"
+          test ! -e "$HOME/.netrc"
 
       - name: Resolve publication inventory
         id: publication-inventory
-        if: ${{ !cancelled() && (steps.changesets.outcome == 'success' || steps.changesets.outcome == 'failure') }}
+        if: ${{ !cancelled() && steps.git-auth-cleanup.outcome == 'success' && (steps.changesets.outcome == 'success' || steps.changesets.outcome == 'failure') }}
         env:
           CHANGESETS_ACTION_OUTCOME: ${{ steps.changesets.outcome }}
           CHANGESETS_PUBLISHED: ${{ steps.changesets.outputs.published }}
@@ -426,7 +432,7 @@ jobs:
           NODE
 
       - name: Verify published packages
-        if: ${{ !cancelled() && steps.publication-inventory.outcome == 'success' && steps.npm-auth-cleanup.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.git-auth-cleanup.outcome == 'success' && steps.publication-inventory.outcome == 'success' && steps.npm-auth-cleanup.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHANGESETS_VERIFICATION_PACKAGES: ${{ steps.publication-inventory.outputs.verification_packages }}

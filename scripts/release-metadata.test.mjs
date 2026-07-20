@@ -137,8 +137,16 @@ assert.match(publish, /GIT_TERMINAL_PROMPT: 0/u)
 assert.match(publish, /name: Remove Git tag authentication helper/u)
 assert.match(
   publish,
-  /name: Remove Git tag authentication helper\n {8}if: \$\{\{ always\(\) \}\}/u,
+  /name: Remove Git tag authentication helper\n {8}id: git-auth-cleanup\n {8}if: \$\{\{ always\(\) \}\}/u,
 )
+const gitAuthCleanup = publish.slice(
+  publish.indexOf('name: Remove Git tag authentication helper'),
+  publish.indexOf('name: Resolve publication inventory'),
+)
+assert.match(gitAuthCleanup, /rm -f "\$RUNNER_TEMP\/glucoseiq-git-askpass"/u)
+assert.match(gitAuthCleanup, /rm -f "\$HOME\/\.netrc"/u)
+assert.match(gitAuthCleanup, /test ! -e "\$RUNNER_TEMP\/glucoseiq-git-askpass"/u)
+assert.match(gitAuthCleanup, /test ! -e "\$HOME\/\.netrc"/u)
 assert.ok(
   publish.indexOf('name: Prepare Git tag authentication') <
     publish.indexOf('uses: changesets/action@') &&
@@ -151,7 +159,7 @@ assert.ok(
 assert.match(publish, /name: Resolve publication inventory/u)
 assert.match(
   publish,
-  /name: Resolve publication inventory[\s\S]{0,180}if: \$\{\{ !cancelled\(\) && \(steps\.changesets\.outcome == 'success' \|\| steps\.changesets\.outcome == 'failure'\) \}\}/u,
+  /name: Resolve publication inventory[\s\S]{0,260}if: \$\{\{ !cancelled\(\) && steps\.git-auth-cleanup\.outcome == 'success' && \(steps\.changesets\.outcome == 'success' \|\| steps\.changesets\.outcome == 'failure'\) \}\}/u,
   'post-attempt inventory must run when publication fails before action outputs are updated',
 )
 assert.match(publish, /resolvePublicationInventory/u)
@@ -195,6 +203,11 @@ assert.match(
   publish,
   /steps\.npm-auth-cleanup\.outcome == 'success'/u,
   'registry verification must not run unless npm authentication cleanup succeeds',
+)
+assert.match(
+  verifierStep,
+  /steps\.git-auth-cleanup\.outcome == 'success'/u,
+  'registry verification must not run unless Git authentication cleanup succeeds',
 )
 assert.ok(
   publish.indexOf('name: Remove npm authentication') <
