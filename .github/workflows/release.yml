@@ -339,16 +339,35 @@ jobs:
       - name: Verify live documentation domain
         run: node scripts/release-preflight.mjs
 
+      - name: Prepare Git tag authentication
+        run: |
+          set -euo pipefail
+          ASKPASS_PATH="$RUNNER_TEMP/glucoseiq-git-askpass"
+          umask 077
+          printf '%s\n' \
+            '#!/bin/sh' \
+            'case "$1" in' \
+            '  *Username*) printf "%s\n" x-access-token ;;' \
+            '  *Password*) printf "%s\n" "$GITHUB_TOKEN" ;;' \
+            '  *) exit 1 ;;' \
+            'esac' > "$ASKPASS_PATH"
+          chmod 700 "$ASKPASS_PATH"
+
       - name: Publish packages
         id: changesets
         uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
           publish: ${{ needs.quality.outputs.publish_command }}
-          commitMode: github-api
         env:
+          GIT_ASKPASS: ${{ runner.temp }}/glucoseiq-git-askpass
+          GIT_TERMINAL_PROMPT: 0
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+
+      - name: Remove Git tag authentication helper
+        if: ${{ always() }}
+        run: rm -f "$RUNNER_TEMP/glucoseiq-git-askpass"
 
       - name: Resolve publication inventory
         id: publication-inventory

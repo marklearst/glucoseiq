@@ -49,11 +49,14 @@ function harness({
   publishThrow,
   packumentFor,
   githubRelease,
+  fetchedTagObject,
+  remoteTagFetchFailure,
   remoteTagFailure,
   remoteTagOutput,
 } = {}) {
   const commands = []
   const lines = []
+  const fetchedTagObjects = new Map()
   return {
     commands,
     lines,
@@ -72,6 +75,17 @@ function harness({
         return { status: 0, stdout: `${releaseSha}\n`, stderr: '' }
       }
       if (command === 'git' && args[0] === 'rev-parse') {
+        const ref = args.at(-1)
+        const tag = ref
+          .slice('refs/tags/'.length)
+          .replace(/\^\{commit\}$/u, '')
+        if (fetchedTagObjects.has(tag)) {
+          return {
+            status: 0,
+            stdout: `${ref.endsWith('^{commit}') ? releaseSha : fetchedTagObjects.get(tag)}\n`,
+            stderr: '',
+          }
+        }
         return missingTags
           ? { status: 1, stdout: '', stderr: '' }
           : { status: 0, stdout: `${tagCommit}\n`, stderr: '' }
@@ -82,6 +96,29 @@ function harness({
           return { status: 128, stdout: '', stderr: 'simulated remote transport failure' }
         }
         return { status: 0, stdout: remoteTagOutput?.(tag) ?? '', stderr: '' }
+      }
+      if (command === 'git' && args[0] === 'fetch') {
+        const sourceRef = args.at(-1).split(':', 1)[0]
+        const tag = sourceRef.slice('refs/tags/'.length)
+        if (
+          remoteTagFetchFailure === true ||
+          (typeof remoteTagFetchFailure === 'function' && remoteTagFetchFailure(tag))
+        ) {
+          return { status: 1, stdout: '', stderr: 'simulated remote tag fetch failure' }
+        }
+        const directRef = `refs/tags/${tag}`
+        const directRecord = (remoteTagOutput?.(tag) ?? '')
+          .split('\n')
+          .find((line) => line.endsWith(`\t${directRef}`))
+        assert.ok(directRecord, `missing direct remote tag record for ${tag}`)
+        const observedObject = directRecord.slice(0, directRecord.indexOf('\t'))
+        fetchedTagObjects.set(
+          tag,
+          typeof fetchedTagObject === 'function'
+            ? fetchedTagObject(tag, observedObject)
+            : fetchedTagObject ?? observedObject,
+        )
+        return { status: 0, stdout: '', stderr: '' }
       }
       if (command === 'git' && args[0] === 'tag') return { status: 0, stdout: '', stderr: '' }
       if (command === 'gh') {
@@ -207,6 +244,71 @@ test('accepts existing correct lightweight remote tags before next.0 publication
     state.commands.filter(({ command, args }) => command === 'git' && args[0] === 'ls-remote').length,
     packageSpecs.length,
   )
+})
+
+test('synchronizes each existing exact remote tag into its local ref before publication', async () => {
+  // Catches the fail-closed git-cli release path pushing a stale or separately
+  // created local tag object when the remote tag already exists.
+  assert.equal(typeof publisher.runNextZeroPublisher, 'function')
+  const state = harness({
+    remoteTagOutput(tag) {
+      return `${releaseSha}\trefs/tags/${tag}\n`
+    },
+  })
+  await publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state })
+  assert.deepEqual(
+    state.commands
+      .filter(({ command, args }) => command === 'git' && args[0] === 'fetch')
+      .map(({ args }) => args),
+    packageSpecs.map(({ tag }) => [
+      'fetch',
+      '--force',
+      '--no-tags',
+      'origin',
+      `refs/tags/${tag}:refs/tags/${tag}`,
+    ]),
+  )
+  const lastFetch = state.commands.findLastIndex(
+    ({ command, args }) => command === 'git' && args[0] === 'fetch',
+  )
+  const firstPublish = state.commands.findIndex(
+    ({ command, args }) => command === 'npm' && args[0] === 'publish',
+  )
+  assert.ok(lastFetch >= 0 && lastFetch < firstPublish)
+})
+
+test('rejects a remote tag synchronization failure before publication', async () => {
+  // Catches a remote tag changing or becoming unreadable after preflight while
+  // the publisher prepares the exact local ref used by Changesets Action.
+  assert.equal(typeof publisher.runNextZeroPublisher, 'function')
+  const state = harness({
+    remoteTagFetchFailure: true,
+    remoteTagOutput(tag) {
+      return `${releaseSha}\trefs/tags/${tag}\n`
+    },
+  })
+  await assert.rejects(
+    publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
+    /Synchronize local tag.*failed/u,
+  )
+  assert.equal(state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish'), false)
+})
+
+test('rejects a remote tag that changes while its exact local ref is synchronized', async () => {
+  // Catches a tag race between ls-remote preflight and the authenticated fetch
+  // used to prepare the action's fail-closed git push.
+  assert.equal(typeof publisher.runNextZeroPublisher, 'function')
+  const state = harness({
+    fetchedTagObject: '89abcdef0123456789abcdef0123456789abcdef',
+    remoteTagOutput(tag) {
+      return `${releaseSha}\trefs/tags/${tag}\n`
+    },
+  })
+  await assert.rejects(
+    publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
+    /changed during local synchronization/u,
+  )
+  assert.equal(state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish'), false)
 })
 
 test('accepts existing correct annotated remote tags through their peeled refs', async () => {
