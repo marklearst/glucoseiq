@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import { existsSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import test from 'node:test'
 import * as publisher from './publish-next-zero.mjs'
 
@@ -19,12 +21,22 @@ const packageSpecs = [
     : {}),
 }))
 
-function manifests() {
+function packedManifests() {
   return new Map(packageSpecs.map((spec) => [spec.name, {
     name: spec.name,
     version: spec.version,
     ...(spec.coreDependency
       ? { dependencies: { '@glucoseiq/core': '^1.0.0-next.0' } }
+      : {}),
+  }]))
+}
+
+function manifests() {
+  return new Map(packageSpecs.map((spec) => [spec.name, {
+    name: spec.name,
+    version: spec.version,
+    ...(spec.coreDependency
+      ? { dependencies: { '@glucoseiq/core': 'workspace:^' } }
       : {}),
   }]))
 }
@@ -48,6 +60,7 @@ function harness({
   publishFailure,
   publishThrow,
   packumentFor,
+  packedManifestFor,
   githubRelease,
   fetchedTagObject,
   remoteTagFetchFailure,
@@ -55,21 +68,47 @@ function harness({
   remoteTagOutput,
 } = {}) {
   const commands = []
+  const events = []
   const lines = []
+  const publishedNames = []
+  const packedArchives = new Map()
   const fetchedTagObjects = new Map()
   return {
     commands,
+    events,
     lines,
+    publishedNames,
     fetchImpl: async (url) => {
       const name = decodeURIComponent(new URL(url).pathname.slice(1))
       const spec = packageSpecs.find((entry) => entry.name === name)
       assert.ok(spec, `unexpected registry request: ${url}`)
+      events.push(`registry:${spec.name}`)
       return published.has(name)
         ? response({ status: 200, json: packumentFor?.(spec) ?? publishedPackument(spec) })
         : response()
     },
     runCommand: async (command, args) => {
       commands.push({ command, args })
+      events.push(`${command}:${args[0]}`)
+      if (command === 'pnpm' && args[0] === '--dir' && args[2] === 'pack') {
+        const spec = packageSpecs.find((entry) => args[1].endsWith(entry.directory))
+        assert.ok(spec, `unexpected package directory: ${args[1]}`)
+        const packRoot = args[4]
+        const archiveName = `${spec.name.slice(1).replace('/', '-')}-${spec.version}.tgz`
+        const archivePath = join(packRoot, archiveName)
+        writeFileSync(archivePath, '')
+        packedArchives.set(archivePath, spec)
+        return { status: 0, stdout: `${archivePath}\n`, stderr: '' }
+      }
+      if (command === 'tar') {
+        const spec = packedArchives.get(args[1])
+        assert.ok(spec, `unexpected package archive: ${args[1]}`)
+        return {
+          status: 0,
+          stdout: JSON.stringify(packedManifestFor?.(spec) ?? packedManifests().get(spec.name)),
+          stderr: '',
+        }
+      }
       if (command === 'npm' && args[0] === '--version') return { status: 0, stdout: '11.17.0\n', stderr: '' }
       if (command === 'git' && args[0] === 'rev-parse' && args.at(-1) === 'HEAD^{commit}') {
         return { status: 0, stdout: `${releaseSha}\n`, stderr: '' }
@@ -127,8 +166,11 @@ function harness({
           : { status: 1, stdout: '', stderr: 'HTTP 404: Not Found' }
       }
       if (command === 'npm' && args[0] === 'publish') {
-        if (args[1] === publishThrow) throw new Error('simulated transport failure')
-        if (args[1] === publishFailure) return { status: 1, stdout: '', stderr: 'simulated publish failure' }
+        const spec = packedArchives.get(args[1])
+        assert.ok(spec, `publication must use a prepared package archive: ${args[1]}`)
+        if (spec.name === publishThrow) throw new Error('simulated transport failure')
+        if (spec.name === publishFailure) return { status: 1, stdout: '', stderr: 'simulated publish failure' }
+        publishedNames.push(spec.name)
         return { status: 0, stdout: '', stderr: '' }
       }
       assert.fail(`unexpected command: ${command} ${args.join(' ')}`)
@@ -176,14 +218,69 @@ test('publishes missing packages sequentially with npm 11 next provenance argume
   const state = harness()
   const result = await publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state })
   assert.deepEqual(result.published, packageSpecs.map(({ name }) => name))
-  assert.deepEqual(
-    state.commands.filter(({ command, args }) => command === 'npm' && args[0] === 'publish'),
-    packageSpecs.map(({ directory }) => ({
-      command: 'npm',
-      args: ['publish', directory, '--access', 'public', '--tag', 'next', '--provenance'],
-    })),
-  )
+  assert.deepEqual(state.publishedNames, packageSpecs.map(({ name }) => name))
+  for (const { args } of state.commands.filter(
+    ({ command, args }) => command === 'npm' && args[0] === 'publish',
+  )) {
+    assert.deepEqual(args.slice(2), ['--access', 'public', '--tag', 'next', '--provenance'])
+  }
   assert.deepEqual(linesWithNewTags(state.lines), packageSpecs.map(({ tag }) => `New tag: ${tag}`))
+})
+
+test('publishes the exact pnpm-packed tarballs after inspecting their manifests', async () => {
+  // Catches source workspace ranges being validated as packed metadata and
+  // relative package directories being parsed by npm as GitHub shorthands.
+  const state = harness()
+  await publisher.runNextZeroPublisher({
+    packageSpecs,
+    manifests: manifests(),
+    ...state,
+  })
+  const packs = state.commands.filter(({ command, args }) =>
+    command === 'pnpm' && args.includes('pack'))
+  const inspections = state.commands.filter(({ command }) => command === 'tar')
+  const publications = state.commands.filter(({ command, args }) =>
+    command === 'npm' && args[0] === 'publish')
+  assert.equal(packs.length, packageSpecs.length)
+  assert.equal(inspections.length, packageSpecs.length)
+  assert.deepEqual(
+    publications.map(({ args }) => args[1]),
+    inspections.map(({ args }) => args[1]),
+  )
+  assert.equal(publications.every(({ args }) => args[1].startsWith('/')), true)
+  assert.equal(publications.every(({ args }) => args[1].endsWith('.tgz')), true)
+  assert.deepEqual(
+    state.events.slice(0, packageSpecs.length * 2),
+    packageSpecs.flatMap(() => ['pnpm:--dir', 'tar:-xOzf']),
+  )
+  assert.equal(state.events[packageSpecs.length * 2].startsWith('registry:'), true)
+  for (const { args } of packs) {
+    assert.equal(existsSync(dirname(args[4])), false)
+  }
+})
+
+test('rejects invalid packed dependency metadata before external release state', async () => {
+  const state = harness({
+    packedManifestFor(spec) {
+      const manifest = packedManifests().get(spec.name)
+      if (spec.name === '@glucoseiq/react') {
+        manifest.dependencies['@glucoseiq/core'] = 'workspace:^'
+      }
+      return manifest
+    },
+  })
+  await assert.rejects(
+    publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
+    /packed manifest must not contain workspace dependencies/u,
+  )
+  assert.equal(state.events.some((event) => event.startsWith('registry:')), false)
+  assert.equal(
+    state.commands.some(({ command }) => ['git', 'gh', 'npm'].includes(command)),
+    false,
+  )
+  const pack = state.commands.find(({ command }) => command === 'pnpm')
+  assert.ok(pack)
+  assert.equal(existsSync(dirname(pack.args[4])), false)
 })
 
 test('recovers already-published exact next packages without republishing them', async () => {
@@ -192,10 +289,7 @@ test('recovers already-published exact next packages without republishing them',
   const state = harness({ published: new Set(['@glucoseiq/core']) })
   const result = await publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state })
   assert.deepEqual(result.alreadyPublished, ['@glucoseiq/core'])
-  assert.deepEqual(
-    state.commands.filter(({ command, args }) => command === 'npm' && args[0] === 'publish').map(({ args }) => args[1]),
-    packageSpecs.slice(1).map(({ directory }) => directory),
-  )
+  assert.deepEqual(state.publishedNames, packageSpecs.slice(1).map(({ name }) => name))
 })
 
 test('creates each missing local exact tag at the checked-out release commit', async () => {
@@ -433,7 +527,7 @@ test('rejects a remote tag command failure before publication', async () => {
 test('reports the published and remaining package inventories after a publish failure', async () => {
   // Catches a partial failure that leaves operators without a safe recovery inventory.
   assert.equal(typeof publisher.runNextZeroPublisher, 'function')
-  const state = harness({ publishFailure: 'packages/tokens' })
+  const state = harness({ publishFailure: '@glucoseiq/tokens' })
   await assert.rejects(
     publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
     /Partial next\.0 publication failed\. Published: @glucoseiq\/core, @glucoseiq\/react\. Remaining: @glucoseiq\/tokens, @glucoseiq\/testing, @glucoseiq\/cli/u,
@@ -443,7 +537,7 @@ test('reports the published and remaining package inventories after a publish fa
 test('preserves the partial-publication inventory when the publish command throws', async () => {
   // Catches a timeout or process error replacing the operator recovery inventory.
   assert.equal(typeof publisher.runNextZeroPublisher, 'function')
-  const state = harness({ publishThrow: 'packages/tokens' })
+  const state = harness({ publishThrow: '@glucoseiq/tokens' })
   await assert.rejects(
     publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
     /Partial next\.0 publication failed\. Published: @glucoseiq\/core, @glucoseiq\/react\. Remaining: @glucoseiq\/tokens, @glucoseiq\/testing, @glucoseiq\/cli/u,
@@ -559,10 +653,7 @@ test('publishes when a stable-only package has neither next tag nor next.0 recor
   })
   const result = await publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state })
   assert.equal(result.alreadyPublished.includes('@glucoseiq/core'), false)
-  assert.equal(
-    state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish' && args[1] === 'packages/core'),
-    true,
-  )
+  assert.equal(state.publishedNames.includes('@glucoseiq/core'), true)
 })
 
 test('rejects a local prerelease tag that points away from the release commit', async () => {
