@@ -1,11 +1,15 @@
 import {
+  CORE_PACKAGE_IDENTITY,
   LAUNCH_PACKAGE_SPECS,
   NEXT_ZERO_CORE_RANGE,
   NEXT_ZERO_PACKAGE_SPECS,
   NEXT_ZERO_VERSION,
 } from './release-contract.mjs'
 
-export { RELEASE_PACKAGE_IDENTITIES } from './release-contract.mjs'
+export {
+  CORE_PACKAGE_IDENTITY,
+  RELEASE_PACKAGE_IDENTITIES,
+} from './release-contract.mjs'
 
 const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
 const STABLE_SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
@@ -101,8 +105,9 @@ export function assertPackedCoreDependency({
   if (!lowerMatch || !coreMatch) {
     throw new Error(`${packageName} registry core dependency must be a stable caret range; received ${range}`)
   }
-  if (compareStableSemver(lowerBound, '1.0.0') < 0) {
-    throw new Error(`${packageName} registry core dependency must start at 1.0.0 or newer; received ${range}`)
+  const stableCoreFloor = CORE_PACKAGE_IDENTITY.minimumStableVersion
+  if (compareStableSemver(lowerBound, stableCoreFloor) < 0) {
+    throw new Error(`${packageName} registry core dependency must start at ${stableCoreFloor} or newer; received ${range}`)
   }
   if (
     compareStableSemver(coreVersion, lowerBound) < 0 ||

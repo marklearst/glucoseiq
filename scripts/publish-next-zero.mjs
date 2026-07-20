@@ -319,12 +319,18 @@ export async function runNextZeroPublisher({
     timeoutMs: commandTimeoutMs,
   })))
   const releaseSha = await resolveReleaseSha(runCommand, cwd, commandTimeoutMs)
+  const remoteStates = []
   for (const spec of packageSpecs) {
-    await inspectRemoteTag(spec, releaseSha, runCommand, cwd, commandTimeoutMs)
+    remoteStates.push(await inspectRemoteTag(spec, releaseSha, runCommand, cwd, commandTimeoutMs))
   }
-  for (const spec of packageSpecs) await verifyOrCreateLocalTag(spec, releaseSha, runCommand, cwd, commandTimeoutMs)
   const githubExists = []
   for (const spec of packageSpecs) githubExists.push(await inspectGitHubRelease(spec, runCommand, repository, cwd, commandTimeoutMs))
+  for (let index = 0; index < packageSpecs.length; index += 1) {
+    if (githubExists[index] && remoteStates[index].kind === 'absent') {
+      throw new Error(`GitHub release ${packageSpecs[index].tag} exists while its remote tag is absent`)
+    }
+  }
+  for (const spec of packageSpecs) await verifyOrCreateLocalTag(spec, releaseSha, runCommand, cwd, commandTimeoutMs)
 
   const npmVersion = assertCommandResult(
     await execute(runCommand, 'npm', ['--version'], { cwd, timeoutMs: commandTimeoutMs }, 'Check npm version'),

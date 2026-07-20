@@ -38,6 +38,13 @@ export const NEXT_ZERO_CORE_RANGE = `^${NEXT_ZERO_VERSION}`
 export const RELEASE_PACKAGE_IDENTITIES = Object.freeze(
   packageIdentities.map((identity) => Object.freeze({ ...identity })),
 )
+export const CORE_PACKAGE_IDENTITY = RELEASE_PACKAGE_IDENTITIES.find(
+  ({ name }) => name === '@glucoseiq/core',
+)
+
+if (!CORE_PACKAGE_IDENTITY) {
+  throw new Error('Release package identities must include @glucoseiq/core')
+}
 
 function createPackageSpecs(versionFor) {
   return Object.freeze(RELEASE_PACKAGE_IDENTITIES.map((identity) => {
