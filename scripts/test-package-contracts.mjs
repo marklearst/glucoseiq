@@ -22,8 +22,8 @@ import {
   validateReadmeContract,
 } from './lib/doc-contracts.mjs'
 import {
+  assertCandidatePackageVersions,
   assertPackedCoreDependency,
-  assertExactNextZeroPackageVersions,
   assertValidPackageVersions,
   compareStableSemver,
   createLaunchPackageVersions,
@@ -244,7 +244,7 @@ const sourceManifests = new Map(
 
 assertValidPackageVersions(sourceManifests)
 if (packageContractSource === 'candidate') {
-  assertExactNextZeroPackageVersions(new Map(
+  assertCandidatePackageVersions(new Map(
     [...sourceManifests].map(([name, manifest]) => [name, manifest.version]),
   ))
 }

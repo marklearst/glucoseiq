@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
+  assertCandidatePackageVersions,
   assertPackedCoreDependency,
   assertLaunchVersionPolicy,
   assertValidPackageVersions,
@@ -164,6 +165,18 @@ assert.deepEqual(createLaunchPackageVersions(), launchVersions)
 // a package inventory that cannot be released as one coordinated prerelease.
 assert.deepEqual(createNextZeroPackageVersions(), nextZeroVersions)
 assert.doesNotThrow(() => assertExactNextZeroPackageVersions(nextZeroVersions))
+assert.equal(assertCandidatePackageVersions(nextZeroVersions), 'next.0')
+assert.equal(assertCandidatePackageVersions(launchVersions), 'stable')
+assert.equal(
+  assertCandidatePackageVersions(new Map([
+    ['@glucoseiq/core', '1.4.0'],
+    ['@glucoseiq/react', '2.0.0'],
+    ['@glucoseiq/tokens', '1.1.0'],
+    ['@glucoseiq/testing', '1.0.1'],
+    ['@glucoseiq/cli', '1.2.0'],
+  ])),
+  'stable',
+)
 for (const [name, version] of [
   ['@glucoseiq/core', '1.0.0-next.1'],
   ['@glucoseiq/react', '1.0.0'],
@@ -172,12 +185,26 @@ for (const [name, version] of [
   const versions = new Map(nextZeroVersions)
   versions.set(name, version)
   assert.throws(() => assertExactNextZeroPackageVersions(versions), /exact next\.0 version/u)
+  assert.throws(
+    () => assertCandidatePackageVersions(versions),
+    /exact next\.0 prerelease or coordinated stable versions/u,
+  )
 }
 const driftedNextZeroVersions = new Map(nextZeroVersions)
 driftedNextZeroVersions.delete('@glucoseiq/cli')
 assert.throws(
   () => assertExactNextZeroPackageVersions(driftedNextZeroVersions),
   /must contain exactly five coordinated packages/u,
+)
+assert.throws(
+  () => assertCandidatePackageVersions(driftedNextZeroVersions),
+  /must contain exactly five release packages/u,
+)
+const belowLaunchVersions = new Map(launchVersions)
+belowLaunchVersions.set('@glucoseiq/core', '0.9.0')
+assert.throws(
+  () => assertCandidatePackageVersions(belowLaunchVersions),
+  /@glucoseiq\/core stable candidate must be at least 1\.0\.0; received 0\.9\.0/u,
 )
 assert.equal(parsePackageContractSource([]), 'local')
 assert.equal(parsePackageContractSource(['--source', 'local']), 'local')
