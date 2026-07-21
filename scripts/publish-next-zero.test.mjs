@@ -620,6 +620,27 @@ test('rejects an exact next tag without its exact version record before publicat
   assert.equal(state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish'), false)
 })
 
+test('rejects an exact version record whose next tag is missing', async () => {
+  // npm publishes a version record and its requested dist-tag in one registry
+  // update. Their disagreement is inconsistent state, not a retry signal.
+  const state = harness({
+    published: new Set(['@glucoseiq/core']),
+    packumentFor(spec) {
+      const value = publishedPackument(spec)
+      delete value['dist-tags'].next
+      return value
+    },
+  })
+  await assert.rejects(
+    publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
+    /@glucoseiq\/core npm next tag must be 1\.0\.0-next\.0; received missing/u,
+  )
+  assert.equal(
+    state.commands.some(({ command }) => ['git', 'gh', 'npm'].includes(command)),
+    false,
+  )
+})
+
 test('rejects falsey exact version records before publication', async () => {
   // Catches falsey own properties bypassing the exact-record identity check.
   for (const malformed of [null, false, 0, '']) {
