@@ -215,8 +215,7 @@ jobs:
           body-path: .github/release-pr-body.md
           draft: always-true
           add-paths: |
-            .changeset/*.md
-            .changeset/pre.json
+            .changeset
             packages/*/package.json
             packages/*/CHANGELOG.md
             pnpm-lock.yaml
