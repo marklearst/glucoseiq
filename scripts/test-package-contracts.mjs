@@ -22,6 +22,7 @@ import {
   validateReadmeContract,
 } from './lib/doc-contracts.mjs'
 import {
+  assertCandidatePackageVersions,
   assertPackedCoreDependency,
   assertValidPackageVersions,
   compareStableSemver,
@@ -29,6 +30,7 @@ import {
   parsePackageContractSource,
   requiresSourceReadmeParity,
 } from './lib/package-contracts.mjs'
+import { RELEASE_PACKAGE_IDENTITIES } from './lib/release-contract.mjs'
 import { spawnPackageContractCommandSync } from './lib/package-command.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -43,13 +45,12 @@ const launchPackageVersions = createLaunchPackageVersions()
 const requiresLaunchArtifacts = packageContractSource !== 'local'
 const requiresReadmeParity = requiresSourceReadmeParity(packageContractSource)
 
-const packageSpecs = [
-  { directory: 'packages/core', name: '@glucoseiq/core', scoped: true },
-  { directory: 'packages/react', name: '@glucoseiq/react', scoped: true, coreDependency: true },
-  { directory: 'packages/tokens', name: '@glucoseiq/tokens', scoped: true },
-  { directory: 'packages/testing', name: '@glucoseiq/testing', scoped: true, coreDependency: true },
-  { directory: 'packages/cli', name: '@glucoseiq/cli', scoped: true, coreDependency: true },
-]
+const packageSpecs = RELEASE_PACKAGE_IDENTITIES.map((identity) => ({
+  directory: identity.directory,
+  name: identity.name,
+  scoped: true,
+  ...(identity.coreDependency ? { coreDependency: true } : {}),
+}))
 assert.deepEqual(
   [...readmeContracts.keys()].sort(),
   packageSpecs.map(({ name }) => name).sort(),
@@ -213,7 +214,10 @@ const sourceManifests = new Map(
       manifest.files?.includes('CHANGELOG.md'),
       `${spec.name} source manifest must explicitly allow CHANGELOG.md`,
     )
-    if (requiresLaunchArtifacts) {
+    if (packageContractSource === 'candidate') {
+      // Checked after all manifests are loaded so a candidate cannot mix a
+      // stable package with a next.0 package.
+    } else if (requiresLaunchArtifacts) {
       assert.ok(
         compareStableSemver(manifest.version, launchPackageVersions.get(spec.name)) >= 0,
         `${spec.name} ${packageContractSource} version must be at least ${launchPackageVersions.get(spec.name)}`,
@@ -239,6 +243,11 @@ const sourceManifests = new Map(
 )
 
 assertValidPackageVersions(sourceManifests)
+if (packageContractSource === 'candidate') {
+  assertCandidatePackageVersions(new Map(
+    [...sourceManifests].map(([name, manifest]) => [name, manifest.version]),
+  ))
+}
 const coreVersion = sourceManifests.get('@glucoseiq/core').version
 const sharedCoreErrors = {
   '#errors': {

@@ -11,7 +11,18 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { assertPackedCoreDependency } from './lib/package-contracts.mjs'
+import {
+  LAUNCH_PACKAGE_SPECS,
+  NEXT_ZERO_NPM_TAG,
+  NEXT_ZERO_VERSION,
+  RELEASE_PACKAGE_IDENTITIES,
+} from './lib/release-contract.mjs'
 import { runChangesetPolicy } from './test-changeset-policy.mjs'
+
+export {
+  LAUNCH_PACKAGE_SPECS as LAUNCH_PACKAGES,
+  NEXT_ZERO_PACKAGE_SPECS as NEXT_ZERO_PACKAGES,
+} from './lib/release-contract.mjs'
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url))
 const repositoryRoot = resolve(scriptDirectory, '..')
@@ -35,47 +46,17 @@ const PROVENANCE_SOURCE = 'git+https://github.com/marklearst/glucoseiq@refs/head
 const GIT_SHA = /^[a-f0-9]{40}$/u
 const GIT_COMMIT_OID = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u
 
-const launchDefinitions = [
-  {
-    name: '@glucoseiq/core',
-    directory: 'packages/core',
-    minimumVersion: '1.0.0',
-  },
-  {
-    name: '@glucoseiq/react',
-    directory: 'packages/react',
-    minimumVersion: '1.0.0',
-    coreDependency: true,
-  },
-  {
-    name: '@glucoseiq/tokens',
-    directory: 'packages/tokens',
-    minimumVersion: '1.0.0',
-  },
-  {
-    name: '@glucoseiq/testing',
-    directory: 'packages/testing',
-    minimumVersion: '1.0.0',
-    coreDependency: true,
-  },
-  {
-    name: '@glucoseiq/cli',
-    directory: 'packages/cli',
-    minimumVersion: '1.0.0',
-    coreDependency: true,
-  },
-]
+const launchDefinitions = RELEASE_PACKAGE_IDENTITIES.map((identity) => Object.freeze({
+  name: identity.name,
+  directory: identity.directory,
+  minimumVersion: identity.minimumStableVersion,
+  ...(identity.coreDependency ? { coreDependency: true } : {}),
+}))
+const LAUNCH_PACKAGES = LAUNCH_PACKAGE_SPECS
 
-export const LAUNCH_PACKAGES = Object.freeze(
-  launchDefinitions.map((definition) => Object.freeze({
-    ...definition,
-    version: definition.minimumVersion,
-    tag: `${definition.name}@${definition.minimumVersion}`,
-    ...(definition.coreDependency
-      ? { coreVersion: '1.0.0' }
-      : {}),
-  })),
-)
+function isExactNextZeroVersion(version) {
+  return version === NEXT_ZERO_VERSION
+}
 
 function stableSemverParts(version, label) {
   const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u.exec(version)
@@ -93,6 +74,14 @@ function compareStableSemver(left, right) {
   return 0
 }
 
+function assertPublicationVersion(version, label, minimumVersion) {
+  if (isExactNextZeroVersion(version)) return
+  stableSemverParts(version, label)
+  if (compareStableSemver(version, minimumVersion) < 0) {
+    throw new Error(`${label} must be at least ${minimumVersion}; received ${version}`)
+  }
+}
+
 export function createPublishedPackageSpecs(manifests) {
   if (!(manifests instanceof Map)) throw new TypeError('manifests must be a Map')
 
@@ -107,18 +96,13 @@ export function createPublishedPackageSpecs(manifests) {
       )
     }
     const version = manifest.version
-    stableSemverParts(version, `${definition.name} version`)
-    if (compareStableSemver(version, definition.minimumVersion) < 0) {
-      throw new Error(
-        `${definition.name} version must be at least ${definition.minimumVersion}; received ${version}`,
-      )
-    }
+    assertPublicationVersion(version, `${definition.name} version`, definition.minimumVersion)
 
     return [definition.name, manifest]
   }))
   const coreVersion = source.get('@glucoseiq/core').version
 
-  return Object.freeze(launchDefinitions.map((definition) => {
+  const specs = launchDefinitions.map((definition) => {
     const manifest = source.get(definition.name)
     const version = manifest.version
     let requiredCoreVersion
@@ -152,7 +136,9 @@ export function createPublishedPackageSpecs(manifests) {
       tag: `${definition.name}@${version}`,
       ...(requiredCoreVersion ? { coreVersion: requiredCoreVersion } : {}),
     })
-  }))
+  })
+  assertPackageSpecs(specs)
+  return Object.freeze(specs)
 }
 
 export function loadPublishedPackageSpecs({ repoRoot = repositoryRoot } = {}) {
@@ -174,18 +160,15 @@ function assertPackageSpecs(packageSpecs) {
   if (!Array.isArray(packageSpecs) || packageSpecs.length !== launchDefinitions.length) {
     throw new Error(`packageSpecs must contain exactly ${launchDefinitions.length} packages`)
   }
+  let nextZeroCount = 0
   for (let index = 0; index < launchDefinitions.length; index += 1) {
     const expected = launchDefinitions[index]
     const actual = packageSpecs[index]
     if (actual?.name !== expected.name || actual?.directory !== expected.directory) {
       throw new Error(`packageSpecs[${index}] must describe ${expected.name}`)
     }
-    stableSemverParts(actual.version, `${actual.name} version`)
-    if (compareStableSemver(actual.version, expected.minimumVersion) < 0) {
-      throw new Error(
-        `${actual.name} version must be at least ${expected.minimumVersion}; received ${actual.version}`,
-      )
-    }
+    assertPublicationVersion(actual.version, `${actual.name} version`, expected.minimumVersion)
+    if (isExactNextZeroVersion(actual.version)) nextZeroCount += 1
     if (actual.tag !== `${actual.name}@${actual.version}`) {
       throw new Error(`${actual.name} tag must be ${actual.name}@${actual.version}`)
     }
@@ -197,6 +180,9 @@ function assertPackageSpecs(packageSpecs) {
     ) {
       throw new Error(`${actual.name} internal dependency contract is invalid`)
     }
+  }
+  if (nextZeroCount > 0 && nextZeroCount !== launchDefinitions.length) {
+    throw new Error('packageSpecs must use next.0 for all five coordinated packages or stable versions for all packages')
   }
 }
 
@@ -748,7 +734,14 @@ function registryReadinessIssue(spec, packument) {
   if (packument['dist-tags'] !== undefined) {
     assertPlainObject(packument['dist-tags'], `${spec.name} distribution tags`)
   }
-  if (packument['dist-tags']?.latest !== spec.version) {
+  if (isExactNextZeroVersion(spec.version)) {
+    if (packument['dist-tags']?.[NEXT_ZERO_NPM_TAG] !== spec.version) {
+      return `${spec.name} ${NEXT_ZERO_NPM_TAG} must be ${spec.version}; received ${packument['dist-tags']?.[NEXT_ZERO_NPM_TAG] ?? 'missing'}`
+    }
+    if (packument['dist-tags']?.latest === spec.version) {
+      return `${spec.name} latest must not be ${spec.version}`
+    }
+  } else if (packument['dist-tags']?.latest !== spec.version) {
     return `${spec.name} latest must be ${spec.version}; received ${packument['dist-tags']?.latest ?? 'missing'}`
   }
   if (packument.versions !== undefined) {
@@ -923,7 +916,18 @@ function validateRegistryRecord(spec, packument, registry) {
     throw new Error(`${spec.name} registry record returned name ${packument.name ?? 'missing'}`)
   }
   assertPlainObject(packument['dist-tags'], `${spec.name} distribution tags`)
-  if (packument['dist-tags'].latest !== spec.version) {
+  if (
+    isExactNextZeroVersion(spec.version) &&
+    packument['dist-tags'][NEXT_ZERO_NPM_TAG] !== spec.version
+  ) {
+    throw new Error(
+      `${spec.name} ${NEXT_ZERO_NPM_TAG} must be ${spec.version}; received ${packument['dist-tags'][NEXT_ZERO_NPM_TAG] ?? 'missing'}`,
+    )
+  }
+  if (isExactNextZeroVersion(spec.version) && packument['dist-tags'].latest === spec.version) {
+    throw new Error(`${spec.name} latest must not be ${spec.version}`)
+  }
+  if (!isExactNextZeroVersion(spec.version) && packument['dist-tags'].latest !== spec.version) {
     throw new Error(
       `${spec.name} latest must be ${spec.version}; received ${packument['dist-tags'].latest ?? 'missing'}`,
     )
@@ -1539,12 +1543,13 @@ export async function verifyRepositoryArtifacts({
         cause: error,
       })
     }
-    if (
-      release.tag_name !== spec.tag ||
-      release.draft !== false ||
-      release.prerelease !== false
-    ) {
-      throw new Error(`${spec.tag} must have a published, stable GitHub release`)
+    const prerelease = isExactNextZeroVersion(spec.version)
+    if (release.tag_name !== spec.tag || release.draft !== false || release.prerelease !== prerelease) {
+      throw new Error(
+        prerelease
+          ? `${spec.tag} must have a published, non-draft prerelease GitHub release`
+          : `${spec.tag} must have a published, stable GitHub release`,
+      )
     }
   }
   return { releaseSha, packageCommits }

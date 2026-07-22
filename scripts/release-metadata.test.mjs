@@ -39,22 +39,26 @@ assert.doesNotMatch(workflow, /^ {2}release:$/mu, 'the former combined release j
 assert.match(quality, /^ {4}permissions:\n {6}contents: read$/mu)
 assert.match(quality, /^ {4}timeout-minutes: 30$/mu)
 assert.doesNotMatch(quality, /^ {6}\S+: write$/mu)
-assert.match(quality, /^ {4}outputs:\n {6}has_changesets:/mu)
+assert.match(quality, /^ {4}outputs:\n {6}should_version:/mu)
 assert.match(quality, /^ {6}should_publish:/mu)
+assert.match(quality, /^ {6}publish_command:/mu)
+assert.match(quality, /^ {6}release_state:/mu)
 assert.match(quality, /^ {6}expected_packages:/mu)
 assert.match(quality, /npm install --global npm@11\.17\.0/u)
 assert.match(
   quality,
-  /import \{\s+isChangesetReaderPath,\s+parseNullDelimitedPaths,\s+runChangesetPolicy,?\s+\}/u,
+  /import \{\s+detectReleaseMode,\s+isChangesetReaderPath,\s+parseNullDelimitedPaths,\s+runChangesetPolicy,?\s+\}/u,
 )
-assert.match(quality, /paths\.some\(isChangesetReaderPath\)/u)
+assert.match(quality, /paths\.filter\(isChangesetReaderPath\)/u)
+assert.match(quality, /detectReleaseMode/u)
 assert.match(quality, /policy\.reason === 'generated-version-commit'/u)
 assert.match(quality, /policy\.versionedPackages/u)
 assert.match(quality, /createExpectedPublicationPlan/u)
 assert.match(quality, /expected_packages=\$\{JSON\.stringify\(expectedPackages\)\}/u)
-assert.match(quality, /if \(hasChangesets && generatedVersionCommit\)/u)
-assert.match(quality, /stale release merge/iu)
-assert.match(quality, /!hasChangesets && generatedVersionCommit/u)
+assert.match(quality, /should_version=\$\{releaseMode\.shouldVersion\}/u)
+assert.match(quality, /should_publish=\$\{releaseMode\.shouldPublish\}/u)
+assert.match(quality, /publish_command=\$\{releaseMode\.publishCommand \?\? ''\}/u)
+assert.match(quality, /release_state=\$\{releaseMode\.state\}/u)
 assert.doesNotMatch(quality, /git ls-files '\.changeset\/\*\.md'/u)
 for (const command of [
   'pnpm build',
@@ -77,7 +81,7 @@ for (const command of [
 
 assert.match(version, /^ {4}needs: quality$/mu)
 assert.match(version, /^ {4}timeout-minutes: 45$/mu)
-assert.match(version, /^ {4}if: needs\.quality\.outputs\.has_changesets == 'true'$/mu)
+assert.match(version, /^ {4}if: needs\.quality\.outputs\.should_version == 'true'$/mu)
 assert.match(version, /^ {4}permissions:\n {6}contents: write\n {6}pull-requests: write\n {6}checks: write$/mu)
 assert.match(version, /npm install --global npm@11\.17\.0/u)
 assert.doesNotMatch(version, /id-token:/u)
@@ -86,6 +90,7 @@ assert.match(version, /base: main/u)
 assert.match(version, /commit-message: 'chore\(release\): version packages'/u)
 assert.match(version, /title: 'chore\(release\): version packages'/u)
 assert.match(version, /body-path: \.github\/release-pr-body\.md/u)
+assert.match(version, /^ {12}\.changeset\/pre\.json$/mu)
 assert.match(version, /draft: always-true/u)
 assert.match(version, /pull-request-head-sha/u)
 assert.match(version, /name: Checkout release candidate/u)
@@ -122,10 +127,39 @@ assert.match(
   publish,
   /uses: changesets\/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d/u,
 )
+// Catches the action returning to its API tag path, which swallows every
+// createRef error before it creates a public GitHub release.
+assert.doesNotMatch(publish, /^ {10}commitMode:/mu)
+assert.match(publish, /name: Prepare Git tag authentication/u)
+assert.match(publish, /glucoseiq-git-askpass/u)
+assert.match(publish, /GIT_ASKPASS: \$\{\{ runner\.temp \}\}\/glucoseiq-git-askpass/u)
+assert.match(publish, /GIT_TERMINAL_PROMPT: 0/u)
+assert.match(publish, /name: Remove Git tag authentication helper/u)
+assert.match(
+  publish,
+  /name: Remove Git tag authentication helper\n {8}id: git-auth-cleanup\n {8}if: \$\{\{ always\(\) \}\}/u,
+)
+const gitAuthCleanup = publish.slice(
+  publish.indexOf('name: Remove Git tag authentication helper'),
+  publish.indexOf('name: Resolve publication inventory'),
+)
+assert.match(gitAuthCleanup, /rm -f "\$RUNNER_TEMP\/glucoseiq-git-askpass"/u)
+assert.match(gitAuthCleanup, /rm -f "\$HOME\/\.netrc"/u)
+assert.match(gitAuthCleanup, /test ! -e "\$RUNNER_TEMP\/glucoseiq-git-askpass"/u)
+assert.match(gitAuthCleanup, /test ! -e "\$HOME\/\.netrc"/u)
+assert.ok(
+  publish.indexOf('name: Prepare Git tag authentication') <
+    publish.indexOf('uses: changesets/action@') &&
+    publish.indexOf('uses: changesets/action@') <
+    publish.indexOf('name: Remove Git tag authentication helper') &&
+    publish.indexOf('name: Remove Git tag authentication helper') <
+    publish.indexOf('name: Resolve publication inventory'),
+  'ephemeral Git tag authentication must surround only the Changesets Action',
+)
 assert.match(publish, /name: Resolve publication inventory/u)
 assert.match(
   publish,
-  /name: Resolve publication inventory[\s\S]{0,180}if: \$\{\{ !cancelled\(\) && \(steps\.changesets\.outcome == 'success' \|\| steps\.changesets\.outcome == 'failure'\) \}\}/u,
+  /name: Resolve publication inventory[\s\S]{0,260}if: \$\{\{ !cancelled\(\) && steps\.git-auth-cleanup\.outcome == 'success' && \(steps\.changesets\.outcome == 'success' \|\| steps\.changesets\.outcome == 'failure'\) \}\}/u,
   'post-attempt inventory must run when publication fails before action outputs are updated',
 )
 assert.match(publish, /resolvePublicationInventory/u)
@@ -143,7 +177,10 @@ assert.match(
 assert.match(publish, /inventory\.reportedPackages/u)
 assert.match(publish, /inventory\.verificationPackages/u)
 assert.doesNotMatch(publish, /continue-on-error:/u)
-assert.equal(occurrences(publish, /publish: pnpm changeset publish/gu), 1)
+assert.equal(
+  occurrences(publish, /publish: \$\{\{ needs\.quality\.outputs\.publish_command \}\}/gu),
+  1,
+)
 assert.doesNotMatch(
   publish.slice(publish.indexOf('name: Resolve publication inventory')),
   /(?:changeset|npm) publish/u,
@@ -166,6 +203,11 @@ assert.match(
   publish,
   /steps\.npm-auth-cleanup\.outcome == 'success'/u,
   'registry verification must not run unless npm authentication cleanup succeeds',
+)
+assert.match(
+  verifierStep,
+  /steps\.git-auth-cleanup\.outcome == 'success'/u,
+  'registry verification must not run unless Git authentication cleanup succeeds',
 )
 assert.ok(
   publish.indexOf('name: Remove npm authentication') <
@@ -232,7 +274,7 @@ assert.equal(
 
 assert.equal(
   rootPackage.scripts['test:release-safety'],
-  'node --test scripts/commit-message-contracts.test.mjs scripts/test-changeset-policy.test.mjs scripts/release-preflight.test.mjs scripts/verify-published-packages.test.mjs',
+  'node --test scripts/commit-message-contracts.test.mjs scripts/test-changeset-policy.test.mjs scripts/release-preflight.test.mjs scripts/release-contract-consumers.test.mjs scripts/verify-published-packages.test.mjs scripts/publish-next-zero.test.mjs',
   'release-safety regressions must have one durable root command',
 )
 
