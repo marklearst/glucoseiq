@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { existsSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import test from 'node:test'
@@ -46,10 +47,20 @@ function response({ status = 404, json } = {}) {
 }
 
 function publishedPackument(spec) {
+  const archive = Buffer.alloc(0)
   return {
     name: spec.name,
     'dist-tags': { next: spec.version, latest: '0.9.0' },
-    versions: { [spec.version]: { name: spec.name, version: spec.version } },
+    versions: {
+      [spec.version]: {
+        name: spec.name,
+        version: spec.version,
+        dist: {
+          integrity: `sha512-${createHash('sha512').update(archive).digest('base64')}`,
+          shasum: createHash('sha1').update(archive).digest('hex'),
+        },
+      },
+    },
   }
 }
 
@@ -290,6 +301,58 @@ test('recovers already-published exact next packages without republishing them',
   const result = await publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state })
   assert.deepEqual(result.alreadyPublished, ['@glucoseiq/core'])
   assert.deepEqual(state.publishedNames, packageSpecs.slice(1).map(({ name }) => name))
+})
+
+test('rejects an existing exact version whose tarball differs from the packed candidate', async () => {
+  // Catches immutable registry bytes being attached to the approved release
+  // commit before the post-publication verifier can reject them.
+  const mutations = [
+    {
+      mutate(dist) {
+        dist.integrity = 'sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=='
+      },
+      pattern: /registry tarball integrity must match/u,
+    },
+    {
+      mutate(dist) { delete dist.integrity },
+      pattern: /registry tarball integrity must match/u,
+    },
+    {
+      mutate(dist) { dist.shasum = '0'.repeat(40) },
+      pattern: /registry tarball shasum must match/u,
+    },
+    {
+      mutate(dist) { delete dist.shasum },
+      pattern: /registry tarball shasum must match/u,
+    },
+    {
+      mutate(_dist, metadata) { metadata.dist = null },
+      pattern: /malformed distribution metadata/u,
+    },
+  ]
+  for (const { mutate, pattern } of mutations) {
+    const state = harness({
+      published: new Set(['@glucoseiq/core']),
+      packumentFor(spec) {
+        const value = publishedPackument(spec)
+        const metadata = value.versions[spec.version]
+        mutate(metadata.dist, metadata)
+        return value
+      },
+    })
+    await assert.rejects(
+      publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
+      pattern,
+    )
+    assert.equal(
+      state.commands.some(({ command }) => ['git', 'gh', 'npm'].includes(command)),
+      false,
+    )
+    assert.deepEqual(linesWithNewTags(state.lines), [])
+    const pack = state.commands.find(({ command }) => command === 'pnpm')
+    assert.ok(pack)
+    assert.equal(existsSync(dirname(pack.args[4])), false)
+  }
 })
 
 test('creates each missing local exact tag at the checked-out release commit', async () => {
