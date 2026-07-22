@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -28,6 +30,41 @@ function jobBlock(name) {
 
 function occurrences(source, pattern) {
   return [...source.matchAll(pattern)].length
+}
+
+function versionPullRequestAddPaths() {
+  const match = version.match(/\n {10}add-paths: \|\n((?: {12}[^\n]+\n)+)/u)
+  assert.ok(match, 'version job must define release pull-request paths')
+  return match[1].trim().split('\n').map((line) => line.trim())
+}
+
+function assertVersionPullRequestPaths({ prerelease }) {
+  const repository = mkdtempSync(join(tmpdir(), 'glucoseiq-release-paths-'))
+  try {
+    execFileSync('git', ['init', '--quiet'], { cwd: repository })
+    mkdirSync(join(repository, '.changeset'), { recursive: true })
+    mkdirSync(join(repository, 'packages/core'), { recursive: true })
+    writeFileSync(join(repository, '.changeset/README.md'), '# Changesets\n')
+    writeFileSync(join(repository, 'packages/core/package.json'), '{}\n')
+    writeFileSync(join(repository, 'packages/core/CHANGELOG.md'), '# Changelog\n')
+    writeFileSync(join(repository, 'pnpm-lock.yaml'), 'lockfileVersion: 9\n')
+    if (prerelease) {
+      writeFileSync(join(repository, '.changeset/pre.json'), '{"mode":"pre"}\n')
+    }
+
+    execFileSync('git', ['add', '--', ...versionPullRequestAddPaths()], {
+      cwd: repository,
+      stdio: 'pipe',
+    })
+    const staged = execFileSync('git', ['diff', '--cached', '--name-only', '-z'], {
+      cwd: repository,
+      encoding: 'utf8',
+    }).split('\0').filter(Boolean)
+    assert.ok(staged.includes('.changeset/README.md'))
+    assert.equal(staged.includes('.changeset/pre.json'), prerelease)
+  } finally {
+    rmSync(repository, { force: true, recursive: true })
+  }
 }
 
 assert.match(workflow, /^permissions: \{\}$/mu, 'root permissions must default to none')
@@ -90,7 +127,6 @@ assert.match(version, /base: main/u)
 assert.match(version, /commit-message: 'chore\(release\): version packages'/u)
 assert.match(version, /title: 'chore\(release\): version packages'/u)
 assert.match(version, /body-path: \.github\/release-pr-body\.md/u)
-assert.match(version, /^ {12}\.changeset\/pre\.json$/mu)
 assert.match(version, /draft: always-true/u)
 assert.match(version, /pull-request-head-sha/u)
 assert.match(version, /name: Checkout release candidate/u)
@@ -104,6 +140,11 @@ assert.match(version, /check-runs/u)
 assert.match(version, /head_sha/u)
 assert.match(version, /details_url/u)
 assert.match(version, /steps\.candidate\.outcome/u)
+
+// Catches a literal optional prerelease path aborting Git staging before
+// .changeset/pre.json exists.
+assertVersionPullRequestPaths({ prerelease: false })
+assertVersionPullRequestPaths({ prerelease: true })
 
 assert.match(publish, /^ {4}needs: quality$/mu)
 assert.match(publish, /^ {4}timeout-minutes: 45$/mu)
