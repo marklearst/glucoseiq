@@ -52,6 +52,34 @@ function selectGeneratedVersionFixtureRevision(changes) {
     : 'HEAD'
 }
 
+function synchronizeFixturePackageManager(repository) {
+  const sourceManifest = JSON.parse(
+    readFileSync(join(REPOSITORY_ROOT, 'package.json'), 'utf8'),
+  )
+  const fixtureManifestPath = join(repository, 'package.json')
+  const fixtureManifest = JSON.parse(readFileSync(fixtureManifestPath, 'utf8'))
+
+  if (fixtureManifest.packageManager === sourceManifest.packageManager) return
+
+  fixtureManifest.packageManager = sourceManifest.packageManager
+  writeFileSync(fixtureManifestPath, `${JSON.stringify(fixtureManifest, null, 2)}\n`)
+  runFixtureCommand('git', ['add', '--', 'package.json'], repository)
+  runFixtureCommand(
+    'git',
+    [
+      '-c',
+      'user.name=Release Fixture',
+      '-c',
+      'user.email=release-fixture@example.invalid',
+      'commit',
+      '--quiet',
+      '-m',
+      'test: synchronize fixture package manager',
+    ],
+    repository,
+  )
+}
+
 function createGeneratedVersionFixture({
   generate = true,
   mutate,
@@ -91,6 +119,7 @@ function createGeneratedVersionFixture({
       repository,
     )
   }
+  synchronizeFixturePackageManager(repository)
   if (prepareBase) {
     prepareBase(repository)
     runFixtureCommand('git', ['add', '-A', '--'], repository)
@@ -177,6 +206,27 @@ test('generated-version fixtures start from the pre-version commit', () => {
     ]),
     'HEAD',
   )
+})
+
+test('generated-version fixtures use the working-tree package manager pin', () => {
+  const expectedPackageManager = JSON.parse(
+    readFileSync(join(REPOSITORY_ROOT, 'package.json'), 'utf8'),
+  ).packageManager
+  const fixture = createGeneratedVersionFixture({
+    generate: false,
+    mutate(repository) {
+      writeFileSync(join(repository, '.fixture-marker'), 'fixture\n')
+    },
+  })
+
+  try {
+    const fixturePackageManager = JSON.parse(
+      readFileSync(join(fixture.repository, 'package.json'), 'utf8'),
+    ).packageManager
+    assert.equal(fixturePackageManager, expectedPackageManager)
+  } finally {
+    fixture.cleanup()
+  }
 })
 
 function nullDelimited(...paths) {

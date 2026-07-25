@@ -329,16 +329,17 @@ test('the visible homepage sample is explicitly marked and standalone', () => {
   assert.equal(result.diagnostics.length, 0, formatSnippetDiagnostics(result.diagnostics))
 })
 
-test('homepage and UI examples pair visual shorthand with semantic text', () => {
+test('homepage signal and UI examples pair visual shorthand with semantic text', () => {
   const homepage = readTracked('apps/docs/app/(home)/page.tsx')
-  assert.match(homepage, /<caption className="sr-only">[^<]+<\/caption>/u)
-  assert.match(homepage, /<thead className="sr-only">/u)
-  assert.equal(homepage.match(/<th scope="col">/gu)?.length, 2)
-  assert.match(
-    homepage,
-    /<span aria-hidden="true">\{ARROW\[trend\.trend\]\}<\/span>/u
-  )
-  assert.match(homepage, /<span className="sr-only">[^<]*\{trendLabel\}<\/span>/u)
+  assert.match(homepage, /<figure className=\{styles\.signalFigure\}>/u)
+  assert.match(homepage, /<figcaption className=\{styles\.signalCaption\}>/u)
+  assert.match(homepage, /14 days of synthetic readings/u)
+  assert.match(homepage, /mg\/dL/u)
+  assert.match(homepage, /aria-label="Package documentation"/u)
+  assert.doesNotMatch(homepage, /className=\{styles\.chartPanel\}/u)
+  assert.doesNotMatch(homepage, /className=\{styles\.recentReadings\}/u)
+  assert.doesNotMatch(homepage, /<article key=\{item\.name\}>/u)
+  assert.doesNotMatch(homepage, /TREND_GLYPHS/u)
 
   const live = readTracked('apps/docs/content/docs/live.mdx')
   assert.match(
@@ -373,7 +374,7 @@ test('the launch runbook preserves phase, artifact, and OIDC safety gates', () =
     runbook,
     /test "\$\(node -p 'process\.versions\.node\.split\("\."\)\[0\]'\)" = "24"/u
   )
-  assert.match(runbook, /test "\$\(pnpm --version\)" = "11\.12\.0"/u)
+  assert.match(runbook, /test "\$\(pnpm --version\)" = "11\.17\.0"/u)
   assert.match(runbook, /test "\$\(npm --version\)" = "11\.17\.0"/u)
 
   assert.match(runbook, /Transition candidate[\s\S]*pnpm changeset status/u)

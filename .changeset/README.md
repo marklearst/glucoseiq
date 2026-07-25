@@ -28,7 +28,7 @@ pnpm test:changesets
 
 ## Release flow
 
-A main-branch push runs the complete quality suite in
+A main-branch push runs the quality suite in
 `.github/workflows/release.yml`. Pending Changesets create or refresh a draft
 release pull request. That candidate is checked out by its exact commit, built,
 packed, and tested before its required check can pass.

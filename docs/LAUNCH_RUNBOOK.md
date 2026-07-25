@@ -106,12 +106,13 @@ if rg -n -i --fixed-strings -- "$FORBIDDEN_TERM" <<<"$git_metadata"; then
   exit 1
 fi
 
-commit_bodies=$(git log origin/main..HEAD --format='%B')
-if rg -n -i 'co-authored-by|generated-by|task[ -]?link|tool attribution' \
-  <<<"$commit_bodies"; then
-  echo "Non-project Git trailer or attribution found" >&2
-  exit 1
-fi
+while IFS= read -r commit; do
+  trailers=$(git show -s --format='%B' "$commit" | git interpret-trailers --parse)
+  if test -n "$trailers"; then
+    echo "Unapproved Git trailer found" >&2
+    exit 1
+  fi
+done < <(git rev-list origin/main..HEAD)
 ```
 
 No matching line is the passing result. Review the human-written pull-request
@@ -123,12 +124,12 @@ body separately because it is not stored in the worktree.
 set -euo pipefail
 
 test "$(node -p 'process.versions.node.split(".")[0]')" = "24"
-test "$(pnpm --version)" = "11.12.0"
+test "$(pnpm --version)" = "11.17.0"
 test "$(npm --version)" = "11.17.0"
 pnpm install --frozen-lockfile
 ```
 
-The launch toolchain is Node 24, pnpm 11.12.0, and npm 11.17.0 in release CI.
+The launch toolchain is Node 24, pnpm 11.17.0, and npm 11.17.0 in release CI.
 The frozen install must finish without changing `pnpm-lock.yaml`.
 
 ### A3. Confirm the release state for the current phase
@@ -261,8 +262,8 @@ tests cannot mark them complete.
 
 - [ ] The transition pull request title is
       `feat: launch the GlucoseIQ 1.0 monorepo`.
-- [ ] Its title, body, commits, trailers, branch name, and changed files contain
-      no tool attribution, generated-by marker, task link, or prohibited term.
+- [ ] Its title, body, commits, trailers, branch name, and changed files are
+      project-focused and contain no internal workflow references.
 - [ ] The pull request contains the intended Fumadocs, compatibility, package,
       CI, and release infrastructure and no protected legacy-worktree content.
 - [ ] GitHub Actions is allowed to create and update pull requests.
@@ -365,8 +366,8 @@ describes the public discovery metadata.
       that current head, and no newer Changesets remain outside the candidate.
 - [ ] The pull request contains five `1.0.0` manifests and one `2.0.0`
       compatibility manifest, correct changelogs, and the updated lockfile.
-- [ ] The release body and commits remain project-focused and contain no tool
-      attribution, generated trailer, task link, or prohibited term.
+- [ ] The release body and commits remain project-focused and contain no
+      internal workflow references.
 - [ ] Re-run Part A against the exact versioned release head SHA.
 - [ ] Inspect the packed manifests, package contents, documentation, and
       migration text from that SHA.
@@ -401,7 +402,7 @@ still use the public contract described in
 
 - [ ] Merge the reviewed release pull request.
 - [ ] Observe the GitHub-hosted `release.yml` run for the exact merge SHA.
-- [ ] Confirm it uses Node 24, pnpm 11.12.0, npm 11.17.0, public access, and
+- [ ] Confirm it uses Node 24, pnpm 11.17.0, npm 11.17.0, public access, and
       provenance.
 - [ ] Do not start a separate manual publication while the workflow is running.
 - [ ] If any package fails, stop and use Partial-publication recovery below.

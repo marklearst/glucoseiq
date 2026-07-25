@@ -9,6 +9,8 @@ const ciWorkflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8')
 const pullRequestBody = readFileSync(join(root, '.github/release-pr-body.md'), 'utf8')
 const launchRunbook = readFileSync(join(root, 'docs/LAUNCH_RUNBOOK.md'), 'utf8')
 const rootPackage = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
+const pnpmAction =
+  'pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0'
 
 function jobBlock(name) {
   const lines = workflow.split('\n')
@@ -32,7 +34,7 @@ assert.match(workflow, /^permissions: \{\}$/mu, 'root permissions must default t
 const quality = jobBlock('quality')
 const version = jobBlock('version')
 const publish = jobBlock('publish')
-assert.doesNotMatch(workflow, /^ {2}release:$/mu, 'the former all-powerful release job must be removed')
+assert.doesNotMatch(workflow, /^ {2}release:$/mu, 'the former combined release job must be removed')
 
 assert.match(quality, /^ {4}permissions:\n {6}contents: read$/mu)
 assert.match(quality, /^ {4}timeout-minutes: 30$/mu)
@@ -204,10 +206,14 @@ assert.doesNotMatch(workflow, /gh workflow run/u)
 assert.equal(occurrences(workflow, /uses: actions\/checkout@/gu), 4)
 assert.equal(occurrences(workflow, /persist-credentials: false/gu), 4)
 assert.equal(occurrences(workflow, /fetch-depth: 0/gu), 4)
-assert.equal(occurrences(workflow, /version: 11\.12\.0/gu), 3)
+assert.equal(rootPackage.packageManager, 'pnpm@11.17.0')
+assert.equal(occurrences(workflow, new RegExp(pnpmAction.replaceAll('.', '\\.'), 'gu')), 3)
+assert.equal(occurrences(workflow, /version: 11\.17\.0/gu), 3)
 assert.equal(occurrences(workflow, /node-version: 24/gu), 3)
 assert.equal(occurrences(workflow, /npm install --global npm@11\.17\.0/gu), 3)
 assert.doesNotMatch(workflow, /workflow_dispatch:/u)
+assert.equal(occurrences(ciWorkflow, new RegExp(pnpmAction.replaceAll('.', '\\.'), 'gu')), 1)
+assert.equal(occurrences(ciWorkflow, /version: 11\.17\.0/gu), 1)
 
 for (const source of [workflow, ciWorkflow]) {
   assert.match(source, /fetch-depth: 0/u, 'Changeset policy callers must fetch complete history')

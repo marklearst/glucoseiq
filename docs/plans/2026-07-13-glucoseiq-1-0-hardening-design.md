@@ -29,7 +29,7 @@ No public package will be added for GlucoseIQ 1.0. A future package requires an 
 - Keep ESM declarations on `.d.mts` and CommonJS declarations on `.d.ts`.
 - Freeze the visual layer. Content structure, metadata, accessibility semantics, and documentation behavior remain in scope.
 - Keep `packages/core/docs-md/` outside the change and do not inspect, delete, regenerate, stage, or commit it.
-- Keep public Git metadata and repository content free of assistant attribution, generated-by trailers, task links, and tool-focused naming.
+- Use project-focused names and messages in branches, commits, and pull requests.
 
 ## Approach
 
