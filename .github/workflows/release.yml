@@ -54,6 +54,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Audit dependencies
+        run: pnpm test:security
+
       - name: Detect release mode
         id: release-mode
         env:
@@ -232,6 +235,7 @@ jobs:
         continue-on-error: true
         run: |
           set -euo pipefail
+          pnpm test:security
           pnpm build
           pnpm typecheck
           pnpm lint

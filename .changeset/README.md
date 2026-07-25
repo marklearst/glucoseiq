@@ -35,7 +35,7 @@ packed, and tested before its required check can pass.
 
 Merging the reviewed release pull request starts publication only after the
 same quality suite, the versioned-tarball matrix, and the live
-`glucoseiq.health` preflight pass. Registry verification runs after a real
+`glucoseiq.dev` preflight pass. Registry verification runs after a real
 publication and checks the published packages, metadata, tags, provenance,
 entrypoints, declarations, React peers, CLI, and compatibility exports.
 

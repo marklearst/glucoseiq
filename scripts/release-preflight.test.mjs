@@ -211,16 +211,16 @@ test('requires HTTP 200 from the apex, robots, and sitemap endpoints', async () 
 test('requires the apex canonical URL to resolve exactly to the HTTPS apex', async () => {
   for (const canonical of [
     'https://example.com/',
-    'http://glucoseiq.health/',
-    'https://glucoseiq.health/docs',
-    'https://glucoseiq.health/?preview=true',
-    'https://glucoseiq.health/#top',
+    'http://glucoseiq.dev/',
+    'https://glucoseiq.dev/docs',
+    'https://glucoseiq.dev/?preview=true',
+    'https://glucoseiq.dev/#top',
   ]) {
     const { fetchImpl } = createSuccessfulFetch({ canonical })
 
     await assert.rejects(
       verifyReleaseDomainOnce({ fetchImpl, requestTimeoutMs: 100 }),
-      /apex canonical: expected https:\/\/glucoseiq\.health\/, resolved /,
+      /apex canonical: expected https:\/\/glucoseiq\.dev\/, resolved /,
     )
   }
 
@@ -236,7 +236,7 @@ test('requires the apex canonical URL to resolve exactly to the HTTPS apex', asy
   })
   await assert.rejects(
     verifyReleaseDomainOnce({ fetchImpl: alteredByBase, requestTimeoutMs: 100 }),
-    /apex canonical: expected https:\/\/glucoseiq\.health\/, resolved https:\/\/example\.com\//,
+    /apex canonical: expected https:\/\/glucoseiq\.dev\/, resolved https:\/\/example\.com\//,
   )
 })
 
@@ -260,7 +260,7 @@ test('fails closed when an endpoint response or apex body is malformed', async (
           : successfulFetch(url, options),
       requestTimeoutMs: 100,
     }),
-    /request https:\/\/glucoseiq\.health\/ returned a response without a text body reader/,
+    /request https:\/\/glucoseiq\.dev\/ returned a response without a text body reader/,
   )
 
   await assert.rejects(
@@ -277,7 +277,7 @@ test('fails closed when an endpoint response or apex body is malformed', async (
 
 test('allows only permanent www redirects whose Location resolves exactly to the apex', async () => {
   for (const wwwStatus of [301, 308]) {
-    const { fetchImpl } = createSuccessfulFetch({ wwwStatus, location: '//glucoseiq.health/' })
+    const { fetchImpl } = createSuccessfulFetch({ wwwStatus, location: '//glucoseiq.dev/' })
     await assert.doesNotReject(
       verifyReleaseDomainOnce({ fetchImpl, requestTimeoutMs: 100 }),
     )
@@ -293,14 +293,14 @@ test('allows only permanent www redirects whose Location resolves exactly to the
 
   for (const location of [
     '/',
-    'http://glucoseiq.health/',
-    'https://glucoseiq.health/docs',
-    'https://glucoseiq.health/?from=www',
+    'http://glucoseiq.dev/',
+    'https://glucoseiq.dev/docs',
+    'https://glucoseiq.dev/?from=www',
   ]) {
     const { fetchImpl } = createSuccessfulFetch({ location })
     await assert.rejects(
       verifyReleaseDomainOnce({ fetchImpl, requestTimeoutMs: 100 }),
-      /www Location: expected https:\/\/glucoseiq\.health\/, resolved /,
+      /www Location: expected https:\/\/glucoseiq\.dev\/, resolved /,
     )
   }
 
@@ -343,7 +343,7 @@ test('times out the complete request body read and aborts its request signal', a
 
   await assert.rejects(
     request,
-    /request https:\/\/glucoseiq\.health\/ timed out after 25 ms/,
+    /request https:\/\/glucoseiq\.dev\/ timed out after 25 ms/,
   )
   assert.equal(capturedSignal.aborted, true)
   assert.equal(clearedTimer, 41)
@@ -358,7 +358,7 @@ test('reports network failures without exposing unstable stack output', async ()
       timeoutMs: 100,
     }),
     {
-      message: 'request https://glucoseiq.health/ failed: socket closed',
+      message: 'request https://glucoseiq.dev/ failed: socket closed',
     },
   )
 })
@@ -381,9 +381,9 @@ test('bounds attempts, sleeps only between attempts, and reports every failure',
     {
       message: [
         'Release domain preflight failed after 3 attempts:',
-        '- attempt 1: request https://glucoseiq.health/ failed: offline 1',
-        '- attempt 2: request https://glucoseiq.health/ failed: offline 2',
-        '- attempt 3: request https://glucoseiq.health/ failed: offline 3',
+        '- attempt 1: request https://glucoseiq.dev/ failed: offline 1',
+        '- attempt 2: request https://glucoseiq.dev/ failed: offline 2',
+        '- attempt 3: request https://glucoseiq.dev/ failed: offline 3',
       ].join('\n'),
     },
   )
@@ -447,6 +447,6 @@ test('CLI uses injected dependencies and prints one deterministic success line',
 
   assert.equal(result.attemptsUsed, 1)
   assert.deepEqual(lines, [
-    'Release domain preflight passed: https://glucoseiq.health/ (4 endpoints, 1 attempt).',
+    'Release domain preflight passed: https://glucoseiq.dev/ (4 endpoints, 1 attempt).',
   ])
 })

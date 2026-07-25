@@ -54,8 +54,8 @@ real device data. Do not use generated values for medical decisions.
 
 ## Documentation
 
-- [Testing guide](https://glucoseiq.health/docs/testing)
-- [Public API](https://glucoseiq.health/docs/api)
-- [Migration guide](https://glucoseiq.health/docs/migration)
+- [Testing guide](https://glucoseiq.dev/docs/testing)
+- [Public API](https://glucoseiq.dev/docs/api)
+- [Migration guide](https://glucoseiq.dev/docs/migration)
 - [Changelog](https://github.com/marklearst/glucoseiq/blob/main/CHANGELOG.md)
 - [MIT license](https://github.com/marklearst/glucoseiq/blob/main/LICENSE)

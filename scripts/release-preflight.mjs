@@ -1,8 +1,8 @@
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-export const APEX_URL = 'https://glucoseiq.health/'
-export const WWW_URL = 'https://www.glucoseiq.health/'
+export const APEX_URL = 'https://glucoseiq.dev/'
+export const WWW_URL = 'https://www.glucoseiq.dev/'
 export const DEFAULT_ATTEMPTS = 3
 export const DEFAULT_REQUEST_TIMEOUT_MS = 10_000
 export const DEFAULT_RETRY_DELAY_MS = 2_000

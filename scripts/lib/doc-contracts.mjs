@@ -18,50 +18,50 @@ const PUBLIC_PACKAGE_ROOTS = new Set([
   'diabetic-utils',
 ])
 
-const MIGRATION_URL = 'https://glucoseiq.health/docs/migration'
+const MIGRATION_URL = 'https://glucoseiq.dev/docs/migration'
 
 export const PACKAGE_README_CONTRACTS = Object.freeze(
   [
     {
       path: 'packages/core/README.md',
       packageName: '@glucoseiq/core',
-      guideUrl: 'https://glucoseiq.health/docs/core-concepts',
-      apiUrl: 'https://glucoseiq.health/docs/api/core',
+      guideUrl: 'https://glucoseiq.dev/docs/core-concepts',
+      apiUrl: 'https://glucoseiq.dev/docs/api/core',
       migrationUrl: MIGRATION_URL,
     },
     {
       path: 'packages/react/README.md',
       packageName: '@glucoseiq/react',
-      guideUrl: 'https://glucoseiq.health/docs/react',
-      apiUrl: 'https://glucoseiq.health/docs/api',
+      guideUrl: 'https://glucoseiq.dev/docs/react',
+      apiUrl: 'https://glucoseiq.dev/docs/api',
       migrationUrl: MIGRATION_URL,
     },
     {
       path: 'packages/tokens/README.md',
       packageName: '@glucoseiq/tokens',
-      guideUrl: 'https://glucoseiq.health/docs/tokens',
-      apiUrl: 'https://glucoseiq.health/docs/api',
+      guideUrl: 'https://glucoseiq.dev/docs/tokens',
+      apiUrl: 'https://glucoseiq.dev/docs/api',
       migrationUrl: MIGRATION_URL,
     },
     {
       path: 'packages/testing/README.md',
       packageName: '@glucoseiq/testing',
-      guideUrl: 'https://glucoseiq.health/docs/testing',
-      apiUrl: 'https://glucoseiq.health/docs/api',
+      guideUrl: 'https://glucoseiq.dev/docs/testing',
+      apiUrl: 'https://glucoseiq.dev/docs/api',
       migrationUrl: MIGRATION_URL,
     },
     {
       path: 'packages/cli/README.md',
       packageName: '@glucoseiq/cli',
-      guideUrl: 'https://glucoseiq.health/docs/cli',
-      apiUrl: 'https://glucoseiq.health/docs/api',
+      guideUrl: 'https://glucoseiq.dev/docs/cli',
+      apiUrl: 'https://glucoseiq.dev/docs/api',
       migrationUrl: MIGRATION_URL,
     },
     {
       path: 'packages/diabetic-utils/README.md',
       packageName: 'diabetic-utils',
       guideUrl: MIGRATION_URL,
-      apiUrl: 'https://glucoseiq.health/docs/api/core',
+      apiUrl: 'https://glucoseiq.dev/docs/api/core',
       migrationUrl: MIGRATION_URL,
     },
   ].map((contract) => Object.freeze(contract))
@@ -666,7 +666,7 @@ export function mapSiteUrlToTrackedRoute(destination) {
   }
   if (
     url.protocol !== 'https:' ||
-    url.hostname.toLowerCase() !== 'glucoseiq.health' ||
+    url.hostname.toLowerCase() !== 'glucoseiq.dev' ||
     url.port !== '' ||
     url.username !== '' ||
     url.password !== ''
@@ -776,7 +776,7 @@ export function validateDocumentLinks({
     if (/^https?:\/\//iu.test(destination)) {
       try {
         const parsed = new URL(destination)
-        if (parsed.hostname.toLowerCase() === 'glucoseiq.health.') {
+        if (parsed.hostname.toLowerCase() === 'glucoseiq.dev.') {
           diagnostics.push(
             linkDiagnostic(
               path,
@@ -822,13 +822,13 @@ export function validateDocumentLinks({
         )
         continue
       }
-      if (external.hostname.toLowerCase() === 'glucoseiq.health') {
+      if (external.hostname.toLowerCase() === 'glucoseiq.dev') {
         diagnostics.push(
           linkDiagnostic(
             path,
             link,
             'noncanonical-site-url',
-            `Use canonical HTTPS glucoseiq.health URLs: ${destination}`
+            `Use canonical HTTPS glucoseiq.dev URLs: ${destination}`
           )
         )
       }

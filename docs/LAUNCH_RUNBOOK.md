@@ -4,7 +4,7 @@ This runbook executes the approved two-gate launch without rewriting published
 history:
 
 1. merge the transition pull request, deploy the documentation, and make
-   `glucoseiq.health` canonical; then
+   `glucoseiq.dev` canonical; then
 2. review and merge the generated release pull request to publish the package
    family.
 
@@ -302,11 +302,11 @@ The monorepo setup follows Vercel's
 
 ### B3. Registrar and custom domain
 
-- [ ] Confirm the registrar reports `glucoseiq.health` as active. Do this before
+- [ ] Confirm the registrar reports `glucoseiq.dev` as active. Do this before
       changing DNS.
-- [ ] Add `glucoseiq.health` to the Vercel project and make it the canonical
+- [ ] Add `glucoseiq.dev` to the Vercel project and make it the canonical
       production domain.
-- [ ] Add `www.glucoseiq.health` and configure it to redirect to the apex.
+- [ ] Add `www.glucoseiq.dev` and configure it to redirect to the apex.
 - [ ] Ask Vercel to inspect both names and copy the exact A, CNAME, TXT, or
       nameserver values it reports for this project.
 - [ ] Enter those exact values at the active DNS provider. Do not copy a generic
@@ -322,20 +322,31 @@ After propagation, capture fresh evidence:
 ```bash
 set -euo pipefail
 
-dig +short A glucoseiq.health
-dig +short CNAME www.glucoseiq.health
-curl -fsSIL https://glucoseiq.health/
-curl -fsSIL https://www.glucoseiq.health/
-curl -fsS https://glucoseiq.health/robots.txt
-curl -fsS https://glucoseiq.health/sitemap.xml
-curl -fsS https://glucoseiq.health/docs/migration >/dev/null
-curl -fsS https://glucoseiq.health/docs/api/core >/dev/null
+dig +short A glucoseiq.dev
+dig +short CNAME www.glucoseiq.dev
+curl -fsSIL https://glucoseiq.dev/
+curl -fsSIL https://www.glucoseiq.dev/
+curl -fsS https://glucoseiq.dev/robots.txt
+curl -fsS https://glucoseiq.dev/sitemap.xml
+curl -fsS https://glucoseiq.dev/docs/migration >/dev/null
+curl -fsS https://glucoseiq.dev/docs/api/core >/dev/null
 ```
 
 - [ ] The apex serves the production documentation over HTTPS.
 - [ ] `www` redirects to the apex without a redirect loop.
-- [ ] Canonicals use `https://glucoseiq.health` and production is indexable.
+- [ ] Canonicals use `https://glucoseiq.dev` and production is indexable.
 - [ ] Navigation, search, links, and every documented route work on the apex.
+
+`glucoseiq.health` is a redirect alias, not a release gate. After the `.dev`
+site is live:
+
+- [ ] Add `glucoseiq.health` and `www.glucoseiq.health` to the Vercel project
+      and configure each one to redirect permanently to
+      `https://glucoseiq.dev`.
+- [ ] Point `glucoseiq.health` and `www.glucoseiq.health` at the exact DNS
+      records Vercel reports.
+- [ ] Confirm both names redirect permanently to `https://glucoseiq.dev`
+      without changing the canonical URL.
 
 ### B4. Retire the stale site and update repository metadata
 
@@ -346,7 +357,7 @@ Only after the Vercel apex is healthy:
       [Deleting a GitHub Pages site](https://docs.github.com/en/pages/getting-started-with-github-pages/deleting-a-github-pages-site).
 - [ ] Confirm the Pages URL no longer competes with the canonical production
       site.
-- [ ] Set the repository homepage to `https://glucoseiq.health`.
+- [ ] Set the repository homepage to `https://glucoseiq.dev`.
 - [ ] Set a concise repository description that identifies GlucoseIQ as a
       headless TypeScript toolkit for glucose-data applications.
 - [ ] Review public topics such as `typescript`, `diabetes`, `cgm`, `glucose`,
@@ -371,7 +382,7 @@ describes the public discovery metadata.
 - [ ] Re-run Part A against the exact versioned release head SHA.
 - [ ] Inspect the packed manifests, package contents, documentation, and
       migration text from that SHA.
-- [ ] Confirm `glucoseiq.health` is still healthy and canonical.
+- [ ] Confirm `glucoseiq.dev` is still healthy and canonical.
 
 Do not merge the release pull request until the bootstrap credential in B6 is
 ready and every box above is complete.

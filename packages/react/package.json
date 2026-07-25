@@ -1,7 +1,7 @@
 {
   "name": "@glucoseiq/react",
   "version": "0.0.0",
-  "description": "Thin React adapter for GlucoseIQ \u2014 memoized analysis hooks and headless AGP/TIR/trend components over the zero-dependency @glucoseiq/core engine.",
+  "description": "React hooks and headless components for GlucoseIQ reports, ranges, and trends.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -22,7 +22,7 @@
     "url": "https://github.com/marklearst/glucoseiq.git",
     "directory": "packages/react"
   },
-  "homepage": "https://glucoseiq.health",
+  "homepage": "https://glucoseiq.dev",
   "bugs": {
     "url": "https://github.com/marklearst/glucoseiq/issues"
   },
@@ -55,13 +55,13 @@
     "@testing-library/react": "^16.3.0",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.0",
-    "@vitest/coverage-v8": "^3.1.2",
+    "@vitest/coverage-v8": "^3.2.7",
     "jsdom": "^26.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tsup": "^8.4.0",
     "typescript": "^5.8.3",
-    "vitest": "^3.1.2"
+    "vitest": "^3.2.7"
   },
   "files": [
     "dist/",

@@ -5,6 +5,6 @@
  * The 107 supported root exports from `diabetic-utils@1.5.0` remain available;
  * new projects should depend on `@glucoseiq/core` directly.
  *
- * @see https://glucoseiq.health
+ * @see https://glucoseiq.dev
  */
 export * from '@glucoseiq/core'

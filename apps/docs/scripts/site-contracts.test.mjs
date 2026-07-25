@@ -26,19 +26,19 @@ async function loadSiteMetadata() {
 test('canonical URLs always use the GlucoseIQ apex domain', async () => {
   const { SITE_ORIGIN, canonicalUrl } = await loadSiteMetadata()
 
-  assert.equal(SITE_ORIGIN, 'https://glucoseiq.health')
-  assert.equal(canonicalUrl('/'), 'https://glucoseiq.health/')
+  assert.equal(SITE_ORIGIN, 'https://glucoseiq.dev')
+  assert.equal(canonicalUrl('/'), 'https://glucoseiq.dev/')
   assert.equal(
     canonicalUrl('/docs/data-quality'),
-    'https://glucoseiq.health/docs/data-quality'
+    'https://glucoseiq.dev/docs/data-quality'
   )
   assert.equal(
     canonicalUrl('/docs/react'),
-    'https://glucoseiq.health/docs/react'
+    'https://glucoseiq.dev/docs/react'
   )
   assert.equal(
     canonicalUrl('https://glucoseiq-git-preview.vercel.app/docs/metrics'),
-    'https://glucoseiq.health/docs/metrics'
+    'https://glucoseiq.dev/docs/metrics'
   )
 })
 
@@ -46,14 +46,14 @@ test('root HTML is indexable only for a production Vercel deployment', async () 
   const { createRootMetadata } = await loadSiteMetadata()
 
   const production = createRootMetadata('production')
-  assert.equal(production.metadataBase.href, 'https://glucoseiq.health/')
-  assert.equal(production.alternates.canonical, 'https://glucoseiq.health/')
+  assert.equal(production.metadataBase.href, 'https://glucoseiq.dev/')
+  assert.equal(production.alternates.canonical, 'https://glucoseiq.dev/')
   assert.deepEqual(production.robots, { index: true, follow: true })
 
   for (const environment of [undefined, 'preview', 'development']) {
     const metadata = createRootMetadata(environment)
-    assert.equal(metadata.metadataBase.href, 'https://glucoseiq.health/')
-    assert.equal(metadata.alternates.canonical, 'https://glucoseiq.health/')
+    assert.equal(metadata.metadataBase.href, 'https://glucoseiq.dev/')
+    assert.equal(metadata.alternates.canonical, 'https://glucoseiq.dev/')
     assert.deepEqual(metadata.robots, { index: false, follow: false })
   }
 })
@@ -69,8 +69,8 @@ test('robots disallows previews and advertises the production sitemap', async ()
   })
   assert.deepEqual(createRobots('production'), {
     rules: { userAgent: '*', allow: '/' },
-    sitemap: 'https://glucoseiq.health/sitemap.xml',
-    host: 'https://glucoseiq.health',
+    sitemap: 'https://glucoseiq.dev/sitemap.xml',
+    host: 'https://glucoseiq.dev',
   })
 })
 
@@ -84,10 +84,10 @@ test('sitemap output is unique, deterministic, canonical, and undated', async ()
   ]
 
   const expected = [
-    { url: 'https://glucoseiq.health/' },
-    { url: 'https://glucoseiq.health/docs' },
-    { url: 'https://glucoseiq.health/docs/data-quality' },
-    { url: 'https://glucoseiq.health/docs/metrics' },
+    { url: 'https://glucoseiq.dev/' },
+    { url: 'https://glucoseiq.dev/docs' },
+    { url: 'https://glucoseiq.dev/docs/data-quality' },
+    { url: 'https://glucoseiq.dev/docs/metrics' },
   ]
   assert.deepEqual(createSitemap(pages), expected)
   assert.deepEqual(createSitemap([...pages].reverse()), expected)
@@ -108,14 +108,14 @@ test('page metadata carries its own canonical and social identity', async () => 
   assert.equal(page.title, 'Data quality')
   assert.equal(
     page.alternates.canonical,
-    'https://glucoseiq.health/docs/data-quality'
+    'https://glucoseiq.dev/docs/data-quality'
   )
   assert.deepEqual(page.openGraph, {
     type: 'website',
     siteName: 'GlucoseIQ',
     title: 'Data quality',
     description: 'Validate coverage before rendering analytics.',
-    url: 'https://glucoseiq.health/docs/data-quality',
+    url: 'https://glucoseiq.dev/docs/data-quality',
   })
 
   const home = createPageMetadata({
@@ -125,7 +125,7 @@ test('page metadata carries its own canonical and social identity', async () => 
     absoluteTitle: true,
   })
   assert.deepEqual(home.title, { absolute: SITE_TITLE })
-  assert.equal(home.openGraph.url, 'https://glucoseiq.health/')
+  assert.equal(home.openGraph.url, 'https://glucoseiq.dev/')
   assert.deepEqual(home.twitter, {
     card: 'summary_large_image',
     title: SITE_TITLE,

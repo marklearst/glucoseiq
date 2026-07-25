@@ -1420,7 +1420,7 @@ claim enforcement, while still checking their links.
 
 Parse Markdown/MDX links, reference definitions, images, and raw HTML/MDX URL
 attributes. Reject unsafe schemes and tarball-breaking relative non-fragment URLs in
-published READMEs. Map every `https://glucoseiq.health/...` link back to a tracked docs
+published READMEs. Map every `https://glucoseiq.dev/...` link back to a tracked docs
 route. Require all six published READMEs to contain Node `>=24`, installation, a strict
 typed first-use example, option and invalid-input behavior, safety limits, absolute
 guide/migration/API links, license, and changelog links. Add a tracked legacy landing
@@ -1575,7 +1575,7 @@ Each README must contain installation, Node `>=24`, a typed minimal example, val
 - Compatibility bridge: `legacy` tag guidance and direct scoped-package migration.
 
 Repair stale changelog source links to the preserved `v1.4.0` tag before linking the
-package READMEs. Use canonical package guide URLs under `https://glucoseiq.health/docs`
+package READMEs. Use canonical package guide URLs under `https://glucoseiq.dev/docs`
 and include API, migration, MIT license, and changelog links that exist in packed
 tarballs or are absolute HTTPS URLs.
 
@@ -1730,7 +1730,7 @@ remain unstaged and untouched even if it exists in the original worktree.
 
 **Interfaces:**
 
-- The canonical production origin is `https://glucoseiq.health`.
+- The canonical production origin is `https://glucoseiq.dev`.
 - Preview deployments use `noindex` and do not replace production canonicals.
 - The sitemap contains `/` plus every Fumadocs page returned by `source.getPages()`.
 - No visual redesign or palette change is allowed.

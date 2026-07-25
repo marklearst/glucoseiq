@@ -46,8 +46,8 @@ advice.
 
 ## Documentation
 
-- [Tokens guide](https://glucoseiq.health/docs/tokens)
-- [Public API](https://glucoseiq.health/docs/api)
-- [Migration guide](https://glucoseiq.health/docs/migration)
+- [Tokens guide](https://glucoseiq.dev/docs/tokens)
+- [Public API](https://glucoseiq.dev/docs/api)
+- [Migration guide](https://glucoseiq.dev/docs/migration)
 - [Changelog](https://github.com/marklearst/glucoseiq/blob/main/CHANGELOG.md)
 - [MIT license](https://github.com/marklearst/glucoseiq/blob/main/LICENSE)
