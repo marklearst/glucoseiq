@@ -1,6 +1,6 @@
 ---
 title: Design Tokens
-description: Use the canonical GlucoseIQ zones, palettes, trend glyphs, and CSS variables in any interface.
+description: Use the shared GlucoseIQ zones, palettes, trend glyphs, and CSS variables in any interface.
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout'
@@ -76,8 +76,8 @@ uses the dark zone palette for stable fills in both surface themes, while its
 
 ## Add the CSS variables
 
-`cssVariables` returns declarations rather than a complete rule, so you choose
-where the theme lives:
+`cssVariables` returns declarations without a selector, so you choose where the
+theme lives:
 
 ```ts typecheck
 import { cssVariables } from '@glucoseiq/tokens'

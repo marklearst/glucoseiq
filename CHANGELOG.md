@@ -46,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **LBGI / HBGI**: Low and High Blood Glucose Index risk scores (Kovatchev 2006)
 - **GRI**: Glycemia Risk Index with zone A-E classification (Klonoff 2023)
 - **MODD**: Mean of Daily Differences for day-to-day glucose variability (Service 1980)
-- **CGM Connector Adapters**: `normalizeDexcomEntries()`, `normalizeLibreEntries()`, `normalizeNightscoutEntries()` — pure transformation helpers mapping vendor payloads into canonical `NormalizedCGMReading` type with trend and source metadata
+- **CGM Connector Adapters**: `normalizeDexcomEntries()`, `normalizeLibreEntries()`, and `normalizeNightscoutEntries()` map vendor payloads into the shared `NormalizedCGMReading` type with trend and source metadata
 - **FHIR CGM IG**: `buildFHIRCGMSummary()`, `buildFHIRSensorReading()`, `buildFHIRSensorReadings()` for HL7 FHIR-aligned CGM observation payloads
 - **Open mHealth**: `buildOMHBloodGlucose()`, `buildOMHBloodGlucoseList()`, `buildOMHDataPoint()` for standards-compliant health data exchange
 - Edge-case tests for out-of-order timestamps, mixed units, and cross-module interactions
@@ -56,18 +56,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Test suite expanded from 295 to 337 passing tests, maintaining 100% coverage
 
 ### Fixed
-- Enhanced TIR interval estimation now robust to unsorted timestamps
+- Enhanced TIR interval estimation now handles unsorted timestamps
 - FHIR component schema alignment and tighter Open mHealth types
 - GRI and MODD calculations refined from review feedback
 
 ## [1.4.2] - 2024-11-11
 
 ### Documentation
-- Complete README overhaul with v1.4.0 feature showcase
-- Added working code examples for Enhanced TIR and Pregnancy TIR
-- Improved structure and visual hierarchy
-- Added architecture diagram and clinical references section
-- Enhanced developer experience with copy-paste ready examples
+- Reworked the README structure and v1.4.0 feature examples
+- Added runnable examples for Enhanced TIR and Pregnancy TIR
+- Added an architecture diagram and clinical references
 
 ## [1.4.1] - 2024-11-11
 
@@ -86,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Type predicates for better TypeScript type narrowing ([isValidInsulin](https://github.com/marklearst/glucoseiq/blob/v1.4.0/src/validators.ts))
 - Test helpers module ([tests/test-helpers.ts](https://github.com/marklearst/glucoseiq/blob/v1.4.0/tests/test-helpers.ts)) with shared test utilities
 - Enhanced TIR functions: [calculateEnhancedTIR()](https://github.com/marklearst/glucoseiq/blob/v1.4.0/src/tir-enhanced.ts) and [calculatePregnancyTIR()](https://github.com/marklearst/glucoseiq/blob/v1.4.0/src/tir-enhanced.ts)
-- Comprehensive test suite for Enhanced TIR (205 tests, 100% coverage)
+- Added Enhanced TIR tests, bringing the suite to 205 tests with 100% coverage
 
 ### Changed
 - Improved type safety by removing `any` types from type guards
@@ -102,10 +100,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed unused error parameter in MAGE catch block
 
 ### Developer Experience
-- Better autocomplete with literal types
-- Self-documenting code with named constants
-- Reusable test helpers for consistent test data generation
-- Working code examples in documentation
+- Improved autocomplete with literal types
+- Replaced inline formula values with named constants
+- Added shared test helpers
+- Added runnable documentation examples
 
 ## [1.3.1] - 2024-11-10
 - Previous release
@@ -115,7 +113,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Architecture Changes
 
 - Migrated from nested directory structure to flat organization
-- Consolidated related functionality into single, focused files
+- Consolidated related functionality into one file per area
 - Simplified import paths and reduced complexity
 
 ### File Consolidation
@@ -130,14 +128,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Testing Improvements
 
 - Reorganized test files to mirror new structure
-- Added comprehensive type definition tests
+- Added type-definition tests
 - Increased test coverage to 100% for all functional code
 - Total test count increased from 34 to 63 tests
 
 ### Type System
 
 - Centralized type definitions in `types.ts`
-- Added explicit validation for type structures
+- Added validation tests for public type structures
 - Improved type safety across the library
 
 ### Build & Configuration
@@ -145,5 +143,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated build configuration for flat structure
 - Optimized package exports configuration
 - Maintained backward compatibility with existing APIs
-
-This release focuses on improving maintainability and developer experience while preserving all existing functionality and type safety.

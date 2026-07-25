@@ -1,9 +1,9 @@
 # GlucoseIQ
 
-GlucoseIQ is a headless TypeScript toolkit for glucose-data applications. It
-provides analytics, normalized data structures, framework-neutral render data,
-SVG renderers, React bindings, design tokens, deterministic test fixtures, and
-a command-line interface without prescribing a dashboard or product UI.
+GlucoseIQ is a headless TypeScript library for CGM and glucose data. The core
+package normalizes readings, calculates metrics, and returns render data or SVG
+for your UI. Companion packages add React bindings, design tokens, fixed-seed
+test fixtures, and a command-line interface.
 
 GlucoseIQ 1.0 moves the project into the `@glucoseiq` package scope.
 `diabetic-utils` 2.0 is the compatibility bridge for existing 1.5.x imports.
@@ -18,7 +18,7 @@ GlucoseIQ 1.0 moves the project into the `@glucoseiq` package scope.
 | [`@glucoseiq/core`](https://www.npmjs.com/package/@glucoseiq/core) | Headless analytics, metrics, connectors, interoperability helpers, render data, and SVG renderers. |
 | [`@glucoseiq/react`](https://www.npmjs.com/package/@glucoseiq/react) | React 18 and 19 hooks and headless components backed by the core package. |
 | [`@glucoseiq/tokens`](https://www.npmjs.com/package/@glucoseiq/tokens) | Shared glucose-zone colors, thresholds, trend glyphs, and CSS custom properties. |
-| [`@glucoseiq/testing`](https://www.npmjs.com/package/@glucoseiq/testing) | Deterministic synthetic CGM-shaped data and scenario fixtures for tests and demos. |
+| [`@glucoseiq/testing`](https://www.npmjs.com/package/@glucoseiq/testing) | Fixed-seed synthetic CGM-shaped data and scenario fixtures for tests and demos. |
 | [`@glucoseiq/cli`](https://www.npmjs.com/package/@glucoseiq/cli) | The `glucoseiq` executable for analyzing mapped CSV input. |
 | [`diabetic-utils`](https://www.npmjs.com/package/diabetic-utils) | Compatibility bridge from the legacy package to `@glucoseiq/core`. |
 

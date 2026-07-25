@@ -1,188 +1,95 @@
-# Headless CGM Framework Roadmap (Revised)
+# GlucoseIQ roadmap
 
-## North-Star Goal
+GlucoseIQ is the TypeScript layer between CGM data and a product interface. It
+normalizes supported payloads, calculates glucose metrics, and returns typed
+data or SVG. Applications keep responsibility for credentials, storage,
+workflows, and presentation.
 
-Build **GlucoseIQ** into the premier headless CGM TypeScript framework:
-UI-agnostic, protocol-first, and capable of powering independent dashboards
-and large product platforms. The `diabetic-utils` package remains the
-compatibility bridge for existing projects.
+## GlucoseIQ 1.0
 
-The strategy is not to ship a full vertical platform; it is to ship a world-class **headless core** that any product team can compose into their own experience.
+The first scoped release contains five packages:
 
-## Product Positioning
+- `@glucoseiq/core`
+- `@glucoseiq/react`
+- `@glucoseiq/tokens`
+- `@glucoseiq/testing`
+- `@glucoseiq/cli`
 
-- **Core first**: `core` is the main course and must be exceptional.
-- **Composable ecosystem**: optional packages make adoption easier across app stacks.
-- **Enterprise-capable without enterprise bloat**: robust enough for large deployments, lean enough for modern frontend/backend teams.
+`diabetic-utils@2` is the compatibility bridge for existing imports.
 
-## Codebase Scan: What Is Already Strong
+No package will be added to the 1.0 launch. A larger package list would add
+more versioning and support work without improving the initial contract.
 
-The current codebase already includes essential building blocks for a headless CGM system:
+## Work after 1.0
 
-- Canonical glucose models and utility conversions.
-- Vendor normalization adapters (Dexcom, Libre, Nightscout).
-- Broad analytics coverage (TIR, AGP, risk/variability metrics).
-- Interop builders (FHIR/Open mHealth).
-- Strong automated testing and modular functions.
+### Connector evidence
 
-## Strategic Gaps to Close
+Keep connector normalization under `@glucoseiq/core/connectors`.
 
-1. **Domain contract layering is incomplete**
-   - Need strict contracts for each stage:
-     - source payload,
-     - normalized event,
-     - aligned timeline,
-     - computed analytics snapshot,
-     - presentation-ready derivative series.
+- Add fixtures from documented Dexcom, Libre, and Nightscout payload shapes.
+- Record which timestamp, trend, unit, and identifier fields each normalizer
+  reads.
+- Test replay, duplicate records, clock differences, and missing trend values.
+- Keep authentication and fetching in the host application.
 
-2. **Connector model lacks capability metadata**
-   - Add explicit connector capability descriptors:
-     - update frequency and freshness,
-     - trend vocabulary coverage,
-     - source clock behavior,
-     - supported history depth,
-     - quality/reliability flags.
+### Report contracts
 
-3. **Feature orchestration is manual**
-   - Add first-class pipelines for common workflows:
-     - ingest -> normalize -> align -> aggregate -> export.
+Make the path from readings to a report easier to inspect.
 
-4. **Validation ergonomics need opt-in tiers**
-   - Keep core lean and fast.
-   - Provide optional runtime schema adapters (Zod/standard schema) as add-ons.
+- Document screening rules next to the affected report fields.
+- Expose data sufficiency wherever a summary could be mistaken for a complete
+  period.
+- Keep numeric-array APIs separate from unit-bearing reading APIs.
+- Add report fixtures for common product states such as missing data, mixed
+  units, long gaps, and meal windows.
 
-5. **Framework entrypoints are not yet productized**
-   - Create headless app-integration helpers for Next.js and TanStack ecosystems without coupling to UI frameworks.
+### Product examples
 
-## Monorepo Strategy Options
+Examples should prove that the packages support different interfaces without
+turning those interfaces into framework requirements.
 
-### Option A (Recommended): Turborepo + pnpm workspaces
+- A responsive web dashboard that uses typed report data.
+- An AGP-style report that uses the SVG renderer.
+- A small React surface that uses hooks and components.
+- A server example that normalizes a payload already fetched by the host.
 
-Why this fits a lightweight, library-first project:
+Examples belong under `examples/` until they need their own release or support
+policy.
 
-- Minimal ceremony and fast local feedback loops.
-- Great DX for multiple publishable packages.
-- Strong cache/task orchestration without heavyweight abstractions.
+### Compatibility
 
-Suggested package layout:
+- Keep the 107 exports from `diabetic-utils@1.5.0` covered by contract tests.
+- Publish migration notes with every intentional behavior change.
+- Keep scoped package versions independent after the coordinated launch.
+- Remove compatibility code only through a documented major release.
 
-- `packages/core`
-- `packages/connectors`
-- `packages/pipelines`
-- `packages/interop`
-- `packages/schemas` (optional)
-- `packages/query` (optional)
-- `examples/*` (Next.js, TanStack Start, MUI X dashboards)
+## When a new package is justified
 
-### Option B: Nx (not default)
+A proposed package needs a boundary that users can understand and maintainers
+can test independently. At least one of these conditions should apply:
 
-Use only if you need deep enterprise governance features (complex dependency graph policy, large team guardrails, advanced generators).
+- It introduces a runtime dependency that does not belong in core.
+- It needs a separate security or credential policy.
+- It targets a runtime with a different support matrix.
+- It has a release cadence independent of the existing packages.
+- It owns a public contract large enough to document and support on its own.
 
-For this project’s current size and speed goals, Nx likely adds unnecessary operational complexity.
+Two ideas may eventually meet that test:
 
-## Connector Strategy by Device Class
+- A schema adapter package if Zod or Standard Schema support develops a stable
+  public contract and dependency boundary.
+- A transport package if retry, caching, and credential handling can be
+  separated from vendor clients without weakening their security model.
 
-Treat connectors as capability-driven modules with explicit profiles.
+Neither is part of 1.0. Start with an example or internal module, gather real
+use cases, then decide whether a package earns the maintenance cost.
 
-### Tier 1: Full-fidelity CGM connectors
+## Measures that matter
 
-- **Dexcom**
-- **Libre**
-
-Requirements:
-
-- full trend mapping coverage,
-- high-resolution timestamp handling,
-- robust de-duplication and backfill support,
-- deterministic normalization with strict error unions.
-
-### Tier 2: Community/cloud relay connectors
-
-- **Nightscout** and other relay sources.
-
-Requirements:
-
-- provenance metadata,
-- source-quality scoring,
-- replay/clock-skew guardrails.
-
-### Tier 3: Limited-range or constrained devices
-
-Some devices expose narrower operating/alert ranges or reduced telemetry semantics compared with full-fidelity CGM streams.
-
-Plan:
-
-- represent device constraints explicitly in connector capabilities,
-- mark unsupported metrics as `notComputable` rather than silently guessing,
-- provide policy helpers so consumers choose strict vs permissive behavior.
-
-Note: regulatory and labeling differences vary by market and can change; treat these as external policy inputs, not hardcoded assumptions.
-
-## API Design Rules (Non-Negotiable)
-
-1. **Purity by default**: deterministic transforms, no hidden side effects.
-2. **Typed error unions**: parse/transport/domain errors are explicit and discriminated.
-3. **Time semantics are explicit**: timezone, ordering, and gap policy are configurable.
-4. **Stable contracts**: additive evolution first; deprecate with migration guides.
-5. **Performance budget**: avoid heavy runtime deps in core path.
-
-## Feature Strategy Template (Apply to Every New Capability)
-
-For each new feature (including each connector), require the same structured lifecycle:
-
-1. **Problem definition**
-   - clinical/analytics intent,
-   - data prerequisites,
-   - failure modes.
-
-2. **Contract design**
-   - input/output type contracts,
-   - capability and error model,
-   - invariants and edge-case semantics.
-
-3. **Implementation**
-   - pure normalization/computation,
-   - no framework coupling,
-   - benchmark against performance budget.
-
-4. **Verification**
-   - golden fixtures,
-   - edge-case tests,
-   - compatibility tests across package boundaries.
-
-5. **Documentation + examples**
-   - reference docs,
-   - example integration (Next.js / TanStack Start / MUI X),
-   - migration notes if behavior changed.
-
-## Phased Execution Plan
-
-### Phase 1 — Contract Hardening (core + connectors)
-
-- Introduce capability descriptors and strict connector error unions.
-- Add aligned timeline contract and gap/collision policies.
-- Keep existing exports stable; add new APIs additively.
-
-### Phase 2 — Pipeline Layer
-
-- Ship reusable orchestration pipelines and snapshot envelopes.
-- Add deterministic series builders for dashboards.
-
-### Phase 3 — Optional Extensions
-
-- Publish optional `schemas` and `query` packages.
-- Add transport-agnostic fetch/retry helpers and cache key utilities.
-
-### Phase 4 — Adoption Flywheel
-
-- Ship polished examples + starter kits.
-- Publish interoperability playbooks and migration guides.
-- Track onboarding time and production success metrics.
-
-## Success Metrics
-
-- <30 minutes from install to first working dashboard.
-- Tier-1 connectors pass exhaustive fixture suites.
-- Core package remains dependency-light and framework-agnostic.
-- Optional packages improve adoption without burdening minimal users.
-- Clear semver and migration confidence for long-term trust.
+- A developer can install core and produce a report in under 30 minutes.
+- Packed-package tests cover every public entrypoint and supported module
+  system.
+- Core stays below its 20 KB compressed bundle budget and has no runtime
+  dependencies.
+- Connector docs match the fields used by the implementation.
+- Migration tests keep existing `diabetic-utils` imports working.

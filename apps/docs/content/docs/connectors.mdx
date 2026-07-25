@@ -18,12 +18,9 @@ import {
 } from '@glucoseiq/core/connectors'
 ```
 
-<Callout type="warn" title="Normalization, not authenticated transport">
-  These functions do not sign in to a vendor, hold credentials, refresh
-  tokens, make network requests, poll, retry, backfill, cache, or persist data.
-  Fetch payloads with the authorized API or client appropriate to your
-  application, then pass those payloads to GlucoseIQ for deterministic
-  normalization.
+<Callout type="warn" title="Connector scope">
+  Connector functions normalize payloads you supply. Your application handles
+  vendor access, network policy, and storage.
 </Callout>
 
 ## The normalized contract
@@ -54,7 +51,7 @@ interface NormalizedCGMReading {
 Batch normalizers sort successful readings chronologically. Unknown or
 unsupported trend values become `unknown` instead of inventing a direction.
 
-`dedupKey` is a deterministic key you can use in your own cache or persistence
+`dedupKey` is a stable key you can use in your own cache or persistence
 layer. The normalizers create the key; they do not remove duplicate readings
 for you.
 
@@ -189,9 +186,8 @@ NIGHTSCOUT_CAPABILITIES.clockModel    // 'relay'
 | Nightscout | 2 | 300 s | 900 s | `full` | 90 days | `relay` |
 
 Tier 1 describes a full-fidelity vendor feed; tier 2 describes a community or
-relay source. Treat these values as declarative defaults for your scheduling,
-freshness, and gap policies—not as a polling engine or a guarantee from the
-upstream service.
+relay source. Use these values as starting points for scheduling and staleness
+checks, then verify them against the current upstream service.
 
 ## A practical ingestion boundary
 
@@ -215,5 +211,5 @@ async function buildReport() {
 }
 ```
 
-Your server route owns authorization and network policy. GlucoseIQ owns the
-pure, testable translation into a vendor-neutral analytics contract.
+Authorize and fetch vendor data in your server route, then pass the payload to
+a GlucoseIQ normalizer.

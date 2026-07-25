@@ -3,9 +3,8 @@ title: Data Model
 description: Glucose readings, source metadata, unit contracts, timestamps, and time zones.
 ---
 
-GlucoseIQ deliberately keeps its analytical input small. A reading represents
-one glucose value at one instant; source-specific details are optional metadata
-on top of that common shape.
+A reading contains one glucose value, its unit, and a timestamp.
+Source-specific details are optional metadata on that shape.
 
 ## `GlucoseReading`
 
@@ -67,11 +66,11 @@ The added fields are:
 
 | Field | Meaning |
 | --- | --- |
-| `trend` | Canonical direction from `rapidRising` through `rapidFalling`, or `unknown` |
+| `trend` | Normalized direction from `rapidRising` through `rapidFalling`, or `unknown` |
 | `source` | `'dexcom'`, `'libre'`, `'nightscout'`, or `'unknown'` |
 | `vendorId` | Original stable identifier when the payload provides one |
 | `nativeUnit` | Vendor display unit when the normalized value is emitted in another unit |
-| `dedupKey` | Deterministic source-qualified key when the adapter can construct one |
+| `dedupKey` | Stable source-qualified key when the adapter can construct one |
 
 Reading-based analytics such as `analyzeGlucose` accept normalized readings:
 
@@ -92,7 +91,7 @@ const report = analyzeGlucose(readings)
 ```
 
 The array normalizers return readings in chronological order. They map source
-trend vocabularies to the canonical `CGMTrend` union and use `unknown` when a
+trend vocabularies to the shared `CGMTrend` union and use `unknown` when a
 trend is absent or unmapped.
 
 ## Units travel with every reading
@@ -214,5 +213,5 @@ const results = subjects.map(({ subjectId, readings }) => ({
 }))
 ```
 
-This prevents application identity and protected data from leaking into a
-portable analytical primitive.
+Keeping identity in the containing record limits the analytics input to
+measurement data. The host still owns authorization and privacy controls.

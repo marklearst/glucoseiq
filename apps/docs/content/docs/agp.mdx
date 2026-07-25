@@ -31,7 +31,7 @@ populatedBin
 ```
 
 Draw it with any chart library as two shaded areas (5–95, 25–75) plus a median
-line — or don't draw it yourself at all:
+line, or use the SVG renderer:
 
 ## AGP-in-a-tag
 
@@ -44,7 +44,7 @@ const readings: GlucoseReading[] = [
 ]
 
 const svg = agpChartToSVG(readings, { theme: 'dark', title: 'Last 14 days' })
-// A complete, self-contained <svg> string — no DOM, no canvas, no framework.
+// A self-contained <svg> string. No DOM, canvas, or framework required.
 ```
 
 The renderer returns an SVG string. A browser can embed it as trusted markup;
@@ -54,9 +54,9 @@ stacked bar) and `trendTileToSVG` (the glanceable current-value tile).
 
 ## Reproducibility
 
-Nearest-rank percentiles are the default — matching `glucosePercentiles` and
-keeping cited results reproducible. Interpolated (type-7) percentiles are an
-explicit opt-in via `method: 'linear'`.
+Nearest-rank percentiles are the default, matching `glucosePercentiles` and
+keeping cited results reproducible. Set `method: 'linear'` to use interpolated
+type-7 percentiles.
 
 The percentile-band conventions follow the international consensus report:
 [Battelino et al., 2019](https://doi.org/10.2337/dci19-0028).

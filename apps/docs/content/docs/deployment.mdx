@@ -1,21 +1,20 @@
 ---
 title: Deployment
-description: Deploy GlucoseIQ applications with explicit server, client, credential, rendering, and verification boundaries.
+description: Choose where GlucoseIQ runs and keep authenticated transport on the server.
 ---
 
-GlucoseIQ does not prescribe a hosting platform. The important deployment
-decision is where authenticated transport ends and normalized glucose data
-begins.
+Choose where authenticated transport ends and normalized glucose data begins.
+Keep vendor credentials and authorization in a trusted server or data layer.
 
 ## Recommended data flow
 
-1. A trusted server or data layer obtains credentials and fetches the source
-   payload.
-2. A connector or application adapter validates and normalizes the payload.
-3. The server applies authorization, retention, and logging policy.
-4. The UI receives only the fields it needs as `GlucoseReading[]` or an
-   application-specific view model.
-5. Core analytics or React hooks derive render-ready data.
+| Stage | Location | Output |
+| --- | --- | --- |
+| Fetch source data | Trusted server or data layer | Vendor payload |
+| Validate and normalize | Trusted server or application adapter | `GlucoseReading[]` |
+| Apply host policy | Server | Authorized, retained, and logged data |
+| Send data to the UI | Server boundary | Required reading fields or a view model |
+| Calculate and render | Server or client, depending on the API | Analytics data or SVG |
 
 Do not place vendor secrets in public environment variables, client bundles,
 URLs, analytics events, or error messages. Connector functions do not create a
@@ -25,8 +24,7 @@ security boundary for the host.
 
 Use `@glucoseiq/core` in server-only modules. The package has no runtime
 dependencies and does not require a DOM. Serialize only the result needed by a
-client component, and decide deliberately whether raw readings should cross
-that boundary.
+client component, and decide whether raw readings should cross that boundary.
 
 Do not import `@glucoseiq/react` from a server-only module. Its root is a Client
 Component package. A framework such as Next.js can pass serializable data into
@@ -40,8 +38,8 @@ reading arrays and options objects stable between React renders when their
 contents have not changed.
 
 Core SVG renderers return strings. Embed only output produced by the trusted
-renderer boundary, pair charts with a textual summary, and verify the complete
-host application at its deployed URL.
+renderer boundary, pair charts with a textual summary, and verify the host
+application at its deployed URL.
 
 ## File and command deployments
 
@@ -49,32 +47,6 @@ The `glucoseiq` executable reads one requested input file into memory and
 writes only an explicitly requested SVG path. Container and job hosts should
 set file-size, path, CPU, memory, timeout, and retention limits appropriate to
 their workload. Use `--json` for automation and check the process exit code.
-
-## Deploy this documentation workspace to Vercel
-
-For the GlucoseIQ documentation project, use the repository-aware monorepo
-configuration:
-
-| Setting | Value |
-| --- | --- |
-| Project | `glucoseiq` |
-| Repository | `marklearst/glucoseiq` |
-| Root directory | `apps/docs` |
-| Framework | Next.js |
-| Node.js | 24.x |
-| Build command | `cd ../.. && turbo run build --filter=docs` |
-| Install command | Automatic pnpm workspace detection |
-
-Verify a pull-request preview before promoting the transition. Vercel's
-[Turborepo deployment guide](https://vercel.com/docs/monorepos/turborepo)
-describes the monorepo root and filtered-build model.
-
-For the production domain, first confirm the registrar reports the domain as
-active. Then add both `glucoseiq.health` and `www.glucoseiq.health` to the
-project, make the apex canonical, and redirect `www` to the apex. Copy the
-exact A, CNAME, or verification values reported for this project; do not reuse
-generic DNS examples. See Vercel's
-[custom-domain guide](https://vercel.com/docs/domains/set-up-custom-domain).
 
 ## Production verification
 
@@ -88,5 +60,5 @@ Before directing users to a deployment:
 - check accessibility in the actual host, including the chart's text alternative
 - record the deployed commit and a rollback target
 
-The checked-in launch runbook tracks the repository maintainer sequence
-separately from this consumer guide.
+Repository maintainers should follow `docs/LAUNCH_RUNBOOK.md` for the release
+sequence and documentation-site configuration.

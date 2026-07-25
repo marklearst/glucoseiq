@@ -3,9 +3,19 @@ title: Data Quality
 description: Handle malformed records, coverage, gaps, interpolation, and non-computable results.
 ---
 
-Good glucose analytics begin before the first metric is calculated. Preserve
-observed readings, make rejected records visible, assess coverage, and treat
-interpolation as derived data rather than new sensor evidence.
+Validate and preserve source readings before calculating metrics. Report
+rejected rows and mark interpolated points as derived.
+
+## Choose the check you need
+
+| Need | API or result | Host responsibility |
+| --- | --- | --- |
+| Skip one malformed vendor row | `safeNormalize*Entries` | Record or show the rejected-row count |
+| Audit skipped CSV rows | `parseGlucoseCSV` | Compare source and accepted row counts when an audit is required |
+| Check report validity | `report.valid` | Show an empty state for an invalid report |
+| Measure available history | `report.dataSufficiency` or `calculateActivePercent` | Show coverage separately from analytical values |
+| Find missing readings | `detectGaps` | Choose a threshold that matches the source cadence |
+| Build a regular chart grid | `alignToGrid` | Keep interpolated points separate from observed readings |
 
 ## Choose strict or partial-success normalization
 
@@ -205,10 +215,10 @@ observations count once, invalid timestamps receive no duration, and the final
 integer-minute allocation conserves the summary total. Percentages and reading
 counts still classify raw input rows.
 
-## Detect gaps explicitly
+## Find gaps
 
-Timestamp coverage is one aggregate number. `detectGaps` identifies the exact breaks a
-chart or review workflow may need to show:
+Timestamp coverage is one aggregate number. `detectGaps` identifies the exact
+breaks a chart or review workflow may need to show:
 
 ```ts typecheck
 import { detectGaps, type GlucoseReading } from '@glucoseiq/core'
@@ -274,8 +284,8 @@ Each `GridPoint` contains `timestamp`, `value`, and `interpolated`; it is not a
 unit alongside the grid in your view model.
 
 Treat aligned points as presentation or comparison data. Keep the original
-observations for reports unless your application deliberately chooses to count
-interpolated values as data.
+observations for reports unless your application chooses to count interpolated
+values as data.
 
 ## Handle typed errors by code
 
@@ -320,21 +330,5 @@ console.info(feedback)
 ```
 
 Other public helpers may return a sentinel result, skip malformed rows, or
-throw a standard JavaScript `Error` or `RangeError`. Follow the contract of the
-specific function rather than assuming every quality problem has the same
-shape.
-
-## A practical quality gate
-
-Before rendering a retrospective dashboard:
-
-1. Normalize with a safe variant when partial success is acceptable.
-2. Record rejected source rows.
-3. Deduplicate repeated records using stable source identity where available.
-4. Detect gaps and calculate active percent with the source's expected cadence.
-5. Run `analyzeGlucose` and check `report.valid`.
-6. Show coverage warnings separately from the analytical values.
-7. Use aligned/interpolated data only where the UI explicitly needs it.
-
-This keeps data-quality policy visible to the application instead of hiding it
-inside a chart or metric.
+throw a standard JavaScript `Error` or `RangeError`. Follow the contract for
+the function you call.
