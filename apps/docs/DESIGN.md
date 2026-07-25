@@ -36,7 +36,7 @@ width:
   content: "1120px"
 motion:
   drop: "360ms ease-out fall from above the page to its final position"
-  ring: "The complete ring fades in during the same 360ms ease-out sequence"
+  ring: "720ms clockwise reveal after the 360ms landing"
   report: "None. The complete report is in the first server HTML."
 ---
 
@@ -154,7 +154,7 @@ The package index uses a full-width list. Every row has a top or bottom hairline
 - Glucose states pair color with labels, values, or chart position.
 - The complete report is in the first server HTML. It does not wait for JavaScript or scrolling.
 - The mark runs once on page load. Its outline starts `520px` above its resting place and lands there in `360ms` with `ease-out`. It does not rotate or bounce.
-- The complete ring fades in during the same `360ms` sequence. It does not draw around the circle or use a moving tip.
+- The ring draws clockwise from 12 o'clock after the outline lands. The reveal takes `720ms`, does not loop, and has no moving tip.
 - Reduced motion shows the finished mark at once with no animation and shortens interaction transitions.
 - The mobile stack keeps outer page scrolling vertical. Code manages its own overflow.
 
