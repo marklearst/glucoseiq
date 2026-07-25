@@ -11,6 +11,13 @@
         "!.next/cache/**"
       ]
     },
+    "typecheck": {
+      "dependsOn": [
+        "^build",
+        "^typecheck"
+      ],
+      "outputs": []
+    },
     "test": {
       "dependsOn": [
         "^build"

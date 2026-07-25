@@ -1,11 +1,12 @@
 /**
  * @file src/timeseries.ts
  *
- * Time-series plumbing for CGM dashboards: sensor-gap detection and day/night
- * splitting. Pure and dependency-free.
+ * Time-series helpers for CGM dashboards: sensor-gap detection and day/night
+ * splitting.
  */
 
 import type { GlucoseReading } from './types'
+import { DomainError } from './errors'
 
 /** A detected gap between consecutive readings. */
 export interface GlucoseGap {
@@ -80,7 +81,7 @@ export interface DayNightSplit {
  * @param readings - Glucose readings with ISO 8601 timestamps
  * @param options - Time zone and night window
  * @returns Readings partitioned into `day` and `night`
- * @throws {Error} If the time zone is invalid
+ * @throws {DomainError} If the time zone is invalid
  * @category Time series
  * @public
  */
@@ -92,11 +93,19 @@ export function splitDayNight(
   const nightStart = options?.nightStartHour ?? 0
   const nightEnd = options?.nightEndHour ?? 6
 
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    hourCycle: 'h23',
-    hour: '2-digit',
-  })
+  let formatter: Intl.DateTimeFormat
+  try {
+    formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hourCycle: 'h23',
+      hour: '2-digit',
+    })
+  } catch (error) {
+    if (error instanceof RangeError) {
+      throw new DomainError(error.message, 'INVALID_TIMEZONE')
+    }
+    throw error
+  }
 
   const day: GlucoseReading[] = []
   const night: GlucoseReading[] = []

@@ -1,36 +1,36 @@
 ---
 title: React Adapter
-description: Memoized analytics hooks and ready-made SVG components from @glucoseiq/react.
+description: Memoized analytics hooks and SVG components from @glucoseiq/react.
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout'
 
-`@glucoseiq/react` is a thin adapter over the pure engine. Use the hooks when
-you want typed data for your own interface, or the SVG components when you want
-the shortest path to a complete chart.
+`@glucoseiq/react` wraps the core analytics and SVG renderers. Use hooks for
+typed data or components for a rendered SVG.
 
 ```bash
 npm install @glucoseiq/react @glucoseiq/core
 ```
 
-React 18 or newer is the only peer dependency.
+React 18 or newer is the only peer dependency. The root is a Client Component
+package; use `@glucoseiq/core` directly for server-only work.
 
 ## Choose the smallest API that fits
 
 | API | Returns | Best for |
 | --- | --- | --- |
-| `useGlucoseAnalysis` | Complete `AnalyzeGlucoseResult` | Dashboard summaries and retrospective reports |
+| `useGlucoseAnalysis` | `AnalyzeGlucoseResult` | Dashboard summaries and retrospective reports |
 | `useAGPProfile` | Percentile bins across a 24-hour clock | Custom AGP charts in D3, Visx, Canvas, or another renderer |
 | `useGlucoseIQScore` | Score, rating, and zone | A compact wellness summary |
 | `useMealResponse` | Baseline, peak, delta, timing, and iAUC | Post-meal detail views |
 | `useGlucoseLive` | Latest reading, derived trend, and staleness | Current-glucose surfaces |
-| `AgpChart`, `TirBar`, `TrendTile` | Inline SVG inside a wrapper element | Ready-made, dependency-free visuals |
+| `AgpChart`, `TirBar`, `TrendTile` | Inline SVG inside a wrapper element | Chart-library-free SVG visuals |
 
 All hooks accept the same `GlucoseReading[]` contract as `@glucoseiq/core`.
 
 ## Build a report-driven component
 
-```tsx
+```tsx typecheck
 'use client'
 
 import type { AnalyzeGlucoseOptions, GlucoseReading } from '@glucoseiq/core'
@@ -75,15 +75,17 @@ either reference on every render causes the analysis to run again.
 `useGlucoseLive` combines `latestReading`, `computeGlucoseTrend`, and
 `minutesSinceLastReading`:
 
-```tsx
+```tsx typecheck
 import type { GlucoseReading } from '@glucoseiq/core'
 import { useGlucoseLive } from '@glucoseiq/react'
 
+const liveOptions = {
+  windowMin: 15,
+  refreshMs: 30_000,
+} as const
+
 function CurrentGlucose({ readings }: { readings: GlucoseReading[] }) {
-  const live = useGlucoseLive(readings, {
-    windowMin: 15,
-    refreshMs: 30_000,
-  })
+  const live = useGlucoseLive(readings, liveOptions)
 
   if (!live.latest || live.minutesSince === null) {
     return <p>No current reading.</p>
@@ -101,16 +103,24 @@ function CurrentGlucose({ readings }: { readings: GlucoseReading[] }) {
 }
 ```
 
-`refreshMs` only advances the staleness clock. It does not poll a CGM source or
-add readings. Your application remains responsible for transport and for
-updating the array when data arrives.
+Omit `refreshMs` to disable interval refresh. When provided, it must be a whole
+number of milliseconds from `1` through `2_147_483_647`; invalid values throw
+`DomainError` with code `INVALID_OPTION` before a timer is scheduled. A valid
+value only advances the staleness clock. It does not poll a CGM source or add
+readings. Your application remains responsible for transport and for updating
+the array when data arrives.
 
-See [Build a Live Glucose Surface](/docs/live) for a complete polling boundary
-and failure-state model.
+See [Build a Live Glucose Surface](/docs/live) for a polling example and
+failure states.
 
-## Use the ready-made SVG components
+## Use the SVG components
 
-```tsx
+Each SVG includes a concise image label. Pair it with an adjacent text summary
+that states the values and trend a reader needs to understand. A visible
+`figcaption` also serves people who cannot distinguish a chart's colors or
+shapes.
+
+```tsx typecheck
 import type { GlucoseReading, TIRBarOptions } from '@glucoseiq/core'
 import { AgpChart, TirBar, TrendTile } from '@glucoseiq/react'
 
@@ -121,31 +131,54 @@ const agpOptions = {
   title: 'Last 14 days',
 } as const
 
-export function Charts({ readings }: { readings: GlucoseReading[] }) {
+interface ChartSummaries {
+  current: string
+  timeInRange: string
+  agp: string
+}
+
+interface ChartsProps {
+  readings: GlucoseReading[]
+  summaries: ChartSummaries
+}
+
+export function Charts({ readings, summaries }: ChartsProps) {
   return (
     <>
-      <TrendTile readings={readings} />
-      <TirBar readings={readings} options={tirOptions} />
-      <AgpChart
-        readings={readings}
-        options={agpOptions}
-        className="dashboard-chart"
-      />
+      <figure>
+        <TrendTile readings={readings} />
+        <figcaption>{summaries.current}</figcaption>
+      </figure>
+      <figure>
+        <TirBar readings={readings} options={tirOptions} />
+        <figcaption>{summaries.timeInRange}</figcaption>
+      </figure>
+      <figure>
+        <AgpChart
+          readings={readings}
+          options={agpOptions}
+          className="dashboard-chart"
+        />
+        <figcaption>{summaries.agp}</figcaption>
+      </figure>
     </>
   )
 }
 ```
+
+Build the summary strings from the same report or live model as the SVG. Include
+the numeric values and labels that color, position, or a trend glyph would
+otherwise carry alone.
 
 Each component memoizes a zero-dependency renderer from `@glucoseiq/core` and
 inlines the returned SVG inside a `div`. `className` and `style` apply to that
 wrapper. Dimensions, theme, time zone, and titles belong in the renderer's
 `options` object.
 
-<Callout type="info" title="Choose data APIs for complete design control">
-  The SVG components are batteries-included renderers, not an unstyled chart
-  primitive system. Use `useAGPProfile`, `useGlucoseAnalysis`, or the core APIs
-  directly when your design needs custom axes, tooltips, interaction, Canvas,
-  native charts, or a different accessibility model.
+<Callout type="info" title="Use data APIs for custom rendering">
+  The SVG components provide fixed renderers. Use the hooks or core APIs for
+  custom axes, interaction, Canvas, native charts, or a different accessibility
+  model.
 </Callout>
 
 ## Where React fits in the architecture
@@ -158,4 +191,4 @@ component. A typical application:
 3. Uses hooks to derive immutable view data.
 4. Renders that data with its own design system or the optional SVG components.
 
-For the complete path, follow [Build a Dashboard in 10 Minutes](/docs/dashboard).
+Follow [Build a Dashboard in 10 Minutes](/docs/dashboard) for a working example.

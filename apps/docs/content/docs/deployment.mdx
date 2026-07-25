@@ -1,0 +1,64 @@
+---
+title: Deployment
+description: Choose where GlucoseIQ runs and keep authenticated transport on the server.
+---
+
+Choose where authenticated transport ends and normalized glucose data begins.
+Keep vendor credentials and authorization in a trusted server or data layer.
+
+## Recommended data flow
+
+| Stage | Location | Output |
+| --- | --- | --- |
+| Fetch source data | Trusted server or data layer | Vendor payload |
+| Validate and normalize | Trusted server or application adapter | `GlucoseReading[]` |
+| Apply host policy | Server | Authorized, retained, and logged data |
+| Send data to the UI | Server boundary | Required reading fields or a view model |
+| Calculate and render | Server or client, depending on the API | Analytics data or SVG |
+
+Do not place vendor secrets in public environment variables, client bundles,
+URLs, analytics events, or error messages. Connector functions do not create a
+security boundary for the host.
+
+## Server-rendered applications
+
+Use `@glucoseiq/core` in server-only modules. The package has no runtime
+dependencies and does not require a DOM. Serialize only the result needed by a
+client component, and decide whether raw readings should cross that boundary.
+
+Do not import `@glucoseiq/react` from a server-only module. Its root is a Client
+Component package. A framework such as Next.js can pass serializable data into
+a client component that owns the React hooks and optional SVG wrappers.
+
+## Browser applications
+
+Browser bundles can use selected core functions and the React adapter, but the
+application still needs a Node 24 or newer supported build environment. Keep
+reading arrays and options objects stable between React renders when their
+contents have not changed.
+
+Core SVG renderers return strings. Embed only output produced by the trusted
+renderer boundary, pair charts with a textual summary, and verify the host
+application at its deployed URL.
+
+## File and command deployments
+
+The `glucoseiq` executable reads one requested input file into memory and
+writes only an explicitly requested SVG path. Container and job hosts should
+set file-size, path, CPU, memory, timeout, and retention limits appropriate to
+their workload. Use `--json` for automation and check the process exit code.
+
+## Production verification
+
+Before directing users to a deployment:
+
+- install and build with Node 24 using the lockfile
+- run unit, coverage, package-consumer, documentation, and type-resolution gates
+- verify HTTPS, direct routes, canonical URLs, robots policy, and sitemap
+- verify valid, invalid, empty, stale, and low-coverage user states
+- confirm secrets and raw health payloads are absent from logs and client assets
+- check accessibility in the actual host, including the chart's text alternative
+- record the deployed commit and a rollback target
+
+Repository maintainers should follow `docs/LAUNCH_RUNBOOK.md` for the release
+sequence and documentation-site configuration.

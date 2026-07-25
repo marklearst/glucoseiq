@@ -17,6 +17,11 @@ describe('Guards', () => {
       expect(isEstimateGMIOptions({ value: 100 })).toBe(false)
       expect(isEstimateGMIOptions({ unit: MG_DL })).toBe(false)
       expect(isEstimateGMIOptions({ value: 100, unit: 123 })).toBe(false)
+      expect(isEstimateGMIOptions({ value: 0, unit: MG_DL })).toBe(false)
+      expect(isEstimateGMIOptions({ value: -1, unit: MG_DL })).toBe(false)
+      expect(isEstimateGMIOptions({ value: NaN, unit: MG_DL })).toBe(false)
+      expect(isEstimateGMIOptions({ value: Infinity, unit: MMOL_L })).toBe(false)
+      expect(isEstimateGMIOptions({ value: 100, unit: 'banana' })).toBe(false)
     })
   })
 
@@ -43,6 +48,8 @@ describe('Guards', () => {
       expect(isValidGlucoseString('100 mgdl')).toBe(false) // Invalid unit format
       expect(isValidGlucoseString('5.5.5 mmol/L')).toBe(false) // Invalid number
       expect(isValidGlucoseString('5,5 mmol/L')).toBe(false) // Invalid decimal separator
+      expect(isValidGlucoseString('0 mg/dL')).toBe(false)
+      expect(isValidGlucoseString(`${'9'.repeat(400)} mg/dL`)).toBe(false)
     })
 
     it('handles whitespace correctly', () => {

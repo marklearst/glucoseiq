@@ -3,22 +3,20 @@
 import { MG_DL, MMOL_L } from './constants'
 
 /**
- * Supported clinical glucose units.
- * Used for all clinical analytics and conversions.
+ * Supported glucose units for analytics and conversions.
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  */
 export type GlucoseUnit = typeof MG_DL | typeof MMOL_L
 
 /**
- * List of allowed clinical glucose units.
- * Used for input validation and unit conversion.
+ * List of glucose units accepted by validation and conversion APIs.
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  */
 export const AllowedGlucoseUnits: GlucoseUnit[] = [MG_DL, MMOL_L]
 
 /**
- * Single clinical glucose reading.
- * Includes value, unit, and ISO 8601 timestamp for clinical analytics.
+ * Single glucose reading.
+ * Includes value, unit, and ISO 8601 timestamp for analytics.
  * @see https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7445493/
  */
 export interface GlucoseReading {
@@ -28,7 +26,7 @@ export interface GlucoseReading {
 }
 
 /**
- * Result object for clinical Time-in-Range (TIR) analytics.
+ * Result object for Time-in-Range (TIR) analytics.
  * Percentages for in-range, below-range, and above-range readings.
  * @see https://care.diabetesjournals.org/content/42/8/1593
  */
@@ -39,7 +37,7 @@ export interface TIRResult {
 }
 
 /**
- * Options for clinical GMI (Glucose Management Indicator) estimation.
+ * Options for GMI (Glucose Management Indicator) estimation.
  * Used to standardize GMI calculation input.
  * @see https://diatribe.org/glucose-management-indicator-gmi
  */
@@ -50,7 +48,7 @@ export interface EstimateGMIOptions {
 
 /**
  * Result of glucose unit conversion.
- * Provides converted value and new unit for clinical interoperability.
+ * Provides converted value and new unit for interoperability.
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  */
 export interface ConversionResult {
@@ -61,7 +59,7 @@ export interface ConversionResult {
 }
 
 /**
- * Options for clinical Time-in-Range (TIR) analytics.
+ * Options for Time-in-Range (TIR) analytics.
  */
 export interface TIROptions {
   readings: GlucoseReading[]
@@ -70,7 +68,7 @@ export interface TIROptions {
 }
 
 /**
- * Single clinical A1C reading (value and ISO date).
+ * Single A1C reading (value and ISO date).
  */
 export interface A1CReading {
   value: number
@@ -78,7 +76,7 @@ export interface A1CReading {
 }
 
 /**
- * Options for clinical glucose statistics analytics.
+ * Options for glucose statistics analytics.
  * Controls which metrics are calculated and reported.
  */
 export interface GlucoseStatsOptions {
@@ -105,7 +103,7 @@ export interface GlucoseStatsOptions {
 
 /**
  * Population type for TIR target assessment.
- * Different populations have different clinical goals.
+ * Different populations use different published target sets.
  * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
  */
 export type TIRPopulation = 'standard' | 'older-adults' | 'high-risk'
@@ -117,12 +115,12 @@ export type TIRAssessment = 'excellent' | 'good' | 'needs improvement' | 'concer
 
 /**
  * Detailed metrics for a single glucose range.
- * Provides percentage, duration, count, and average value for clinical analysis.
+ * Provides percentage, duration, count, and average value for analytics.
  */
 export interface RangeMetrics {
   /** Percentage of readings in this range (0-100) */
   readonly percentage: number
-  /** Total duration in this range (minutes) */
+  /** Estimated occupied-slot duration allocated to this range (minutes). */
   readonly duration: number
   /** Count of readings in this range */
   readonly readingCount: number
@@ -131,24 +129,27 @@ export interface RangeMetrics {
 }
 
 /**
- * Assessment of whether TIR metrics meet clinical targets.
- * Based on International Consensus on Time in Range (2019).
+ * Assessment of raw TIR percentages against population goals.
+ * Custom range thresholds retain the percentage goals but are explicitly
+ * marked as configured rather than consensus ranges.
  * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
  */
 export interface TargetAssessment {
-  /** TIR ≥70% for standard population, ≥50% for older adults */
+  /** Whether raw TIR exceeds 70% for standard or 50% for older/high-risk populations. */
   readonly tirMeetsGoal: boolean
-  /** TBR Level 1 <4% for standard, <1% for older adults */
+  /** Whether cumulative raw TBR is <4% for standard or <1% for older/high-risk populations. */
   readonly tbrLevel1Safe: boolean
-  /** TBR Level 2 <1% for standard, <0.5% for older adults */
+  /** Whether raw Level 2 TBR is <1%. */
   readonly tbrLevel2Safe: boolean
-  /** TAR Level 1 <25% (all populations) */
+  /** Whether cumulative raw TAR is <25% for standard or <50% for older/high-risk populations. */
   readonly tarLevel1Acceptable: boolean
-  /** TAR Level 2 <5% (all populations) */
+  /** Whether raw Level 2 TAR is <5% for standard or <10% for older/high-risk populations. */
   readonly tarLevel2Acceptable: boolean
-  /** Overall assessment of glycemic control */
+  /** Whether percentage goals were applied to consensus ranges or caller-configured ranges. */
+  readonly targetBasis: 'consensus-ranges' | 'configured-ranges'
+  /** Overall assessment label derived from the configured targets */
   readonly overallAssessment: TIRAssessment
-  /** Clinical recommendations based on metrics */
+  /** Informational notes derived from the metrics */
   readonly recommendations: readonly string[]
 }
 
@@ -158,43 +159,41 @@ export interface TargetAssessment {
 export interface TIRSummary {
   /** Total number of glucose readings analyzed */
   readonly totalReadings: number
-  /** Total duration of data analyzed (minutes) */
+  /** Estimated occupied 5-minute timestamp-slot coverage (minutes). */
   readonly totalDuration: number
-  /** Data quality assessment */
+  /** Coverage grade based on observed span and at least 70% occupied slots. */
   readonly dataQuality: 'excellent' | 'good' | 'fair' | 'poor'
 }
 
 /**
  * Complete Enhanced Time-in-Range result.
- * Provides detailed breakdown across five clinical glucose ranges per International Consensus 2019.
+ * Provides a five-range glucose breakdown using the 2019 consensus thresholds.
  * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
  */
 export interface EnhancedTIRResult {
-  /** Very Low: <54 mg/dL (3.0 mmol/L) - Level 2 Hypoglycemia */
+  /** Very Low: <54 mg/dL (3.0 mmol/L) - Level 2 Hypoglycemia. Average value is reported in mg/dL. */
   readonly veryLow: RangeMetrics
-  /** Low: 54-69 mg/dL (3.0-3.8 mmol/L) - Level 1 Hypoglycemia */
+  /** Low: 54-69 mg/dL (3.0-3.8 mmol/L) - Level 1 Hypoglycemia. Average value is reported in mg/dL. */
   readonly low: RangeMetrics
-  /** In Range: 70-180 mg/dL (3.9-10.0 mmol/L) - Target Range */
+  /** In Range: 70-180 mg/dL (3.9-10.0 mmol/L) - Target Range. Average value is reported in mg/dL. */
   readonly inRange: RangeMetrics
-  /** High: 181-250 mg/dL (10.1-13.9 mmol/L) - Level 1 Hyperglycemia */
+  /** High: 181-250 mg/dL (10.1-13.9 mmol/L) - Level 1 Hyperglycemia. Average value is reported in mg/dL. */
   readonly high: RangeMetrics
-  /** Very High: >250 mg/dL (>13.9 mmol/L) - Level 2 Hyperglycemia */
+  /** Very High: >250 mg/dL (>13.9 mmol/L) - Level 2 Hyperglycemia. Average value is reported in mg/dL. */
   readonly veryHigh: RangeMetrics
-  /** Assessment against clinical targets */
+  /** Assessment against the configured targets */
   readonly meetsTargets: TargetAssessment
   /** Summary statistics */
   readonly summary: TIRSummary
 }
 
 /**
- * Options for Enhanced TIR calculation.
- * Allows customization for different clinical populations and use cases.
+ * Options that select a population goal set or override Enhanced TIR
+ * thresholds.
  */
 export interface EnhancedTIROptions {
   /** Population type for target assessment (default: 'standard') */
   readonly population?: TIRPopulation
-  /** Glucose unit for input validation (default: 'mg/dL') */
-  readonly unit?: GlucoseUnit
   /** Override for the very low threshold (<54 mg/dL). Value must be provided in mg/dL. */
   readonly veryLowThreshold?: number
   /** Override for the low threshold (54-69 mg/dL). Value must be provided in mg/dL. */
@@ -215,11 +214,13 @@ export interface PregnancyTIRResult {
   readonly inRange: RangeMetrics
   /** Below Range: <63 mg/dL (3.5 mmol/L) */
   readonly belowRange: RangeMetrics
+  /** Level 2 Below Range: <54 mg/dL (<3.0 mmol/L). This is a subset of `belowRange`. */
+  readonly belowRangeLevel2: RangeMetrics
   /** Above Range: >140 mg/dL (7.8 mmol/L) */
   readonly aboveRange: RangeMetrics
-  /** Whether metrics meet pregnancy-specific targets (TIR >70%, TBR <4%, TAR <25%) */
+  /** Whether metrics meet type 1 diabetes pregnancy targets (TIR >70%, TBR <63 mg/dL <4%, TBR <54 mg/dL <1%, TAR >140 mg/dL <25%) */
   readonly meetsPregnancyTargets: boolean
-  /** Clinical recommendations */
+  /** Informational notes derived from the metrics */
   readonly recommendations: readonly string[]
   /** Summary statistics */
   readonly summary: TIRSummary
@@ -229,6 +230,6 @@ export interface PregnancyTIRResult {
  * Options for Pregnancy TIR calculation.
  */
 export interface PregnancyTIROptions {
-  /** Glucose unit for input validation (default: 'mg/dL') */
+  /** Unit used to normalize mixed-unit readings for pregnancy thresholds. Defaults to the predominant reading unit. */
   readonly unit?: GlucoseUnit
 }

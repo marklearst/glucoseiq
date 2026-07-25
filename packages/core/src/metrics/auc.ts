@@ -4,13 +4,9 @@
  * Area-under-the-curve helpers for glucose time-series, including the
  * incremental AUC (iAUC) used to quantify meal / postprandial responses.
  *
- * iAUC follows the Wolever & Jenkins convention: only area *above* the baseline
- * is counted, and segments that cross the baseline contribute only the
- * above-baseline triangle. This is the definition used for glycemic-response
- * and glycemic-index work, and is the piece naive trapezoid implementations
- * get wrong.
- *
- * Pure and dependency-free.
+ * iAUC follows the Wolever & Jenkins convention and counts only area above the
+ * baseline. A segment that crosses the baseline contributes its above-baseline
+ * triangle.
  *
  * @see https://pubmed.ncbi.nlm.nih.gov/2379513/  Wolever & Jenkins (1986)
  */
@@ -53,8 +49,15 @@ function timedPoints(
  * @returns Area in (unit × minutes), or NaN if fewer than two valid readings
  *
  * @example
- * ```ts
- * glucoseAUC(readings) // e.g. 18240 (mg/dL·min)
+ * ```ts typecheck
+ * import { type GlucoseReading } from '@glucoseiq/core'
+ * import { glucoseAUC } from '@glucoseiq/core/metrics'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 100, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ *   { value: 120, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+ * ]
+ * const area = glucoseAUC(readings) // mg/dL·min
  * ```
  *
  * @category AUC
@@ -86,8 +89,16 @@ export function glucoseAUC(readings: GlucoseReading[], options?: AUCOptions): nu
  * @returns Incremental area in (unit × minutes), or NaN if fewer than two valid readings
  *
  * @example
- * ```ts
- * incrementalAUC(readings, preMealValue) // e.g. 4120 (mg/dL·min above baseline)
+ * ```ts typecheck
+ * import { type GlucoseReading } from '@glucoseiq/core'
+ * import { incrementalAUC } from '@glucoseiq/core/metrics'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 100, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ *   { value: 140, unit: 'mg/dL', timestamp: '2024-01-01T08:30:00Z' },
+ * ]
+ * const preMealValue: number = 100
+ * const area = incrementalAUC(readings, preMealValue)
  * ```
  *
  * @category AUC

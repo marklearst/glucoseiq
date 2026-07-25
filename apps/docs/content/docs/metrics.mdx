@@ -1,11 +1,11 @@
 ---
 title: Metrics Reference
-description: Every metric in GlucoseIQ, with its function, formula source, and citation.
+description: Metric contracts, units, implementation references, and citations in GlucoseIQ.
 ---
 
-Every formula traces to a published source and is golden-tested against
-reference values (including the R `iglu` package and Nightscout). No invented
-math, no uncited thresholds.
+Each metric names the publication or reference implementation behind its
+contract when one applies. Follow the cited source for method details and
+limitations.
 
 ## Time in ranges
 
@@ -13,7 +13,7 @@ math, no uncited thresholds.
 | --- | --- | --- |
 | `calculateEnhancedTIR` | 5-range TIR (very low / low / in-range / high / very high) with consensus target assessment | Battelino 2019 |
 | `calculatePregnancyTIR` | Pregnancy TIR (63–140 mg/dL) | ADA Standards of Care |
-| `calculateTITR` | Time in Tight Range (70–140, target >50%) | Battelino 2019 (emerging consensus) |
+| `calculateTITR` | Time in Tight Range (70–140); target assessment uses the library's configurable 50% default | Project default |
 | `detectEpisodes` | ≥15-min hypo/hyper events with level, duration, nadir/peak | Danne 2017; Battelino 2019 |
 
 ## Averages & estimation
@@ -39,26 +39,39 @@ math, no uncited thresholds.
 | `calculateCONGA` | Continuous Overall Net Glycemic Action | McDonnell 2005 |
 | `glucoseMValue` | Schlichtkrull M-value (with/without W correction) | Schlichtkrull 1965 |
 | `calculateIGC` | Rodbard hypo/hyper index + Index of Glycemic Control | Rodbard 2009 (+ erratum) |
-| `calculateGVIPGS` | GVI + Patient Glycemic Status (Nightscout parity) | Rodbard; Nightscout |
+| `calculateGVIPGS` | GVI + Patient Glycemic Status from unit-bearing `GlucoseReading[]` (Nightscout parity) | Rodbard; Nightscout |
 | `glucoseMAG` | Mean Absolute Glucose change per hour | Hermanides 2010 |
 | `glucoseGVP` | Glycemic Variability Percentage | Peyser 2018 |
-| `calculateActivePercent` | CGM wear time | Danne 2017 |
-| `calculateAGPMetrics` | All of the above scalars in one call | — |
+| `calculateActivePercent` | Timestamp-slot coverage estimate (not proof of sensor wear) | Danne 2017 |
+| `calculateAGPMetrics` | Mean, SD, CV, LBGI/HBGI, ADRR, GRADE, GRI, J-index, MODD, CONGA, active percent, and reading count | Convenience aggregate |
 
 ## Series & events
 
 | Function | What it computes |
 | --- | --- |
-| `buildAGPProfile` | Time-of-day percentile bands (5/25/50/75/95) — the AGP chart's data |
+| `buildAGPProfile` | AGP-style time-of-day percentile-band series (5/25/50/75/95) |
 | `analyzeMealResponse` | Baseline, peak, delta, time-to-peak, return-to-baseline, iAUC |
 | `glucoseAUC` / `incrementalAUC` | Trapezoidal AUC; Wolever 4-case iAUC above baseline |
 | `computeGlucoseTrend` | Rate-of-change + trend classification (Dexcom-style thresholds) |
 | `detectGaps` / `splitDayNight` / `alignToGrid` | Sensor gaps, nocturnal split, uniform-grid resampling |
 | `aggregateCohort` | Population distributions of TIR/GMI/CV/mean across patients |
 
-## The unit-safety guarantee
+## Unit contracts
 
-Metrics calibrated for mg/dL (LBGI/HBGI, GRADE, J-Index, M-value, IGC, GVI/PGS)
-accept a `unit` option and convert mmol/L input **before** applying the
-formula — passing mmol/L values can never silently produce clinically invalid
-output.
+Reading-based APIs such as `calculateADRR`, `calculateGVIPGS`, `glucoseMAG`,
+and `glucoseGVP` inspect the unit on every `GlucoseReading` and can normalize a
+mixed-unit series. `calculateGVIPGS` therefore takes unit-bearing readings, not
+a numeric array plus a unit option.
+
+Numeric-array APIs require one homogeneous unit. `glucoseLBGI`, `glucoseHBGI`,
+and `calculateJIndex` take the unit as a positional argument;
+`calculateGRADE` takes it as the fourth positional argument; and
+`glucoseMValue` and `calculateIGC` take it in their options. `glucoseMAGE`
+operates on one homogeneous numeric scale and has no unit option. Always follow
+the individual signature before removing unit metadata.
+
+## Glucose IQ score
+
+`glucoseIQScore` is a project-defined, non-diagnostic wellness heuristic
+derived from GRI. It is not a validated clinical score and must not be used for
+diagnosis or treatment decisions.

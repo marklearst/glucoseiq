@@ -1,0 +1,100 @@
+---
+title: Runtime Support
+description: Supported Node, module, TypeScript, React, browser, and package-entry contracts for GlucoseIQ 1.0.
+---
+
+GlucoseIQ 1.0 uses Node.js 24 as the supported package baseline. Every
+published manifest declares `node >=24`, including packages that can be bundled
+into a browser application.
+
+## Support matrix
+
+| Surface | Supported contract |
+| --- | --- |
+| Node.js | 24 or newer for all published packages |
+| Package modules | ESM and CommonJS |
+| ESM declarations | `.d.mts` through each `import.types` condition |
+| CommonJS declarations | `.d.ts` through each `require.types` condition |
+| TypeScript resolution | Verified with strict NodeNext and Bundler consumers |
+| React | React 18 and 19; package peer range is `>=18` |
+| Package manager in this repository | pnpm 11.17.0 |
+| Release npm client | npm 11.17.0 |
+
+The repository compiles documentation examples with TypeScript 5.8.3. Older
+compiler versions are unsupported.
+
+## Public entrypoints
+
+`@glucoseiq/core` publishes five entrypoints:
+
+| Specifier | Contract |
+| --- | --- |
+| `@glucoseiq/core` | Main data model, analysis, ingestion, live helpers, and public errors |
+| `@glucoseiq/core/metrics` | Individual metrics |
+| `@glucoseiq/core/connectors` | Dexcom, Libre, and Nightscout payload normalizers |
+| `@glucoseiq/core/interop` | Interoperability helpers |
+| `@glucoseiq/core/render` | SVG-string renderers |
+
+React, tokens, testing, CLI, and the compatibility bridge each publish one
+root entrypoint. Import only documented entrypoints; internal source paths and
+private build chunks are not public contracts.
+
+## Server and browser boundaries
+
+`@glucoseiq/core` has no runtime dependencies and its renderers return strings
+without requiring a DOM. Applications can bundle selected core functions for a
+browser, but the supported install, build, and server runtime remains Node 24
+or newer.
+
+Connector exports normalize supplied payloads. They do not fetch vendor data,
+store credentials, or choose a persistence layer. Perform authenticated
+transport on a server or another trusted data layer, then pass normalized
+`GlucoseReading[]` values to the UI.
+
+`@glucoseiq/cli` is Node-only because it reads and writes files. It is not a
+browser command surface.
+
+## React boundary
+
+The `@glucoseiq/react` root is a Client Component package and retains its
+`'use client'` directive in packed ESM and CommonJS output. Use
+`@glucoseiq/core` directly from server-only modules. Pass serializable reading
+data across the server/client boundary, then call hooks inside a client
+component.
+
+React is a peer dependency. The host application chooses and installs its
+supported React version and, for DOM applications, its matching renderer.
+
+## Module-resolution examples
+
+ESM consumers use imports:
+
+```ts typecheck
+import { analyzeGlucose } from '@glucoseiq/core'
+import { calculateActivePercent } from '@glucoseiq/core/metrics'
+
+const analyze = analyzeGlucose
+const coverage = calculateActivePercent
+void { analyze, coverage }
+```
+
+CommonJS consumers resolve the matching runtime and declaration conditions:
+
+```js
+const { analyzeGlucose } = require('@glucoseiq/core')
+const { calculateActivePercent } = require('@glucoseiq/core/metrics')
+```
+
+Do not mix a private `dist/` path into either form. Package exports own runtime
+and declaration routing.
+
+## Upgrade boundaries
+
+- Node versions below 24 can remain on `diabetic-utils@legacy`; the GlucoseIQ
+  1.0 family and `diabetic-utils` 2 require Node 24 or newer.
+- New applications should use scoped packages instead of depending on the
+  compatibility bridge.
+- Review the [migration guide](/docs/migration) before changing package names,
+  units, or numeric expectations.
+- Run the [integration matrix](/docs/integration-testing) in the same module,
+  React, and deployment modes used by the consuming application.

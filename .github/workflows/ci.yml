@@ -2,7 +2,8 @@ name: CI
 
 on:
   push:
-    branches: ['**']
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
 
@@ -15,13 +16,16 @@ concurrency:
 
 jobs:
   test:
-    name: Build & test (Node 24)
+    name: ${{ github.event_name == 'pull_request' && github.head_ref == 'release/glucoseiq-packages' && github.event.pull_request.head.repo.full_name == github.repository && 'Release branch CI (handled by release workflow)' || 'Build & test (Node 24)' }}
+    if: github.event_name != 'pull_request' || github.head_ref != 'release/glucoseiq-packages' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Prepare Changesets base branch
         run: |
@@ -29,9 +33,9 @@ jobs:
             git branch --track main origin/main
 
       - name: Install pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
         with:
-          version: 11.12.0
+          version: 11.17.0
 
       - name: Setup Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
@@ -39,26 +43,54 @@ jobs:
           node-version: 24
           cache: pnpm
 
+      - name: Pin npm
+        run: npm install --global npm@11.17.0
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Audit dependencies
+        run: pnpm test:security
 
       - name: Build
         run: pnpm build
 
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test release safety contracts
+        run: pnpm test:release-safety
+
+      - name: Enforce Changeset policy
+        env:
+          CHANGESET_POLICY_BRANCH: ${{ github.head_ref || github.ref_name }}
+          CHANGESET_POLICY_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          CHANGESET_POLICY_BASE_SHA: ${{ github.event_name == 'push' && github.event.before || '' }}
+        run: pnpm test:changesets
+
       - name: Validate launch changeset
         run: pnpm test:launch
+
+      - name: Test API reference generation
+        run: pnpm --filter docs test:api
+
+      - name: Check generated API reference
+        run: pnpm --filter docs docs:api:check
+
+      - name: Test documentation contracts and snippets
+        run: pnpm test:docs
 
       - name: Test with coverage (100% enforced)
         run: pnpm test:coverage
 
-      - name: Bundle-size guard (core stays lean)
-        run: |
-          SIZE=$(gzip -c packages/core/dist/index.mjs | wc -c)
-          echo "core ESM gzipped: ${SIZE} bytes (budget 20000)"
-          if [ "$SIZE" -gt 20000 ]; then
-            echo "::error::@glucoseiq/core exceeds the 20KB gzipped budget (${SIZE} bytes)"
-            exit 1
-          fi
+      - name: Check intentional error contracts
+        run: pnpm test:errors
+
+      - name: Test reachable core bundle size
+        run: pnpm test:size
 
       - name: Test packed packages
         run: pnpm test:packages
@@ -67,7 +99,7 @@ jobs:
         run: pnpm --filter docs build
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         continue-on-error: true
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

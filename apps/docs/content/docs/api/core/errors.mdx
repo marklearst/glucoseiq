@@ -1,0 +1,116 @@
+---
+title: "Errors"
+description: "Functions and typed failures with stable machine-readable codes."
+---
+
+### DomainError
+
+```ts fragment="generated API declaration or signature"
+class DomainError extends GlucoseIQError
+```
+
+**Import:** `@glucoseiq/core`
+
+A value or option is outside its valid domain.
+
+**Constructor**
+
+```ts fragment="generated API declaration or signature"
+new DomainError(message: string, code: GlucoseIQErrorCode)
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly code` | `GlucoseIQErrorCode` | Stable machine-readable code. |
+
+
+---
+
+### EmptyDatasetError
+
+```ts fragment="generated API declaration or signature"
+class EmptyDatasetError extends GlucoseIQError
+```
+
+**Import:** `@glucoseiq/core`
+
+An operation requires data but the dataset is empty.
+
+**Constructor**
+
+```ts fragment="generated API declaration or signature"
+new EmptyDatasetError(message: string)
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly code` | `GlucoseIQErrorCode` | Stable machine-readable code. |
+
+
+---
+
+### GlucoseIQError
+
+```ts fragment="generated API declaration or signature"
+class GlucoseIQError extends Error
+```
+
+**Import:** `@glucoseiq/core`
+
+Base class for all intentional @glucoseiq/core errors.
+
+**Constructor**
+
+```ts fragment="generated API declaration or signature"
+new GlucoseIQError(message: string, code: GlucoseIQErrorCode)
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly code` | `GlucoseIQErrorCode` | Stable machine-readable code. |
+
+
+---
+
+### ParseError
+
+```ts fragment="generated API declaration or signature"
+class ParseError extends GlucoseIQError
+```
+
+**Import:** `@glucoseiq/core`
+
+Input text (CSV, glucose string, payload) could not be parsed.
+
+**Constructor**
+
+```ts fragment="generated API declaration or signature"
+new ParseError(message: string, code: GlucoseIQErrorCode)
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly code` | `GlucoseIQErrorCode` | Stable machine-readable code. |
+
+
+---
+
+### TimestampError
+
+```ts fragment="generated API declaration or signature"
+class TimestampError extends GlucoseIQError
+```
+
+**Import:** `@glucoseiq/core`
+
+A timestamp could not be parsed.
+
+**Constructor**
+
+```ts fragment="generated API declaration or signature"
+new TimestampError(message: string)
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readonly code` | `GlucoseIQErrorCode` | Stable machine-readable code. |

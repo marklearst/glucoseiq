@@ -3,10 +3,8 @@
  *
  * Renders the Time-in-Range stacked bar (the vertical 5-zone bar from an AGP
  * report) as a self-contained SVG string. Zones are ordered high→low with
- * always-on percent labels, so severity is encoded by position and text — not
- * color alone (colorblind-safe by redundancy).
- *
- * Pure and dependency-free.
+ * always-on percent labels. Position and text communicate severity without
+ * relying on color.
  *
  * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
  */
@@ -14,6 +12,11 @@
 import type { GlucoseReading } from '../types'
 import { MG_DL, MGDL_MMOLL_CONVERSION } from '../constants'
 import { calculateEnhancedTIR } from '../tir-enhanced'
+import {
+  addFinite,
+  resolveSvgDimension,
+  roundToTenth,
+} from './svg-options'
 
 /** Options for {@link tirBarToSVG}. */
 export interface TIRBarOptions {
@@ -21,7 +24,10 @@ export interface TIRBarOptions {
   readonly width?: number
   /** SVG height in px (default 320). */
   readonly height?: number
-  /** Color theme (default 'dark'). */
+  /**
+   * Surface color theme (default 'dark'). This changes the SVG background and
+   * text only; the five zone fills remain fixed so existing charts stay stable.
+   */
   readonly theme?: 'light' | 'dark'
 }
 
@@ -33,15 +39,37 @@ const ZONE_COLORS = {
   veryLow: '#b91c1c',
 } as const
 
+function noDataFrame(
+  width: number,
+  height: number,
+  background: string,
+  text: string
+): string {
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Time in Range">`,
+    `<rect width="${width}" height="${height}" fill="${background}"/>`,
+    `<text x="${width / 2}" y="${height / 2}" fill="${text}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" text-anchor="middle">No data</text>`,
+    '</svg>',
+  ].join('')
+}
+
 /**
- * Renders a Time-in-Range stacked bar as an SVG string.
+ * Renders a Time-in-Range stacked bar as an SVG string. Zone fills remain
+ * fixed; the surface theme changes only the background and text.
  *
  * @param readings - Glucose readings (mg/dL or mmol/L)
  * @param options - Dimensions and theme
  * @returns A self-contained SVG document string
+ * @throws {DomainError} If width or height is not a finite positive number
  *
  * @example
- * ```ts
+ * ```ts typecheck
+ * import { type GlucoseReading } from '@glucoseiq/core'
+ * import { tirBarToSVG } from '@glucoseiq/core/render'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ * ]
  * const svg = tirBarToSVG(readings)
  * ```
  *
@@ -49,8 +77,18 @@ const ZONE_COLORS = {
  * @public
  */
 export function tirBarToSVG(readings: GlucoseReading[], options?: TIRBarOptions): string {
-  const width = options?.width ?? 180
-  const height = options?.height ?? 320
+  const width = resolveSvgDimension(
+    options?.width,
+    180,
+    'tirBarToSVG',
+    'width'
+  )
+  const height = resolveSvgDimension(
+    options?.height,
+    320,
+    'tirBarToSVG',
+    'height'
+  )
   const theme = options?.theme ?? 'dark'
   const bg = theme === 'light' ? '#ffffff' : '#0a0a0a'
   const text = theme === 'light' ? '#475569' : '#94a3b8'
@@ -62,17 +100,8 @@ export function tirBarToSVG(readings: GlucoseReading[], options?: TIRBarOptions)
     return !Number.isNaN(Date.parse(r.timestamp))
   })
 
-  const parts: string[] = [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Time in Range">`,
-    `<rect width="${width}" height="${height}" fill="${bg}"/>`,
-  ]
-
   if (clean.length === 0) {
-    parts.push(
-      `<text x="${width / 2}" y="${height / 2}" fill="${text}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" text-anchor="middle">No data</text>`
-    )
-    parts.push('</svg>')
-    return parts.join('')
+    return noDataFrame(width, height, bg, text)
   }
 
   const tir = calculateEnhancedTIR(clean)
@@ -87,22 +116,31 @@ export function tirBarToSVG(readings: GlucoseReading[], options?: TIRBarOptions)
   const margin = { top: 16, bottom: 16 }
   const barX = 16
   const barW = 44
-  const plotH = height - margin.top - margin.bottom
+  const plotH = Math.max(0, height - margin.top - margin.bottom)
   const total = zones.reduce((s, z) => s + z.pct, 0)
+  if (!Number.isFinite(total) || total <= 0) {
+    return noDataFrame(width, height, bg, text)
+  }
+
+  const summary = zones.map((zone) => `${zone.label} ${zone.pct}%`).join(', ')
+  const parts: string[] = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Time in Range: ${summary}">`,
+    `<rect width="${width}" height="${height}" fill="${bg}"/>`,
+  ]
 
   let y = margin.top
   for (const z of zones) {
     const h = (z.pct / total) * plotH
     const segH = Math.max(0, h - 2) // 2px surface gap between segments
     parts.push(
-      `<rect x="${barX}" y="${Math.round(y * 10) / 10}" width="${barW}" height="${Math.round(segH * 10) / 10}" rx="2" fill="${z.color}"/>`
+      `<rect x="${barX}" y="${roundToTenth(y)}" width="${barW}" height="${roundToTenth(segH)}" rx="2" fill="${z.color}"/>`
     )
     if (z.pct > 0) {
       parts.push(
-        `<text x="${barX + barW + 8}" y="${Math.round((y + h / 2 + 3) * 10) / 10}" fill="${text}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" text-anchor="start">${z.label} ${z.pct}%</text>`
+        `<text x="${barX + barW + 8}" y="${roundToTenth(addFinite(addFinite(y, h / 2), 3))}" fill="${text}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" text-anchor="start">${z.label} ${z.pct}%</text>`
       )
     }
-    y += h
+    y = addFinite(y, h)
   }
 
   parts.push('</svg>')

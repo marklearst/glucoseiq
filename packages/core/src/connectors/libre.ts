@@ -1,16 +1,16 @@
 /**
  * @file src/connectors/libre.ts
  *
- * Pure transformation adapter for Libre LinkUp API payloads.
- * Maps raw Libre entries into NormalizedCGMReading objects.
- * Does NOT handle authentication — use with any Libre LinkUp client library.
+ * Converts Libre LinkUp API payloads to NormalizedCGMReading values.
+ * A Libre LinkUp client must authenticate and fetch the payloads.
  *
  * @see https://www.npmjs.com/package/librelinkup-api-client
  * @see https://www.npmjs.com/package/libre-client
  */
 
 import { MG_DL, MMOL_L } from '../constants'
-import { TimestampError } from '../errors'
+import { DomainError, TimestampError } from '../errors'
+import { toUsableMgDl } from '../reading-policy'
 import type {
   LibreLinkUpEntry,
   LibreTrendValue,
@@ -26,8 +26,18 @@ const LIBRE_TREND_MAP: Record<LibreTrendValue, CGMTrend> = {
   5: 'rapidRising',
 }
 
+/** Resolves Libre's numeric display-unit flag without accepting coercible values. */
+function resolveLibreUnit(flag: unknown): typeof MG_DL | typeof MMOL_L {
+  if (flag === undefined || flag === 1) return MG_DL
+  if (flag === 0) return MMOL_L
+  throw new DomainError(
+    `Libre entry has unsupported glucose unit: ${String(flag)}`,
+    'INVALID_UNIT'
+  )
+}
+
 /**
- * Normalizes a Libre LinkUp numeric trend value into a canonical CGMTrend.
+ * Maps a Libre LinkUp numeric trend value to the shared `CGMTrend` values.
  *
  * Accepts the raw API value (which may be null/undefined or out of range)
  * and returns 'unknown' for any invalid or unmapped values.
@@ -35,40 +45,56 @@ const LIBRE_TREND_MAP: Record<LibreTrendValue, CGMTrend> = {
 export function normalizeLibreTrend(
   trend: number | null | undefined
 ): CGMTrend {
-  if (trend == null) {
-    return 'unknown'
-  }
-
   // LibreTrendValue is defined as 1–5; anything else is treated as unknown.
-  if (trend < 1 || trend > 5) {
+  if (
+    typeof trend !== 'number' ||
+    !Number.isFinite(trend) ||
+    !Number.isInteger(trend) ||
+    trend < 1 ||
+    trend > 5
+  ) {
     return 'unknown'
   }
 
-  return LIBRE_TREND_MAP[trend as LibreTrendValue] ?? 'unknown'
+  return LIBRE_TREND_MAP[trend as LibreTrendValue]
 }
 
 /**
  * Converts a single Libre LinkUp entry into a NormalizedCGMReading.
  *
  * @param entry - Raw Libre LinkUp entry
- * @returns Normalized reading compatible with all `@glucoseiq/core` analytics functions
- * @throws {Error} If the timestamp cannot be parsed
+ * @returns A normalized reading usable by APIs that accept `GlucoseReading`, subject to each API's contract
+ * @throws {TimestampError} If the timestamp cannot be parsed
+ * @throws {DomainError} If the unit or glucose value is not usable
  */
 export function normalizeLibreEntry(
   entry: LibreLinkUpEntry
 ): NormalizedCGMReading {
-  const parsed = Date.parse(entry.Timestamp)
-  if (isNaN(parsed)) {
-    throw new TimestampError(`Unable to parse Libre timestamp: ${entry.Timestamp}`)
+  const timestampError = `Unable to parse Libre timestamp: ${String(
+    entry.Timestamp
+  )}`
+  let parsed = Number.NaN
+  if (typeof entry.Timestamp === 'string') {
+    try {
+      parsed = Date.parse(entry.Timestamp)
+    } catch {
+      parsed = Number.NaN
+    }
+  }
+  const parsedDate = new Date(parsed)
+  if (!Number.isFinite(parsed) || !Number.isFinite(parsedDate.getTime())) {
+    throw new TimestampError(timestampError)
   }
 
-  const timestamp = new Date(parsed).toISOString()
+  const timestamp = parsedDate.toISOString()
 
   // Unit handling: prefer the explicit mg/dL field; otherwise honor the
   // account's display-unit flag (0 = mmol/L). Legacy payloads with neither
   // field remain mg/dL for backward compatibility.
-  const nativeIsMmol = entry.GlucoseUnits === 0
+  const nativeUnit = resolveLibreUnit(entry.GlucoseUnits)
+  const nativeIsMmol = nativeUnit === MMOL_L
   if (entry.ValueInMgPerDl !== undefined) {
+    toUsableMgDl(entry.ValueInMgPerDl, MG_DL, 'Libre entry')
     return {
       value: entry.ValueInMgPerDl,
       unit: MG_DL,
@@ -79,9 +105,10 @@ export function normalizeLibreEntry(
       dedupKey: `libre:${timestamp}`,
     }
   }
+  toUsableMgDl(entry.Value, nativeUnit, 'Libre entry')
   return {
     value: entry.Value,
-    unit: nativeIsMmol ? MMOL_L : MG_DL,
+    unit: nativeUnit,
     timestamp,
     trend: normalizeLibreTrend(entry.TrendArrow),
     source: 'libre',

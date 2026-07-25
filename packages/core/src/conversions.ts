@@ -11,39 +11,39 @@ import {
 import type { GlucoseUnit, EstimateGMIOptions, ConversionResult } from './types'
 import { isEstimateGMIOptions } from './guards'
 import { parseGlucoseString } from './glucose'
+import { DomainError } from './errors'
 
 /**
- * Converts clinical average glucose (mg/dL) to estimated A1C (percentage).
- * Used for clinical analytics and patient reporting.
+ * Estimates A1C (percentage) from average glucose in mg/dL.
  * @param avgMgDl - Average glucose in mg/dL
  * @returns Estimated A1C value (percentage)
- * @see https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html
+ * @see https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html
  */
 export function estimateA1CFromAvgGlucose(avgMgDl: number): number {
   return +((avgMgDl + A1C_TO_EAG_CONSTANT) / A1C_TO_EAG_MULTIPLIER).toFixed(2)
 }
 
 /**
- * Converts clinical A1C value (percentage) to estimated average glucose (mg/dL).
- * Used for clinical analytics and patient reporting.
+ * Estimates average glucose (mg/dL) from an A1C value (percentage).
  * @param a1c - A1C value (percentage)
  * @returns Estimated average glucose in mg/dL
- * @see https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html
+ * @see https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html
  */
 export function estimateAvgGlucoseFromA1C(a1c: number): number {
   return Math.round(a1c * A1C_TO_EAG_MULTIPLIER - A1C_TO_EAG_CONSTANT)
 }
 
 /**
- * Estimates eAG (estimated average glucose, mg/dL) from clinical A1C value.
- * Throws if input is negative. Used for clinical and research reporting.
+ * Estimates eAG (estimated average glucose, mg/dL) from an A1C value and
+ * rejects negative input.
  * @param a1c - A1C value (percentage)
  * @returns Estimated average glucose (mg/dL)
- * @throws {Error} If a1c is negative
- * @see https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html
+ * @throws {DomainError} If a1c is negative
+ * @see https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html
  */
 export function estimateEAG(a1c: number): number {
-  if (a1c < 0) throw new Error('A1C must be positive')
+  if (a1c < 0)
+    throw new DomainError('A1C must be positive', 'INVALID_A1C_VALUE')
   const eAG = Number(
     (a1c * A1C_TO_EAG_MULTIPLIER - A1C_TO_EAG_CONSTANT).toFixed(10)
   )
@@ -55,7 +55,7 @@ export function estimateEAG(a1c: number): number {
  * @param avgGlucose - Average glucose value
  * @param unit - Glucose unit (mg/dL or mmol/L)
  * @returns Estimated A1C
- * @see https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html
+ * @see https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html
  */
 export function estimateA1CFromAverage(
   avgGlucose: number,
@@ -84,9 +84,10 @@ export function a1cToGMI(a1c: number): number {
  * @param valueOrOptions - Glucose value, string, or options object
  * @param unit - Glucose unit (if value is a number)
  * @returns GMI value
- * @throws {Error} If unit is required but not provided when input is a number.
- * @throws {Error} If the glucose unit is unsupported.
- * @throws {Error} If the glucose value is not a positive number.
+ * @throws {DomainError} If unit is required but not provided when input is a number.
+ * @throws {DomainError} If the glucose unit is unsupported.
+ * @throws {DomainError} If the glucose value is not a positive number.
+ * @throws {ParseError} If a string input cannot be parsed.
  * @see https://diatribe.org/glucose-management-indicator-gmi
  */
 export function estimateGMI(
@@ -104,17 +105,27 @@ export function estimateGMI(
     value = parsed.value
     resolvedUnit = parsed.unit
   } else {
-    if (!unit) throw new Error('Unit is required when input is a number.')
+    if (!unit)
+      throw new DomainError(
+        'Unit is required when input is a number.',
+        'INVALID_UNIT'
+      )
     value = valueOrOptions
     resolvedUnit = unit
   }
 
   if (![MG_DL, MMOL_L].includes(resolvedUnit)) {
-    throw new Error(`Unsupported glucose unit: ${resolvedUnit}`)
+    throw new DomainError(
+      `Unsupported glucose unit: ${resolvedUnit}`,
+      'INVALID_UNIT'
+    )
   }
 
   if (value <= 0 || !Number.isFinite(value)) {
-    throw new Error('Glucose value must be a positive number.')
+    throw new DomainError(
+      'Glucose value must be a positive number.',
+      'INVALID_GLUCOSE_VALUE'
+    )
   }
 
   const gmi =
@@ -126,65 +137,68 @@ export function estimateGMI(
 }
 
 /**
- * Converts clinical glucose value from mg/dL to mmol/L.
- * Used for international interoperability and reporting.
+ * Converts a glucose value from mg/dL to mmol/L.
  * @param val - Glucose value in mg/dL
  * @returns Value in mmol/L
- * @throws {Error} If val is not a finite number or is negative/zero
+ * @throws {DomainError} If val is not a finite number or is negative/zero
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  *
  * @example
- * ```typescript
- * const result = mgDlToMmolL(180)
+ * ```ts typecheck
+ * import { mgDlToMmolL } from '@glucoseiq/core'
+ *
+ * const mgdl: number = 180
+ * const result = mgDlToMmolL(mgdl)
  * console.log(result) // 10.0
  * ```
  */
 export function mgDlToMmolL(val: number): number {
   if (!Number.isFinite(val) || val <= 0)
-    throw new Error('Invalid glucose value')
+    throw new DomainError('Invalid glucose value', 'INVALID_GLUCOSE_VALUE')
   return +(val / MGDL_MMOLL_CONVERSION).toFixed(1)
 }
 
 /**
- * Converts clinical glucose value from mmol/L to mg/dL.
- * Used for international interoperability and reporting.
+ * Converts a glucose value from mmol/L to mg/dL.
  * @param val - Glucose value in mmol/L
  * @returns Value in mg/dL
- * @throws {Error} If val is not a finite number or is negative/zero
+ * @throws {DomainError} If val is not a finite number or is negative/zero
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  *
  * @example
- * ```typescript
- * const result = mmolLToMgDl(5.5)
+ * ```ts typecheck
+ * import { mmolLToMgDl } from '@glucoseiq/core'
+ *
+ * const mmol: number = 5.5
+ * const result = mmolLToMgDl(mmol)
  * console.log(result) // 99
  * ```
  */
 export function mmolLToMgDl(val: number): number {
   if (!Number.isFinite(val) || val <= 0)
-    throw new Error('Invalid glucose value')
+    throw new DomainError('Invalid glucose value', 'INVALID_GLUCOSE_VALUE')
   return Math.round(val * MGDL_MMOLL_CONVERSION)
 }
 
 /**
- * Converts clinical glucose value between mg/dL and mmol/L.
- * Used for clinical interoperability and analytics.
- * @param value - Glucose value (number)
- * @param unit - Current glucose unit ('mg/dL' or 'mmol/L')
+ * Converts a glucose value between mg/dL and mmol/L.
+ * @param input - Glucose value and its current unit
  * @returns Object with converted value and new unit
- * @throws {Error} If value is not a finite number or is negative/zero
- * @throws {Error} If unit is not a supported glucose unit
+ * @throws {DomainError} If value is not a finite number or is negative/zero
+ * @throws {DomainError} If unit is not a supported glucose unit
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  */
-export function convertGlucoseUnit({
-  value,
-  unit,
-}: {
+export function convertGlucoseUnit(input: {
+  /** Glucose value (number) */
   value: number
+  /** Current glucose unit ('mg/dL' or 'mmol/L') */
   unit: GlucoseUnit
 }): ConversionResult {
+  const { value, unit } = input
   if (!Number.isFinite(value) || value <= 0)
-    throw new Error('Invalid glucose value')
-  if (![MG_DL, MMOL_L].includes(unit)) throw new Error('Invalid unit')
+    throw new DomainError('Invalid glucose value', 'INVALID_GLUCOSE_VALUE')
+  if (![MG_DL, MMOL_L].includes(unit))
+    throw new DomainError('Invalid unit', 'INVALID_UNIT')
   if (unit === MG_DL)
     return {
       value: Math.round((value / MGDL_MMOLL_CONVERSION) * 10) / 10,

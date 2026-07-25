@@ -1,7 +1,7 @@
 {
   "name": "@glucoseiq/testing",
   "version": "0.0.0",
-  "description": "Deterministic, seedable mock-CGM data generator and scenario fixtures for testing GlucoseIQ-powered apps \u2014 realistic circadian curves, meal spikes, nocturnal hypos, and sensor gaps.",
+  "description": "Fixed-seed synthetic CGM data and scenario fixtures for tests, examples, and local product states.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -22,12 +22,13 @@
     "url": "https://github.com/marklearst/glucoseiq.git",
     "directory": "packages/testing"
   },
-  "homepage": "https://glucoseiq.health",
+  "homepage": "https://glucoseiq.dev",
   "bugs": {
     "url": "https://github.com/marklearst/glucoseiq/issues"
   },
   "scripts": {
     "build": "tsup",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "clean": "rm -rf dist",
@@ -47,15 +48,16 @@
     "@glucoseiq/core": "workspace:^"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^3.1.2",
+    "@vitest/coverage-v8": "^3.2.7",
     "tsup": "^8.4.0",
     "typescript": "^5.8.3",
-    "vitest": "^3.1.2"
+    "vitest": "^3.2.7"
   },
   "files": [
     "dist/",
     "package.json",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "sideEffects": false,

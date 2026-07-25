@@ -1,0 +1,67 @@
+---
+title: Testing API
+description: Public generator options and repeatable scenarios exported by @glucoseiq/testing.
+---
+
+`@glucoseiq/testing` exports a seeded generator and four named scenario
+factories. Its output satisfies the core `GlucoseReading` shape. Use it in
+software tests, demos, stories, screenshots, and documentation.
+
+## `generateCGMSeries`
+
+The generator returns chronological readings. The same options and seed produce
+the same output.
+
+| Option | Type | Default | Validation |
+| --- | --- | --- | --- |
+| `days` | `number` | `1` | Positive integer |
+| `intervalMin` | `number` | `5` | Finite, positive, at most `1440` |
+| `seed` | `number` | `42` | Safe integer |
+| `start` | `string` | `2024-01-01T00:00:00Z` | Parseable timestamp |
+| `basal` | `number` | `110` | Positive and finite, in mg/dL |
+| `mealTimes` | `readonly number[]` | `420, 780, 1140` | Finite minute-of-day values from `0` through `1439` |
+| `mealAmplitude` | `number` | `70` | Non-negative and finite, in mg/dL |
+| `noise` | `number` | `8` | Non-negative and finite, in mg/dL |
+| `nocturnalHypoDays` | `readonly number[]` | `[]` | Non-negative integer day indexes |
+| `unit` | `GlucoseUnit` | `mg/dL` | Exact `mg/dL` or `mmol/L` literal |
+
+The options value must be an ordinary object or an object with a null
+prototype. Invalid options throw `RangeError` before allocation. One call is
+capped at 100,000 readings.
+
+```ts typecheck
+import { generateCGMSeries, type GenerateOptions } from '@glucoseiq/testing'
+
+const options: GenerateOptions = {
+  days: 2,
+  intervalMin: 5,
+  seed: 73,
+  start: '2025-02-01T00:00:00Z',
+  unit: 'mmol/L',
+}
+const first = generateCGMSeries(options)
+const second = generateCGMSeries(options)
+
+if (JSON.stringify(first) !== JSON.stringify(second)) {
+  throw new Error('Expected repeatable fixture output')
+}
+```
+
+The curve is generated in mg/dL, clamped to 40–400 mg/dL, and then converted
+to one decimal place when `unit` is `mmol/L`.
+
+## `scenarios`
+
+| Factory | Shape |
+| --- | --- |
+| `steadyDay()` | One calmer day with smaller meals and lower noise |
+| `hypoNight()` | One day with a 02:00–04:00 synthetic dip |
+| `rollercoaster()` | One day with larger meal excursions and more noise |
+| `gappyTrace()` | One day with the 15:00–16:30 UTC reading window removed |
+
+Each call returns a fresh array. Deriving or mutating one returned array does
+not change the next scenario call.
+
+These are synthetic CGM-shaped fixtures. They are not clinically
+representative and must not be used for diagnosis, treatment, dosing, or
+validation of a medical claim.

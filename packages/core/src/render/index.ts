@@ -1,8 +1,7 @@
 /**
- * @file src/render/index.ts
- *
  * Zero-dependency SVG-string renderers. Each returns a self-contained SVG
- * string that runs anywhere — Node, email, PDF, README, RSC, any framework.
+ * string for server or browser embedding. Email, PDF, README, native, and
+ * watch hosts require host-specific embedding, conversion, or integration.
  */
 
 export { agpChartToSVG, type AGPChartOptions } from './agp-svg'

@@ -1,20 +1,17 @@
 /**
  * @file src/score.ts
  *
- * "Glucose IQ" score — a single, screenshot-friendly 0–100 number derived from
- * the peer-reviewed Glycemia Risk Index (GRI): higher is better (100 − GRI).
+ * The "Glucose IQ" score is a project-defined 0–100 wellness heuristic derived
+ * from the Glycemia Risk Index (GRI). It calculates 100 minus GRI, so higher
+ * values indicate lower GRI.
  *
- * This is an explicitly configurable WELLNESS HEURISTIC for glanceable
- * feedback, built on a cited base (GRI). It is NOT a diagnostic and does not
- * constitute medical advice.
+ * It is not diagnostic and does not constitute medical advice.
  *
- * Pure and dependency-free.
- *
- * @see https://doi.org/10.1177/19322968221085273  Klonoff et al. (2023) — GRI
+ * @see https://doi.org/10.1177/19322968221085273  Klonoff et al. (2023), GRI
  */
 
-import type { GlucoseReading, GlucoseUnit } from './types'
-import { MG_DL, MGDL_MMOLL_CONVERSION } from './constants'
+import type { GlucoseReading } from './types'
+import { MG_DL, MGDL_MMOLL_CONVERSION, MMOL_L } from './constants'
 import { calculateEnhancedTIR } from './tir-enhanced'
 import { calculateGRI, type GRIResult } from './metrics/gri'
 
@@ -25,12 +22,6 @@ export type GlucoseIQRating =
   | 'fair'
   | 'needs attention'
   | 'insufficient'
-
-/** Options for {@link glucoseIQScore}. */
-export interface GlucoseIQOptions {
-  /** Unit for TIR validation (default 'mg/dL'). */
-  readonly unit?: GlucoseUnit
-}
 
 /** Result of {@link glucoseIQScore}. */
 export interface GlucoseIQScore {
@@ -47,26 +38,31 @@ export interface GlucoseIQScore {
 }
 
 /**
- * Computes the Glucose IQ score (100 − GRI) from glucose readings.
+ * Computes the project-defined, non-diagnostic Glucose IQ wellness heuristic.
  *
  * @param readings - Glucose readings with ISO 8601 timestamps
- * @param options - Unit for validation
  * @returns Score, underlying GRI, zone, and a qualitative rating
  *
  * @example
- * ```ts
- * glucoseIQScore(readings).score // 82  → 'good'
+ * ```ts typecheck
+ * import { glucoseIQScore, type GlucoseReading } from '@glucoseiq/core'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ *   { value: 145, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+ * ]
+ * const result = glucoseIQScore(readings)
+ * const score = result.valid ? result.score : null
+ * void score
  * ```
  *
  * @category Score
  * @public
  */
-export function glucoseIQScore(
-  readings: GlucoseReading[],
-  options?: GlucoseIQOptions
-): GlucoseIQScore {
+export function glucoseIQScore(readings: GlucoseReading[]): GlucoseIQScore {
   const clean = readings.filter((r) => {
     if (!Number.isFinite(r.value) || r.value <= 0) return false
+    if (r.unit !== MG_DL && r.unit !== MMOL_L) return false
     const mgdl = r.unit === MG_DL ? r.value : r.value * MGDL_MMOLL_CONVERSION
     if (mgdl > 600) return false
     return !Number.isNaN(Date.parse(r.timestamp))
@@ -76,7 +72,7 @@ export function glucoseIQScore(
     return { score: NaN, gri: NaN, zone: null, rating: 'insufficient', valid: false }
   }
 
-  const tir = calculateEnhancedTIR(clean, { unit: options?.unit })
+  const tir = calculateEnhancedTIR(clean)
   const gri = calculateGRI({
     veryLowPercent: tir.veryLow.percentage,
     lowPercent: tir.low.percentage,

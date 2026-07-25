@@ -1,0 +1,32 @@
+---
+title: "Glucose IQ Score"
+description: "The project-defined wellness score derived from GRI."
+---
+
+### glucoseIQScore
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+glucoseIQScore(readings: GlucoseReading[]): GlucoseIQScore
+```
+
+Computes the project-defined, non-diagnostic Glucose IQ wellness heuristic.
+
+**Returns:** Score, underlying GRI, zone, and a qualitative rating
+
+```ts typecheck
+import { glucoseIQScore, type GlucoseReading } from '@glucoseiq/core'
+
+const readings: GlucoseReading[] = [
+  { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+  { value: 145, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+]
+const result = glucoseIQScore(readings)
+const score = result.valid ? result.score : null
+void score
+```
+
+| Parameter | Description |
+| --- | --- |
+| `readings` | Glucose readings with ISO 8601 timestamps |

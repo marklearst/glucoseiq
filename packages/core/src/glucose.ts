@@ -14,8 +14,8 @@ import { isValidGlucoseString } from './guards'
 import { ParseError } from './errors'
 
 /**
- * Checks if a glucose value is below the hypoglycemia threshold for the given unit.
- * Used for detecting low glucose events.
+ * Returns whether a glucose value is below the configured hypoglycemia
+ * threshold for its unit.
  * @param val - Glucose value (number)
  * @param unit - Glucose unit ('mg/dL' or 'mmol/L'), default: 'mg/dL'
  * @param thresholds - Optional custom thresholds ({ mgdl?: number; mmoll?: number })
@@ -33,8 +33,8 @@ export function isHypo(
 }
 
 /**
- * Checks if a glucose value is above the hyperglycemia threshold for the given unit.
- * Used for detecting high glucose events.
+ * Returns whether a glucose value is above the configured hyperglycemia
+ * threshold for its unit.
  * @param val - Glucose value (number)
  * @param unit - Glucose unit ('mg/dL' or 'mmol/L'), default: 'mg/dL'
  * @param thresholds - Optional custom thresholds ({ mgdl?: number; mmoll?: number })
@@ -52,8 +52,8 @@ export function isHyper(
 }
 
 /**
- * Returns a glucose status label ('low', 'normal', or 'high') based on thresholds for the given unit.
- * Used for charting, alerts, and reporting.
+ * Returns 'low', 'normal', or 'high' from the configured thresholds for the
+ * value's unit.
  * @param val - Glucose value (number)
  * @param unit - Glucose unit ('mg/dL' or 'mmol/L'), default: 'mg/dL'
  * @param thresholds - Optional custom thresholds for hypo/hyper ({ hypo?: { mgdl?: number; mmoll?: number }, hyper?: { mgdl?: number; mmoll?: number } })
@@ -75,12 +75,17 @@ export function getGlucoseLabel(
 
 /**
  * Parses a glucose string (e.g., "100 mg/dL", "5.5 mmol/L") into value and unit.
- * Used for robust input validation and data ingestion.
+ * Accepts only a positive finite value and a supported glucose unit.
  * @param input - String in the format "value unit" (e.g., "100 mg/dL")
  * @returns Object with numeric value and validated unit
  * @throws {Error} If input string is invalid or not in expected format
  * @example
- * parseGlucoseString("100 mg/dL") // { value: 100, unit: "mg/dL" }
+ * ```ts typecheck
+ * import { parseGlucoseString } from '@glucoseiq/core'
+ *
+ * const input: string = '100 mg/dL'
+ * const reading = parseGlucoseString(input) // { value: 100, unit: 'mg/dL' }
+ * ```
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  */
 export function parseGlucoseString(input: string): {

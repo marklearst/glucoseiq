@@ -91,6 +91,93 @@ describe('safeNormalize* (partial success)', () => {
     expect(ns.readings).toHaveLength(1)
     expect(ns.errors).toHaveLength(0)
   })
+
+  it('keeps Dexcom siblings while reporting the original malformed index and code', () => {
+    const res = safeNormalizeDexcomEntries([
+      { Value: 140, Trend: 'SingleUp', WT: 'Date(1700000600000)' },
+      { Value: Infinity, Trend: 'Flat', WT: 'Date(1700000300000)' },
+      { Value: 100, Trend: 'Flat', WT: 'Date(1700000000000)' },
+    ])
+
+    expect(res.readings.map((reading) => reading.value)).toEqual([100, 140])
+    expect(res.errors).toEqual([
+      {
+        index: 1,
+        message: 'Dexcom entry has invalid glucose value: Infinity',
+        code: 'INVALID_GLUCOSE_VALUE',
+      },
+    ])
+  })
+
+  it('keeps Libre siblings while reporting an invalid runtime unit', () => {
+    const res = safeNormalizeLibreEntries([
+      { Value: 140, TrendArrow: 4, Timestamp: '2024-01-01T08:10:00Z' },
+      {
+        Value: 120,
+        GlucoseUnits: 2 as 0,
+        TrendArrow: 3,
+        Timestamp: '2024-01-01T08:05:00Z',
+      },
+      { Value: 100, TrendArrow: 3, Timestamp: '2024-01-01T08:00:00Z' },
+    ])
+
+    expect(res.readings.map((reading) => reading.value)).toEqual([100, 140])
+    expect(res.errors).toEqual([
+      {
+        index: 1,
+        message: 'Libre entry has unsupported glucose unit: 2',
+        code: 'INVALID_UNIT',
+      },
+    ])
+  })
+
+  it('keeps Nightscout siblings while preserving a timestamp error message', () => {
+    const res = safeNormalizeNightscoutEntries([
+      { sgv: 140, date: 1700000600000 },
+      { sgv: 120, date: 8640000000000001 },
+      { sgv: 100, date: 1700000000000 },
+    ])
+
+    expect(res.readings.map((reading) => reading.value)).toEqual([100, 140])
+    expect(res.errors).toEqual([
+      {
+        index: 1,
+        message:
+          "Unable to parse Nightscout timestamp from 'date' field: 8640000000000001",
+        code: 'TIMESTAMP_UNPARSEABLE',
+      },
+    ])
+  })
+
+  it('omits a code for unexpected Error failures', () => {
+    const malformed = {
+      Value: 120,
+      Trend: 'Flat' as const,
+      get WT(): string {
+        throw new Error('unexpected getter failure')
+      },
+    }
+    const res = safeNormalizeDexcomEntries([malformed])
+    expect(res.readings).toEqual([])
+    expect(res.errors).toEqual([
+      { index: 0, message: 'unexpected getter failure' },
+    ])
+  })
+
+  it('stringifies unexpected non-Error failures without assigning a code', () => {
+    const malformed = {
+      Value: 120,
+      Trend: 'Flat' as const,
+      get WT(): string {
+        throw 'unexpected string failure'
+      },
+    }
+    const res = safeNormalizeDexcomEntries([malformed])
+    expect(res.readings).toEqual([])
+    expect(res.errors).toEqual([
+      { index: 0, message: 'unexpected string failure' },
+    ])
+  })
 })
 
 describe('capability descriptors', () => {

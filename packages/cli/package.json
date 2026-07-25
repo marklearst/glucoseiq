@@ -1,7 +1,7 @@
 {
   "name": "@glucoseiq/cli",
   "version": "0.0.0",
-  "description": "Zero-code CGM analysis: `npx @glucoseiq/cli report data.csv` prints a clinician-grade glucose report \u2014 metrics, episodes, and optional AGP SVG \u2014 powered by @glucoseiq/core.",
+  "description": "Zero-code CGM analysis: `npx @glucoseiq/cli report data.csv` prints an analytics summary with metrics, episodes, and an optional AGP-style SVG.",
   "bin": {
     "glucoseiq": "./dist/bin.js"
   },
@@ -25,12 +25,13 @@
     "url": "https://github.com/marklearst/glucoseiq.git",
     "directory": "packages/cli"
   },
-  "homepage": "https://glucoseiq.health",
+  "homepage": "https://glucoseiq.dev",
   "bugs": {
     "url": "https://github.com/marklearst/glucoseiq/issues"
   },
   "scripts": {
     "build": "tsup",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "clean": "rm -rf dist",
@@ -50,16 +51,17 @@
     "@glucoseiq/core": "workspace:^"
   },
   "devDependencies": {
-    "@types/node": "^22.15.3",
-    "@vitest/coverage-v8": "^3.1.2",
+    "@types/node": "^24.13.3",
+    "@vitest/coverage-v8": "^3.2.7",
     "tsup": "^8.4.0",
     "typescript": "^5.8.3",
-    "vitest": "^3.1.2"
+    "vitest": "^3.2.7"
   },
   "files": [
     "dist/",
     "package.json",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "publishConfig": {

@@ -1,21 +1,20 @@
 /**
  * @file src/analyze.ts
  *
- * One-call clinical glucose report. `analyzeGlucose` runs a single normalized,
- * validated pass over a set of readings and returns a comprehensive, typed
- * report: summary scalars (mean, GMI, CV, SD), the enhanced 5-range TIR, tight
- * range, the full risk-metric set, a data-sufficiency assessment, and
- * (optionally) the AGP percentile-band series.
+ * One-call CGM analytics summary. `analyzeGlucose` screens one normalized set
+ * of readings and returns selected summary scalars (mean, GMI, CV, SD), the
+ * enhanced 5-range TIR, tight range, a selected risk block, a data-sufficiency
+ * assessment, episode candidates, and (optionally) an AGP-style
+ * percentile-band series.
  *
- * Every sub-metric is fed from the SAME cleaned reading set, giving a
- * consistent denominator across the whole report. Empty/all-invalid input
- * returns a typed `valid: false` report rather than throwing.
- *
- * Pure and dependency-free.
+ * The screened set feeds each result block, but individual metrics retain
+ * their documented pairing, window, and sufficiency requirements. Input with
+ * no usable screened readings returns a typed `valid: false` report rather
+ * than throwing.
  */
 
-import type { GlucoseReading, GlucoseUnit, EnhancedTIRResult } from './types'
-import { MG_DL, MGDL_MMOLL_CONVERSION } from './constants'
+import type { GlucoseReading, EnhancedTIRResult } from './types'
+import { MG_DL, MGDL_MMOLL_CONVERSION, MMOL_L } from './constants'
 import { estimateGMI } from './conversions'
 import { calculateEnhancedTIR } from './tir-enhanced'
 import { calculateTITR, type TITRResult } from './tir'
@@ -25,7 +24,7 @@ import { detectEpisodes, type EpisodeResult } from './metrics/episodes'
 import type { GRADEResult } from './metrics/grade'
 import type { GRIResult } from './metrics/gri'
 
-/** Maximum physiologically-plausible glucose value (mg/dL) used to screen input. */
+/** Maximum accepted glucose value in mg/dL; higher readings are discarded. */
 const MAX_PLAUSIBLE_MGDL = 600
 /** Consensus data-sufficiency defaults (Battelino 2019). */
 const DEFAULT_MIN_DAYS = 14
@@ -33,8 +32,6 @@ const DEFAULT_MIN_ACTIVE_PERCENT = 70
 
 /** Options for {@link analyzeGlucose}. */
 export interface AnalyzeGlucoseOptions {
-  /** Unit for TIR validation/labeling (default 'mg/dL'). */
-  readonly unit?: GlucoseUnit
   /** IANA time zone for the AGP profile (default 'UTC'). */
   readonly timeZone?: string
   /** Include the AGP percentile-band series (default true). */
@@ -57,15 +54,15 @@ export interface RiskMetrics {
   readonly conga: number
 }
 
-/** Data-sufficiency assessment for a report. */
+/** Data-sufficiency assessment for an analytics result. */
 export interface DataSufficiency {
   /** Number of valid readings analyzed. */
   readonly totalReadings: number
   /** Span of the data in days (last − first). */
   readonly daysOfData: number
-  /** CGM active/wear percent. */
+  /** Rounded expected-slot coverage; duplicate/same-slot rows count once. */
   readonly activePercent: number
-  /** Whether the data meets the consensus recording standard. */
+  /** Whether the observed span and unrounded slot coverage meet the configured numeric thresholds. */
   readonly meetsCGMStandard: boolean
 }
 
@@ -85,18 +82,26 @@ export interface AnalyzeGlucoseResult {
 }
 
 /**
- * Produces a comprehensive clinical report from glucose readings in one call.
+ * Produces a selected CGM analytics summary from glucose readings in one call.
  *
  * @param readings - Glucose readings with ISO 8601 timestamps
- * @param options - Unit, time zone, profile toggle, and sufficiency thresholds
- * @returns A typed report; `valid: false` when there are no in-range readings
+ * @param options - Time zone, profile toggle, and sufficiency thresholds
+ * @returns A typed report; `valid: false` when no usable readings remain after screening
  *
  * @example
- * ```ts
+ * ```ts typecheck
+ * import { analyzeGlucose, type GlucoseReading } from '@glucoseiq/core'
+ *
+ * const readings: GlucoseReading[] = [
+ *   { value: 110, unit: 'mg/dL', timestamp: '2024-01-01T08:00:00Z' },
+ *   { value: 145, unit: 'mg/dL', timestamp: '2024-01-01T08:05:00Z' },
+ * ]
  * const report = analyzeGlucose(readings, { timeZone: 'America/New_York' })
- * report.timeInRange?.inRange.percentage // 72.5
- * report.gmi                             // 6.8
- * report.agpProfile?.bins                // 288 time-of-day bins
+ * if (report.valid && report.timeInRange && report.agpProfile) {
+ *   const tir = report.timeInRange.inRange.percentage
+ *   const bins = report.agpProfile.bins
+ *   void { tir, bins }
+ * }
  * ```
  *
  * @category Report
@@ -110,9 +115,10 @@ export function analyzeGlucose(
   const minDays = options?.minDays ?? DEFAULT_MIN_DAYS
   const minActivePercent = options?.minActivePercent ?? DEFAULT_MIN_ACTIVE_PERCENT
 
-  // Single cleaning pass: physiologically plausible value + parseable timestamp.
+  // Keep supported units, values in (0, 600] mg/dL, and parseable timestamps.
   const clean = readings.filter((r) => {
     if (!Number.isFinite(r.value) || r.value <= 0) return false
+    if (r.unit !== MG_DL && r.unit !== MMOL_L) return false
     const mgdl = r.unit === MG_DL ? r.value : r.value * MGDL_MMOLL_CONVERSION
     if (mgdl > MAX_PLAUSIBLE_MGDL) return false
     return !Number.isNaN(Date.parse(r.timestamp))
@@ -140,7 +146,7 @@ export function analyzeGlucose(
   }
 
   const agp = calculateAGPMetrics(clean)
-  const timeInRange = calculateEnhancedTIR(clean, { unit: options?.unit })
+  const timeInRange = calculateEnhancedTIR(clean)
   const tightRange = calculateTITR(clean)
   const agpProfile = includeProfile
     ? buildAGPProfile(clean, { timeZone: options?.timeZone })
@@ -153,8 +159,15 @@ export function analyzeGlucose(
     if (ms < minMs) minMs = ms
     if (ms > maxMs) maxMs = ms
   }
-  const daysOfData = Math.round(((maxMs - minMs) / 86400000) * 10) / 10
+  const rawDaysOfData = (maxMs - minMs) / 86400000
+  const daysOfData = Math.round(rawDaysOfData * 10) / 10
   const activePercent = agp.activePercent.activePercent
+  const rawActivePercent =
+    agp.activePercent.expectedReadings > 0
+      ? (agp.activePercent.actualReadings /
+          agp.activePercent.expectedReadings) *
+        100
+      : NaN
 
   return {
     meanGlucose: agp.meanGlucose,
@@ -177,7 +190,8 @@ export function analyzeGlucose(
       totalReadings: clean.length,
       daysOfData,
       activePercent,
-      meetsCGMStandard: daysOfData >= minDays && activePercent >= minActivePercent,
+      meetsCGMStandard:
+        rawDaysOfData >= minDays && rawActivePercent >= minActivePercent,
     },
     agpProfile,
     episodes: detectEpisodes(clean),

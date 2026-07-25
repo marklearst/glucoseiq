@@ -1,15 +1,16 @@
-import type { JSX } from 'react'
+import { useId, type JSX } from 'react'
 
 /**
  * The GlucoseIQ mark: a blood-drop outline holding the zone-gradient ring
  * (in-range green → elevated amber → high orange → red). Pure inline SVG.
  */
 export function LogoMark(props: { size?: number }): JSX.Element {
+  const gradientId = `giq-ring-${useId().replaceAll(':', '')}`
   const s = props.size ?? 28
   return (
     <svg width={s} height={s} viewBox="0 0 64 84" fill="none" aria-hidden="true">
       <defs>
-        <linearGradient id="giq-ring" x1="20" y1="38" x2="46" y2="66" gradientUnits="userSpaceOnUse">
+        <linearGradient id={gradientId} x1="20" y1="38" x2="46" y2="66" gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="#30D158" />
           <stop offset="0.45" stopColor="#FFD60A" />
           <stop offset="0.75" stopColor="#FF9F0A" />
@@ -23,7 +24,7 @@ export function LogoMark(props: { size?: number }): JSX.Element {
         strokeLinejoin="round"
         strokeLinecap="round"
       />
-      <circle cx="32" cy="52" r="11.5" stroke="url(#giq-ring)" strokeWidth="7" />
+      <circle cx="32" cy="52" r="11.5" stroke={`url(#${gradientId})`} strokeWidth="7" />
     </svg>
   )
 }

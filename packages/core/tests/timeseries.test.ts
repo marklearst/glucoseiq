@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { detectGaps, splitDayNight } from '../src/timeseries'
 import { createGlucoseReadings } from './test-helpers'
+import { DomainError } from '../src/errors'
 import type { GlucoseReading } from '../src/types'
 
 const at = (isoMin: number, value = 100): GlucoseReading => ({
@@ -68,7 +69,36 @@ describe('splitDayNight', () => {
     expect(res.night).toHaveLength(0)
   })
 
-  it('throws on an invalid time zone', () => {
-    expect(() => splitDayNight([at(0)], { timeZone: 'Mars/Phobos' })).toThrow()
+  it('throws a coded error on an invalid time zone', () => {
+    try {
+      splitDayNight([at(0)], { timeZone: 'Mars/Phobos' })
+      throw new Error('Expected call to throw')
+    } catch (error) {
+      expect(error).toBeInstanceOf(DomainError)
+      expect(error).toMatchObject({
+        code: 'INVALID_TIMEZONE',
+        message: 'Invalid time zone specified: Mars/Phobos',
+      })
+    }
+  })
+
+  it('rethrows unexpected date-time formatter errors unchanged', () => {
+    const unexpectedError = new Error('Unexpected date-time formatter failure')
+    const dateTimeFormatSpy = vi
+      .spyOn(Intl, 'DateTimeFormat')
+      .mockImplementation(() => {
+        throw unexpectedError
+      })
+    let thrown: unknown
+
+    try {
+      splitDayNight([at(0)])
+    } catch (error) {
+      thrown = error
+    } finally {
+      dateTimeFormatSpy.mockRestore()
+    }
+
+    expect(thrown).toBe(unexpectedError)
   })
 })

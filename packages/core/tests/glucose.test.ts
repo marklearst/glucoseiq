@@ -160,6 +160,10 @@ describe('Glucose utilities', () => {
       expect(() => parseGlucoseString('5.5.5 mmol/L')).toThrow(errorMsg)
       expect(() => parseGlucoseString('')).toThrow(errorMsg)
       expect(() => parseGlucoseString('  ')).toThrow(errorMsg)
+      expect(() => parseGlucoseString('0 mg/dL')).toThrow(errorMsg)
+      expect(() => parseGlucoseString(`${'9'.repeat(400)} mg/dL`)).toThrow(
+        errorMsg
+      )
     })
 
     it('handles whitespace correctly', () => {

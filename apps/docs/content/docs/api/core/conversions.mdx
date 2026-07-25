@@ -1,0 +1,352 @@
+---
+title: "Conversions, A1C & GMI"
+description: "Unit conversion and A1C, eAG, and GMI estimation."
+---
+
+### a1cDelta
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+a1cDelta(current: number, previous: number): number
+```
+
+Calculates the change (delta) between two A1C values.
+
+**Returns:** Delta (current - previous)
+
+**Throws:** If either value is invalid
+
+| Parameter | Description |
+| --- | --- |
+| `current` | Current A1C |
+| `previous` | Previous A1C |
+
+
+---
+
+### a1cToGMI
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+a1cToGMI(a1c: number): number
+```
+
+Converts A1C to Glucose Management Indicator (GMI).
+
+**Returns:** GMI value
+
+**See:** [https://diatribe.org/glucose-management-indicator-gmi](https://diatribe.org/glucose-management-indicator-gmi)
+
+| Parameter | Description |
+| --- | --- |
+| `a1c` | A1C value |
+
+
+---
+
+### a1cTrend
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+a1cTrend(readings: number[]): 'increasing' | 'decreasing' | 'stable' | 'insufficient data'
+```
+
+Determines the trend of A1C values over time.
+
+**Returns:** 'increasing' | 'decreasing' | 'stable' | 'insufficient data'
+
+| Parameter | Description |
+| --- | --- |
+| `readings` | Array of A1C values (chronological order) |
+
+
+---
+
+### convertGlucoseUnit
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+convertGlucoseUnit(input: { unit: GlucoseUnit; value: number }): ConversionResult
+```
+
+Converts a glucose value between mg/dL and mmol/L.
+
+**Returns:** Object with converted value and new unit
+
+**Throws:** If value is not a finite number or is negative/zero
+
+**Throws:** If unit is not a supported glucose unit
+
+**See:** [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
+
+| Parameter | Description |
+| --- | --- |
+| `input` | Glucose value and its current unit |
+
+
+---
+
+### estimateA1CFromAverage
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+estimateA1CFromAverage(avgGlucose: number, unit: GlucoseUnit = MG_DL): number
+```
+
+Estimates A1C from average glucose.
+
+**Returns:** Estimated A1C
+
+**See:** [https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html)
+
+| Parameter | Description |
+| --- | --- |
+| `avgGlucose` | Average glucose value |
+| `unit` | Glucose unit (mg/dL or mmol/L) |
+
+
+---
+
+### estimateA1CFromAvgGlucose
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+estimateA1CFromAvgGlucose(avgMgDl: number): number
+```
+
+Estimates A1C (percentage) from average glucose in mg/dL.
+
+**Returns:** Estimated A1C value (percentage)
+
+**See:** [https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html)
+
+| Parameter | Description |
+| --- | --- |
+| `avgMgDl` | Average glucose in mg/dL |
+
+
+---
+
+### estimateAvgGlucoseFromA1C
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+estimateAvgGlucoseFromA1C(a1c: number): number
+```
+
+Estimates average glucose (mg/dL) from an A1C value (percentage).
+
+**Returns:** Estimated average glucose in mg/dL
+
+**See:** [https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html)
+
+| Parameter | Description |
+| --- | --- |
+| `a1c` | A1C value (percentage) |
+
+
+---
+
+### estimateEAG
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+estimateEAG(a1c: number): number
+```
+
+Estimates eAG (estimated average glucose, mg/dL) from an A1C value and
+rejects negative input.
+
+**Returns:** Estimated average glucose (mg/dL)
+
+**Throws:** If a1c is negative
+
+**See:** [https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html)
+
+| Parameter | Description |
+| --- | --- |
+| `a1c` | A1C value (percentage) |
+
+
+---
+
+### estimateGMI
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+estimateGMI(valueOrOptions: string | number | EstimateGMIOptions, unit?: GlucoseUnit): number
+```
+
+Estimate Glucose Management Indicator (GMI) from average glucose.
+
+**Returns:** GMI value
+
+**Throws:** If unit is required but not provided when input is a number.
+
+**Throws:** If the glucose unit is unsupported.
+
+**Throws:** If the glucose value is not a positive number.
+
+**Throws:** If a string input cannot be parsed.
+
+**See:** [https://diatribe.org/glucose-management-indicator-gmi](https://diatribe.org/glucose-management-indicator-gmi)
+
+| Parameter | Description |
+| --- | --- |
+| `valueOrOptions` | Glucose value, string, or options object |
+| `unit` | Glucose unit (if value is a number) |
+
+
+---
+
+### formatA1C
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+formatA1C(val: number): string
+```
+
+Formats an A1C value as a percent string (e.g., "7.2%").
+
+**Returns:** A1C as string with percent sign
+
+| Parameter | Description |
+| --- | --- |
+| `val` | A1C value (percentage) |
+
+
+---
+
+### getA1CCategory
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+getA1CCategory(a1c: number, thresholds?: { normalMax?: number; prediabetesMax?: number }): 'normal' | 'prediabetes' | 'diabetes' | 'invalid'
+```
+
+Returns the CDC category for an A1C value (normal, prediabetes, diabetes, or invalid).
+Uses CDC defaults: normal below 5.7%, prediabetes from 5.7% to below 6.5%,
+and diabetes at 6.5% or above. Explicit custom maxima are inclusive. At
+runtime, nullish threshold objects or fields use the CDC defaults.
+
+**Returns:** 'normal' | 'prediabetes' | 'diabetes' | 'invalid'
+
+**See:** [https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html)
+
+| Parameter | Description |
+| --- | --- |
+| `a1c` | A1C value (percentage) |
+| `thresholds` | Optional inclusive custom maxima |
+
+
+---
+
+### isA1CInTarget
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+isA1CInTarget(a1c: number, target: [number, number] = [6.5, 7.0], thresholds?: { max?: number; min?: number }): boolean
+```
+
+Checks if an A1C value is within a target range.
+
+**Returns:** True if in target range
+
+| Parameter | Description |
+| --- | --- |
+| `a1c` | A1C value |
+| `target` | \[min, max] range (default: \[6.5, 7.0]) |
+| `thresholds` | Optional custom thresholds: &#123; min?: number; max?: number &#125; |
+
+
+---
+
+### isValidA1C
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+isValidA1C(value: unknown): boolean
+```
+
+Returns whether a value is finite and greater than 0 but less than 20.
+
+**Returns:** True if value is a valid A1C percentage
+
+| Parameter | Description |
+| --- | --- |
+| `value` | Candidate A1C value |
+
+
+---
+
+### mgDlToMmolL
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+mgDlToMmolL(val: number): number
+```
+
+Converts a glucose value from mg/dL to mmol/L.
+
+**Returns:** Value in mmol/L
+
+**Throws:** If val is not a finite number or is negative/zero
+
+**See:** [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
+
+```ts typecheck
+import { mgDlToMmolL } from '@glucoseiq/core'
+
+const mgdl: number = 180
+const result = mgDlToMmolL(mgdl)
+console.log(result) // 10.0
+```
+
+| Parameter | Description |
+| --- | --- |
+| `val` | Glucose value in mg/dL |
+
+
+---
+
+### mmolLToMgDl
+
+**Import:** `@glucoseiq/core`
+
+```ts fragment="generated API declaration or signature"
+mmolLToMgDl(val: number): number
+```
+
+Converts a glucose value from mmol/L to mg/dL.
+
+**Returns:** Value in mg/dL
+
+**Throws:** If val is not a finite number or is negative/zero
+
+**See:** [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
+
+```ts typecheck
+import { mmolLToMgDl } from '@glucoseiq/core'
+
+const mmol: number = 5.5
+const result = mmolLToMgDl(mmol)
+console.log(result) // 99
+```
+
+| Parameter | Description |
+| --- | --- |
+| `val` | Glucose value in mmol/L |

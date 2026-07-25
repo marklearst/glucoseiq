@@ -20,49 +20,42 @@ export const HOMA_IR_CUTOFFS = {
 
 /**
  * Hypoglycemia threshold (mg/dL).
- * Used for detecting low glucose events.
  * @see https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html
  */
 export const HYPO_THRESHOLD_MGDL = 70
 
 /**
  * Hyperglycemia threshold (mg/dL).
- * Used for detecting high glucose events.
  * @see https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html
  */
 export const HYPER_THRESHOLD_MGDL = 180
 
 /**
  * Hypoglycemia threshold (mmol/L).
- * Used for low glucose detection in international/metric contexts.
  * @see https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html
  */
 export const HYPO_THRESHOLD_MMOLL = 3.9
 
 /**
  * Hyperglycemia threshold (mmol/L).
- * Used for high glucose detection in international/metric contexts.
  * @see https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html
  */
 export const HYPER_THRESHOLD_MMOLL = 10
 
 /**
  * Multiplier for converting A1C to estimated average glucose (eAG).
- * Used in eAG calculation per CDC/ADA guidelines.
- * @see https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html
+ * @see https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html
  */
 export const A1C_TO_EAG_MULTIPLIER = 28.7
 
 /**
  * Constant for converting A1C to estimated average glucose (eAG).
- * Used in eAG calculation per CDC/ADA guidelines.
- * @see https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html
+ * @see https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html
  */
 export const A1C_TO_EAG_CONSTANT = 46.7
 
 /**
  * GMI (Glucose Management Indicator) calculation coefficients.
- * Used for estimating GMI from average glucose values.
  * @see https://diatribe.org/glucose-management-indicator-gmi
  */
 export const GMI_COEFFICIENTS = {
@@ -82,14 +75,12 @@ export const GMI_COEFFICIENTS = {
 
 /**
  * Conversion factor between mg/dL and mmol/L.
- * Used for unit conversion.
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  */
 export const MGDL_MMOLL_CONVERSION = 18.0182
 
 /**
  * String literal for mg/dL glucose unit.
- * Used for data interoperability and formatting.
  * @see https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm
  */
 export const MG_DL = 'mg/dL' as const
@@ -239,14 +230,14 @@ export const PREGNANCY_TARGET_HIGH_MMOLL = 7.8
 
 /**
  * Target percentage for time-in-range (70-180 mg/dL).
- * Clinical goal: ≥70% of readings in target range.
+ * Published goal: >70% of readings in target range.
  * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
  */
 export const TIR_GOAL_STANDARD = 70
 
 /**
- * Maximum acceptable percentage for Level 1 hypoglycemia (54-69 mg/dL).
- * Clinical goal: <4% of readings in this range.
+ * Maximum acceptable cumulative percentage below 70 mg/dL.
+ * Published goal: <4% of readings below range, including Level 2.
  * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
  */
 export const TBR_LEVEL1_GOAL = 4
@@ -259,8 +250,8 @@ export const TBR_LEVEL1_GOAL = 4
 export const TBR_LEVEL2_GOAL = 1
 
 /**
- * Maximum acceptable percentage for Level 1 hyperglycemia (181-250 mg/dL).
- * Clinical goal: <25% of readings in this range.
+ * Maximum acceptable cumulative percentage above 180 mg/dL.
+ * Published goal: <25% of readings above range, including Level 2.
  * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
  */
 export const TAR_LEVEL1_GOAL = 25
@@ -274,21 +265,35 @@ export const TAR_LEVEL2_GOAL = 5
 
 /**
  * Target percentage for time-in-range for older/high-risk adults.
- * More lenient goal: ≥50% of readings in target range.
+ * More lenient goal: >50% of readings in target range.
  * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
  */
 export const TIR_GOAL_OLDER_ADULTS = 50
 
 /**
- * Maximum acceptable percentage for Level 1 hypoglycemia for older/high-risk adults.
- * More stringent goal: <1% of readings in this range.
+ * Maximum acceptable cumulative percentage below 70 mg/dL for older/high-risk adults.
+ * More stringent goal: <1% of readings below range, including Level 2.
  * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
  */
 export const TBR_LEVEL1_GOAL_OLDER_ADULTS = 1
 
 /**
- * Maximum acceptable percentage for Level 2 hypoglycemia for older/high-risk adults.
- * More stringent goal: <0.5% of readings in this range.
- * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
+ * Maximum acceptable percentage below 54 mg/dL for older/high-risk adults.
+ * Current ADA goal: <1% of readings in this range.
+ * @see {@link https://diabetesjournals.org/care/article/49/Supplement_1/S132/163927 | ADA Standards of Care (2026)}
  */
-export const TBR_LEVEL2_GOAL_OLDER_ADULTS = 0.5
+export const TBR_LEVEL2_GOAL_OLDER_ADULTS = 1
+
+/**
+ * Maximum acceptable cumulative percentage above 180 mg/dL for older/high-risk adults.
+ * Current ADA goal: <50% of readings above range, including Level 2.
+ * @see {@link https://diabetesjournals.org/care/article/49/Supplement_1/S132/163927 | ADA Standards of Care (2026)}
+ */
+export const TAR_LEVEL1_GOAL_OLDER_ADULTS = 50
+
+/**
+ * Maximum acceptable percentage above 250 mg/dL for older/high-risk adults.
+ * Published goal: <10% of readings in this range.
+ * @see {@link https://pmc.ncbi.nlm.nih.gov/articles/PMC6973648/ | International Consensus on Time in Range (2019)}
+ */
+export const TAR_LEVEL2_GOAL_OLDER_ADULTS = 10

@@ -1,63 +1,27 @@
 ---
 title: API Reference
-description: The complete GlucoseIQ public API, generated from source TSDoc — 93 functions, 74 interfaces, 13 type aliases, 44 constants, and 5 classes.
+description: Public package references for the GlucoseIQ workspace.
 ---
 
-The public functions and contracts exported by `@glucoseiq/core`, generated directly from source declarations and TSDoc.
+Choose the package that owns the API you need.
 
-## [Reports](/docs/api/reports)
-One-call clinical reports composed from the whole engine. — 1 function.
+| Package | Use it for | Reference |
+| --- | --- | --- |
+| `@glucoseiq/core` | Analytics, ingestion, connectors, interoperability, and SVG rendering | [Core API](/docs/api/core) |
+| `@glucoseiq/react` | React hooks, live view models, and SVG components | [React API](/docs/api/react) |
+| `@glucoseiq/tokens` | Fixed presentation thresholds, palettes, glyphs, and CSS variables | [Tokens API](/docs/api/tokens) |
+| `@glucoseiq/testing` | Repeatable CGM-shaped data and named scenarios | [Testing API](/docs/api/testing) |
+| `@glucoseiq/cli` | The command, output schema, exit behavior, and injectable `run` function | [CLI API](/docs/api/cli) |
+| `diabetic-utils` | Compatibility with the 107 exports from version 1.5 | [Migration guide](/docs/migration) |
 
-## [AGP & Metrics Aggregate](/docs/api/agp)
-The Ambulatory Glucose Profile series and the all-in-one metrics call. — 2 functions.
+New applications should use the scoped packages. Existing `diabetic-utils`
+applications can use version 2 as a compatibility bridge to
+`@glucoseiq/core`.
 
-## [Time in Range](/docs/api/time-in-range)
-Enhanced 5-range TIR, pregnancy TIR, and Time in Tight Range. — 7 functions.
+## Supporting guides
 
-## [Glucose IQ Score](/docs/api/score)
-A single 0–100 wellness score derived from the peer-reviewed GRI. — 1 function.
-
-## [Variability & Risk Metrics](/docs/api/variability)
-Cited variability and risk indices — every formula golden-tested. — 19 functions.
-
-## [Meals & AUC](/docs/api/meals)
-Postprandial meal response and area-under-the-curve. — 3 functions.
-
-## [Episodes](/docs/api/episodes)
-Consensus ≥15-minute hypo/hyper event detection. — 1 function.
-
-## [Live Model](/docs/api/live)
-Rate-of-change, trend derivation, and sensor staleness. — 4 functions.
-
-## [Time-Series Primitives](/docs/api/series)
-Gap detection, day/night split, and uniform-grid resampling. — 3 functions.
-
-## [Cohort](/docs/api/cohort)
-Population metric distributions across many patients. — 1 function.
-
-## [Rendering (SVG)](/docs/api/render)
-Zero-dependency SVG-string renderers for any surface. — 3 functions.
-
-## [Connectors](/docs/api/connectors)
-Dexcom, Libre, and Nightscout normalization, capabilities, and safe variants. — 13 functions.
-
-## [Ingestion](/docs/api/ingestion)
-Parse any Dexcom/Libre/Nightscout/Tidepool CSV export. — 1 function.
-
-## [Interoperability](/docs/api/interop)
-FHIR CGM IG and Open mHealth payload builders. — 6 functions.
-
-## [Conversions, A1C & GMI](/docs/api/conversions)
-Unit conversions and A1C / eAG / GMI estimation. — 15 functions.
-
-## [Glucose Values & Formatting](/docs/api/glucose)
-Labeling, validation, parsing, and formatting helpers. — 13 functions.
-
-## [Types & Interfaces](/docs/api/types)
-The public contracts that connect ingestion, analytics, rendering, and integrations. — 87 exports.
-
-## [Constants](/docs/api/constants)
-Exported thresholds, goals, conversion factors, colors, and connector capabilities. — 44 exports.
-
-## [Error Classes](/docs/api/errors)
-Typed failures with stable machine-readable error codes. — 5 exports.
+- [Choose a Package](/docs/packages) explains package boundaries.
+- [Runtime Support](/docs/runtime-support) lists Node, module, declaration, and
+  React compatibility.
+- [Safety and Limitations](/docs/safety) defines the requirements for
+  presenting analytics to a person.

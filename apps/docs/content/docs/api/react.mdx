@@ -1,0 +1,108 @@
+---
+title: React API
+description: Public hooks, components, and types exported by @glucoseiq/react.
+---
+
+`@glucoseiq/react` exports one client-only entrypoint. It wraps public
+`@glucoseiq/core` operations without replacing their result, option, or error
+contracts.
+
+```bash
+npm install @glucoseiq/react @glucoseiq/core react
+```
+
+React `>=18` is a peer dependency. Import core directly from server-only
+modules.
+
+## Hooks
+
+| Export | Parameters | Returns |
+| --- | --- | --- |
+| `useGlucoseAnalysis` | `readings`, optional `AnalyzeGlucoseOptions` | `AnalyzeGlucoseResult` |
+| `useAGPProfile` | `readings`, optional `AGPProfileOptions` | `AGPProfileResult` |
+| `useGlucoseIQScore` | `readings` | `GlucoseIQScore` |
+| `useMealResponse` | `readings`, `mealTime`, optional `MealResponseOptions` | `MealResponseResult` |
+| `useGlucoseLive` | `readings`, optional `GlucoseLiveOptions` | `GlucoseLive` |
+
+The first four hooks are `useMemo` wrappers around their corresponding core
+functions. Keep the readings array and options object identities stable when
+their contents have not changed.
+
+`useGlucoseLive` returns:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `latest` | `GlucoseReading \| null` | Most recent reading |
+| `trend` | `GlucoseTrendResult` | Derived trend and rate of change |
+| `minutesSince` | `number \| null` | Minutes since the latest reading |
+
+`GlucoseLiveOptions` extends core `GlucoseTrendOptions` and adds optional
+`refreshMs`. Omit it to disable interval refresh. When provided, it must be a
+whole number of milliseconds from `1` through `2_147_483_647`. A valid value
+re-renders the hook so staleness advances; it does not fetch readings.
+Invalid values throw `DomainError` with code `INVALID_OPTION` before a timer is
+scheduled.
+
+## Components
+
+| Export | Props | Renderer |
+| --- | --- | --- |
+| `AgpChart` | `ChartBaseProps` plus optional `AGPChartOptions` | `agpChartToSVG` |
+| `TirBar` | `ChartBaseProps` plus optional `TIRBarOptions` | `tirBarToSVG` |
+| `TrendTile` | `ChartBaseProps` plus optional `TrendTileOptions` | `trendTileToSVG` |
+
+`ChartBaseProps` contains:
+
+| Prop | Type | Required |
+| --- | --- | --- |
+| `readings` | `GlucoseReading[]` | Yes |
+| `className` | `string` | No |
+| `style` | `CSSProperties` | No |
+
+Each component memoizes its core renderer, then places the returned SVG inside
+a `div`. `className` and `style` belong to that wrapper. Renderer dimensions,
+theme, title, and time-zone options belong in `options`.
+
+```tsx typecheck
+'use client'
+
+import { useMemo } from 'react'
+import type { AGPChartOptions, GlucoseReading } from '@glucoseiq/core'
+import { AgpChart, useGlucoseAnalysis } from '@glucoseiq/react'
+
+export function GlucosePanel({ readings }: { readings: GlucoseReading[] }) {
+  const analysisOptions = useMemo(() => ({ timeZone: 'UTC' } as const), [])
+  const options = useMemo<AGPChartOptions>(
+    () => ({ theme: 'dark', timeZone: 'UTC', title: 'Last 14 days' }),
+    []
+  )
+  const report = useGlucoseAnalysis(readings, analysisOptions)
+
+  return (
+    <section>
+      <p>
+        {report.valid && report.timeInRange
+          ? `${report.timeInRange.inRange.percentage}% in range`
+          : 'Analysis unavailable'}
+      </p>
+      <AgpChart readings={readings} options={options} />
+    </section>
+  )
+}
+```
+
+## Exported types
+
+The package exports `ChartBaseProps`, `GlucoseLive`, and
+`GlucoseLiveOptions`. `@glucoseiq/core` owns the reading, analytics, profile,
+meal, trend, and renderer option types; import those types from core.
+
+## Failure and safety behavior
+
+Hooks preserve the called core function's behavior. For example,
+`useGlucoseAnalysis` can return `valid: false`, while invalid renderer options
+can throw a typed core error. The adapter does not add runtime validation.
+
+Components inline trusted output from the core renderer. Pair each chart with
+an adjacent textual summary and do not route arbitrary markup through the same
+boundary. See [Safety and Limitations](/docs/safety).

@@ -1,0 +1,15 @@
+.installer :global([role='tabpanel']:focus-visible) {
+  outline: 2px solid var(--color-fd-primary);
+  outline-offset: -2px;
+}
+
+.installer :global([role='tab']) {
+  min-width: 44px;
+  min-height: 44px;
+  justify-content: center;
+}
+
+.installer :global([role='tabpanel'] button) {
+  min-width: 44px;
+  min-height: 44px;
+}

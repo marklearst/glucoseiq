@@ -1,0 +1,687 @@
+---
+title: "Constants"
+description: "Exported thresholds, goals, conversion factors, and capabilities."
+---
+
+### A1C_TO_EAG_CONSTANT
+
+```ts fragment="generated API declaration or signature"
+const A1C_TO_EAG_CONSTANT: 46.7
+```
+
+**Import:** `@glucoseiq/core`
+
+Constant for converting A1C to estimated average glucose (eAG).
+
+**See:** [https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html)
+
+
+---
+
+### A1C_TO_EAG_MULTIPLIER
+
+```ts fragment="generated API declaration or signature"
+const A1C_TO_EAG_MULTIPLIER: 28.7
+```
+
+**Import:** `@glucoseiq/core`
+
+Multiplier for converting A1C to estimated average glucose (eAG).
+
+**See:** [https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html)
+
+
+---
+
+### AllowedGlucoseUnits
+
+```ts fragment="generated API declaration or signature"
+const AllowedGlucoseUnits: GlucoseUnit[]
+```
+
+**Import:** `@glucoseiq/core`
+
+List of glucose units accepted by validation and conversion APIs.
+
+**See:** [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
+
+
+---
+
+### DEXCOM_CAPABILITIES
+
+```ts fragment="generated API declaration or signature"
+const DEXCOM_CAPABILITIES: ConnectorCapabilities
+```
+
+**Import:** `@glucoseiq/core/connectors`
+
+Dexcom Share / G7-G8 feeds.
+
+
+---
+
+### GLUCOSE_COLOR_ELEVATED
+
+```ts fragment="generated API declaration or signature"
+const GLUCOSE_COLOR_ELEVATED: '#FBC02D'
+```
+
+**Import:** `@glucoseiq/core`
+
+
+---
+
+### GLUCOSE_COLOR_HIGH
+
+```ts fragment="generated API declaration or signature"
+const GLUCOSE_COLOR_HIGH: '#F57C00'
+```
+
+**Import:** `@glucoseiq/core`
+
+
+---
+
+### GLUCOSE_COLOR_LOW
+
+```ts fragment="generated API declaration or signature"
+const GLUCOSE_COLOR_LOW: '#D32F2F'
+```
+
+**Import:** `@glucoseiq/core`
+
+Color codes for glucose zones.
+
+**See:** [https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html](https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html)
+
+
+---
+
+### GLUCOSE_COLOR_NORMAL
+
+```ts fragment="generated API declaration or signature"
+const GLUCOSE_COLOR_NORMAL: '#388E3C'
+```
+
+**Import:** `@glucoseiq/core`
+
+
+---
+
+### GLUCOSE_COLOR_NORMAL_DOWN
+
+```ts fragment="generated API declaration or signature"
+const GLUCOSE_COLOR_NORMAL_DOWN: '#2E7D32'
+```
+
+**Import:** `@glucoseiq/core`
+
+
+---
+
+### GLUCOSE_COLOR_NORMAL_UP
+
+```ts fragment="generated API declaration or signature"
+const GLUCOSE_COLOR_NORMAL_UP: '#4CAF50'
+```
+
+**Import:** `@glucoseiq/core`
+
+
+---
+
+### GLUCOSE_ZONE_COLORS
+
+```ts fragment="generated API declaration or signature"
+const GLUCOSE_ZONE_COLORS: { readonly ELEVATED: '#FBC02D'; readonly HIGH: '#F57C00'; readonly LOW: '#D32F2F'; readonly NORMAL: '#388E3C'; readonly NORMAL_DOWN: '#2E7D32'; readonly NORMAL_UP: '#4CAF50' }
+```
+
+**Import:** `@glucoseiq/core`
+
+Glucose zone color mapping for different statuses and trends.
+
+**See:** [https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html](https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html)
+
+
+---
+
+### GMI_COEFFICIENTS
+
+```ts fragment="generated API declaration or signature"
+const GMI_COEFFICIENTS: { readonly A1C_INTERCEPT: 3.31; readonly A1C_SLOPE: 0.02392; readonly MG_DL_INTERCEPT: 2.4; readonly MG_DL_SLOPE: 0.03; readonly MMOL_L_INTERCEPT: 3.5; readonly MMOL_L_SLOPE: 1.57 }
+```
+
+**Import:** `@glucoseiq/core`
+
+GMI (Glucose Management Indicator) calculation coefficients.
+
+**See:** [https://diatribe.org/glucose-management-indicator-gmi](https://diatribe.org/glucose-management-indicator-gmi)
+
+
+---
+
+### HOMA_IR_CUTOFFS
+
+```ts fragment="generated API declaration or signature"
+const HOMA_IR_CUTOFFS: { readonly EARLY_RESISTANCE: 2.9; readonly NORMAL: 2; readonly VERY_SENSITIVE: 1 }
+```
+
+**Import:** `@glucoseiq/core`
+
+Interpretation cutoffs for HOMA-IR (insulin resistance assessment).
+These are general categories, not diagnostic.
+
+
+---
+
+### HOMA_IR_DENOMINATOR
+
+```ts fragment="generated API declaration or signature"
+const HOMA_IR_DENOMINATOR: 405
+```
+
+**Import:** `@glucoseiq/core`
+
+Denominator constant for HOMA-IR calculation.
+HOMA-IR = (glucose \[mg/dL] × insulin \[µIU/mL]) / HOMA_IR_DENOMINATOR
+
+**See:** [https://www.ncbi.nlm.nih.gov/books/NBK279396/](https://www.ncbi.nlm.nih.gov/books/NBK279396/)
+
+
+---
+
+### HYPER_THRESHOLD_MGDL
+
+```ts fragment="generated API declaration or signature"
+const HYPER_THRESHOLD_MGDL: 180
+```
+
+**Import:** `@glucoseiq/core`
+
+Hyperglycemia threshold (mg/dL).
+
+**See:** [https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html](https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html)
+
+
+---
+
+### HYPER_THRESHOLD_MMOLL
+
+```ts fragment="generated API declaration or signature"
+const HYPER_THRESHOLD_MMOLL: 10
+```
+
+**Import:** `@glucoseiq/core`
+
+Hyperglycemia threshold (mmol/L).
+
+**See:** [https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html](https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html)
+
+
+---
+
+### HYPO_THRESHOLD_MGDL
+
+```ts fragment="generated API declaration or signature"
+const HYPO_THRESHOLD_MGDL: 70
+```
+
+**Import:** `@glucoseiq/core`
+
+Hypoglycemia threshold (mg/dL).
+
+**See:** [https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html](https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html)
+
+
+---
+
+### HYPO_THRESHOLD_MMOLL
+
+```ts fragment="generated API declaration or signature"
+const HYPO_THRESHOLD_MMOLL: 3.9
+```
+
+**Import:** `@glucoseiq/core`
+
+Hypoglycemia threshold (mmol/L).
+
+**See:** [https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html](https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html)
+
+
+---
+
+### LIBRE_CAPABILITIES
+
+```ts fragment="generated API declaration or signature"
+const LIBRE_CAPABILITIES: ConnectorCapabilities
+```
+
+**Import:** `@glucoseiq/core/connectors`
+
+Libre LinkUp feeds.
+
+
+---
+
+### MGDL_MMOLL_CONVERSION
+
+```ts fragment="generated API declaration or signature"
+const MGDL_MMOLL_CONVERSION: 18.0182
+```
+
+**Import:** `@glucoseiq/core`
+
+Conversion factor between mg/dL and mmol/L.
+
+**See:** [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
+
+
+---
+
+### MG_DL
+
+```ts fragment="generated API declaration or signature"
+const MG_DL: 'mg/dL'
+```
+
+**Import:** `@glucoseiq/core`
+
+String literal for mg/dL glucose unit.
+
+**See:** [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
+
+
+---
+
+### MMOL_L
+
+```ts fragment="generated API declaration or signature"
+const MMOL_L: 'mmol/L'
+```
+
+**Import:** `@glucoseiq/core`
+
+String literal for mmol/L unit.
+
+**See:** [https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm)
+
+
+---
+
+### NIGHTSCOUT_CAPABILITIES
+
+```ts fragment="generated API declaration or signature"
+const NIGHTSCOUT_CAPABILITIES: ConnectorCapabilities
+```
+
+**Import:** `@glucoseiq/core/connectors`
+
+Nightscout community relays.
+
+
+---
+
+### PREGNANCY_TARGET_HIGH_MGDL
+
+```ts fragment="generated API declaration or signature"
+const PREGNANCY_TARGET_HIGH_MGDL: 140
+```
+
+**Import:** `@glucoseiq/core`
+
+Upper bound of target glucose range during pregnancy (mg/dL).
+Applies to Type 1, Type 2, and gestational diabetes.
+
+**See:** [ADA Standards of Care (2024)](https://diabetesjournals.org/care/article/47/Supplement_1/S282)
+
+
+---
+
+### PREGNANCY_TARGET_HIGH_MMOLL
+
+```ts fragment="generated API declaration or signature"
+const PREGNANCY_TARGET_HIGH_MMOLL: 7.8
+```
+
+**Import:** `@glucoseiq/core`
+
+Upper bound of target glucose range during pregnancy (mmol/L).
+Applies to Type 1, Type 2, and gestational diabetes.
+
+**See:** [ADA Standards of Care (2024)](https://diabetesjournals.org/care/article/47/Supplement_1/S282)
+
+
+---
+
+### PREGNANCY_TARGET_LOW_MGDL
+
+```ts fragment="generated API declaration or signature"
+const PREGNANCY_TARGET_LOW_MGDL: 63
+```
+
+**Import:** `@glucoseiq/core`
+
+Lower bound of target glucose range during pregnancy (mg/dL).
+Applies to Type 1, Type 2, and gestational diabetes.
+
+**See:** [ADA Standards of Care (2024)](https://diabetesjournals.org/care/article/47/Supplement_1/S282)
+
+
+---
+
+### PREGNANCY_TARGET_LOW_MMOLL
+
+```ts fragment="generated API declaration or signature"
+const PREGNANCY_TARGET_LOW_MMOLL: 3.5
+```
+
+**Import:** `@glucoseiq/core`
+
+Lower bound of target glucose range during pregnancy (mmol/L).
+Applies to Type 1, Type 2, and gestational diabetes.
+
+**See:** [ADA Standards of Care (2024)](https://diabetesjournals.org/care/article/47/Supplement_1/S282)
+
+
+---
+
+### TAR_LEVEL1_GOAL
+
+```ts fragment="generated API declaration or signature"
+const TAR_LEVEL1_GOAL: 25
+```
+
+**Import:** `@glucoseiq/core`
+
+Maximum acceptable cumulative percentage above 180 mg/dL.
+Published goal: &lt;25% of readings above range, including Level 2.
+
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+
+---
+
+### TAR_LEVEL1_GOAL_OLDER_ADULTS
+
+```ts fragment="generated API declaration or signature"
+const TAR_LEVEL1_GOAL_OLDER_ADULTS: 50
+```
+
+**Import:** `@glucoseiq/core`
+
+Maximum acceptable cumulative percentage above 180 mg/dL for older/high-risk adults.
+Current ADA goal: &lt;50% of readings above range, including Level 2.
+
+**See:** [ADA Standards of Care (2026)](https://diabetesjournals.org/care/article/49/Supplement_1/S132/163927)
+
+
+---
+
+### TAR_LEVEL2_GOAL
+
+```ts fragment="generated API declaration or signature"
+const TAR_LEVEL2_GOAL: 5
+```
+
+**Import:** `@glucoseiq/core`
+
+Maximum acceptable percentage for Level 2 hyperglycemia (&gt;250 mg/dL).
+Clinical goal: &lt;5% of readings in this range.
+
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+
+---
+
+### TAR_LEVEL2_GOAL_OLDER_ADULTS
+
+```ts fragment="generated API declaration or signature"
+const TAR_LEVEL2_GOAL_OLDER_ADULTS: 10
+```
+
+**Import:** `@glucoseiq/core`
+
+Maximum acceptable percentage above 250 mg/dL for older/high-risk adults.
+Published goal: &lt;10% of readings in this range.
+
+**See:** [International Consensus on Time in Range (2019)](https://pmc.ncbi.nlm.nih.gov/articles/PMC6973648/)
+
+
+---
+
+### TBR_LEVEL1_GOAL
+
+```ts fragment="generated API declaration or signature"
+const TBR_LEVEL1_GOAL: 4
+```
+
+**Import:** `@glucoseiq/core`
+
+Maximum acceptable cumulative percentage below 70 mg/dL.
+Published goal: &lt;4% of readings below range, including Level 2.
+
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+
+---
+
+### TBR_LEVEL1_GOAL_OLDER_ADULTS
+
+```ts fragment="generated API declaration or signature"
+const TBR_LEVEL1_GOAL_OLDER_ADULTS: 1
+```
+
+**Import:** `@glucoseiq/core`
+
+Maximum acceptable cumulative percentage below 70 mg/dL for older/high-risk adults.
+More stringent goal: &lt;1% of readings below range, including Level 2.
+
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+
+---
+
+### TBR_LEVEL2_GOAL
+
+```ts fragment="generated API declaration or signature"
+const TBR_LEVEL2_GOAL: 1
+```
+
+**Import:** `@glucoseiq/core`
+
+Maximum acceptable percentage for Level 2 hypoglycemia (&lt;54 mg/dL).
+Clinical goal: &lt;1% of readings in this range.
+
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+
+---
+
+### TBR_LEVEL2_GOAL_OLDER_ADULTS
+
+```ts fragment="generated API declaration or signature"
+const TBR_LEVEL2_GOAL_OLDER_ADULTS: 1
+```
+
+**Import:** `@glucoseiq/core`
+
+Maximum acceptable percentage below 54 mg/dL for older/high-risk adults.
+Current ADA goal: &lt;1% of readings in this range.
+
+**See:** [ADA Standards of Care (2026)](https://diabetesjournals.org/care/article/49/Supplement_1/S132/163927)
+
+
+---
+
+### TIR_GOAL_OLDER_ADULTS
+
+```ts fragment="generated API declaration or signature"
+const TIR_GOAL_OLDER_ADULTS: 50
+```
+
+**Import:** `@glucoseiq/core`
+
+Target percentage for time-in-range for older/high-risk adults.
+More lenient goal: &gt;50% of readings in target range.
+
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+
+---
+
+### TIR_GOAL_STANDARD
+
+```ts fragment="generated API declaration or signature"
+const TIR_GOAL_STANDARD: 70
+```
+
+**Import:** `@glucoseiq/core`
+
+Target percentage for time-in-range (70-180 mg/dL).
+Published goal: &gt;70% of readings in target range.
+
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+
+---
+
+### TIR_HIGH_THRESHOLD_MGDL
+
+```ts fragment="generated API declaration or signature"
+const TIR_HIGH_THRESHOLD_MGDL: 180
+```
+
+**Import:** `@glucoseiq/core`
+
+Level 1 hyperglycemia threshold (mg/dL).
+Target range ends at this value.
+
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+
+---
+
+### TIR_HIGH_THRESHOLD_MMOLL
+
+```ts fragment="generated API declaration or signature"
+const TIR_HIGH_THRESHOLD_MMOLL: 10
+```
+
+**Import:** `@glucoseiq/core`
+
+Level 1 hyperglycemia threshold (mmol/L).
+Target range ends at this value.
+
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+
+---
+
+### TIR_LOW_THRESHOLD_MGDL
+
+```ts fragment="generated API declaration or signature"
+const TIR_LOW_THRESHOLD_MGDL: 70
+```
+
+**Import:** `@glucoseiq/core`
+
+Level 1 hypoglycemia threshold (mg/dL).
+Target range begins at this value.
+
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+
+---
+
+### TIR_LOW_THRESHOLD_MMOLL
+
+```ts fragment="generated API declaration or signature"
+const TIR_LOW_THRESHOLD_MMOLL: 3.9
+```
+
+**Import:** `@glucoseiq/core`
+
+Level 1 hypoglycemia threshold (mmol/L).
+Target range begins at this value.
+
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+
+---
+
+### TIR_VERY_HIGH_THRESHOLD_MGDL
+
+```ts fragment="generated API declaration or signature"
+const TIR_VERY_HIGH_THRESHOLD_MGDL: 250
+```
+
+**Import:** `@glucoseiq/core`
+
+Level 2 hyperglycemia threshold (mg/dL).
+Readings above this value indicate significant hyperglycemia.
+
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+
+---
+
+### TIR_VERY_HIGH_THRESHOLD_MMOLL
+
+```ts fragment="generated API declaration or signature"
+const TIR_VERY_HIGH_THRESHOLD_MMOLL: 13.9
+```
+
+**Import:** `@glucoseiq/core`
+
+Level 2 hyperglycemia threshold (mmol/L).
+Readings above this value indicate significant hyperglycemia.
+
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+
+---
+
+### TIR_VERY_LOW_THRESHOLD_MGDL
+
+```ts fragment="generated API declaration or signature"
+const TIR_VERY_LOW_THRESHOLD_MGDL: 54
+```
+
+**Import:** `@glucoseiq/core`
+
+Level 2 hypoglycemia threshold (mg/dL).
+Readings below this value indicate significant hypoglycemia.
+
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+
+---
+
+### TIR_VERY_LOW_THRESHOLD_MMOLL
+
+```ts fragment="generated API declaration or signature"
+const TIR_VERY_LOW_THRESHOLD_MMOLL: 3
+```
+
+**Import:** `@glucoseiq/core`
+
+Level 2 hypoglycemia threshold (mmol/L).
+Readings below this value indicate significant hypoglycemia.
+
+**See:** [International Consensus on Time in Range (2019)](https://diabetesjournals.org/care/article/42/8/1593)
+
+
+---
+
+### TREND_ARROWS
+
+```ts fragment="generated API declaration or signature"
+const TREND_ARROWS: { readonly FALLING: '↘'; readonly RAPIDFALL: '↓'; readonly RAPIDRISE: '↑'; readonly RISING: '↗'; readonly STEADY: '→' }
+```
+
+**Import:** `@glucoseiq/core`
+
+Unicode arrows for glucose trend indication.
+
+**See:** [https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html](https://www.diabetes.co.uk/diabetes_care/blood-sugar-level-ranges.html)

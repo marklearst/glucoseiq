@@ -2,8 +2,8 @@
  * @file src/connectors/index.ts
  *
  * CGM vendor data normalization adapters.
- * Pure transformation helpers that map vendor payloads into a canonical
- * NormalizedCGMReading type compatible with all diabetic-utils analytics.
+ * Pure transformation helpers that map vendor payloads into the shared
+ * `NormalizedCGMReading` type for reading-based analytics.
  */
 
 export * from './types'

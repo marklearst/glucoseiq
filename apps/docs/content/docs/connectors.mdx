@@ -10,7 +10,7 @@ The connector module translates vendor payloads into
 same value can feed `analyzeGlucose`, AGP builders, live helpers, renderers, or
 your own pipeline.
 
-```ts
+```ts typecheck
 import {
   normalizeDexcomEntries,
   normalizeLibreEntries,
@@ -18,19 +18,16 @@ import {
 } from '@glucoseiq/core/connectors'
 ```
 
-<Callout type="warn" title="Normalization, not authenticated transport">
-  These functions do not sign in to a vendor, hold credentials, refresh
-  tokens, make network requests, poll, retry, backfill, cache, or persist data.
-  Fetch payloads with the authorized API or client appropriate to your
-  application, then pass those payloads to GlucoseIQ for deterministic
-  normalization.
+<Callout type="warn" title="Connector scope">
+  Connector functions normalize payloads you supply. Your application handles
+  vendor access, network policy, and storage.
 </Callout>
 
 ## The normalized contract
 
 Every adapter returns the same shape:
 
-```ts
+```ts typecheck
 interface NormalizedCGMReading {
   readonly value: number
   readonly unit: 'mg/dL' | 'mmol/L'
@@ -54,7 +51,7 @@ interface NormalizedCGMReading {
 Batch normalizers sort successful readings chronologically. Unknown or
 unsupported trend values become `unknown` instead of inventing a direction.
 
-`dedupKey` is a deterministic key you can use in your own cache or persistence
+`dedupKey` is a stable key you can use in your own cache or persistence
 layer. The normalizers create the key; they do not remove duplicate readings
 for you.
 
@@ -63,7 +60,7 @@ for you.
 Dexcom entries use `Value`, `Trend`, and `WT`. `WT` may be a Dexcom
 `Date(epochMs)` wrapper or an ISO timestamp.
 
-```ts
+```ts typecheck
 import { normalizeDexcomEntry } from '@glucoseiq/core/connectors'
 
 const reading = normalizeDexcomEntry({
@@ -90,7 +87,7 @@ Libre normalization respects the account display unit. When
 `ValueInMgPerDl` exists, it is preferred for the normalized value; an account
 using mmol/L is recorded in `nativeUnit`.
 
-```ts
+```ts typecheck
 import { normalizeLibreEntry } from '@glucoseiq/core/connectors'
 
 const reading = normalizeLibreEntry({
@@ -122,7 +119,7 @@ Nightscout adapters accept the `/api/v1/entries` SGV shape. They prefer a
 valid `dateString`, fall back to the epoch-millisecond `date`, and preserve
 `_id` as `vendorId`.
 
-```ts
+```ts typecheck
 import { normalizeNightscoutEntry } from '@glucoseiq/core/connectors'
 
 const reading = normalizeNightscoutEntry({
@@ -148,7 +145,7 @@ The strict batch functions throw if an entry cannot be normalized. Use the
 safe variants when one malformed record should not reject the rest of the
 batch:
 
-```ts
+```ts typecheck
 import { safeNormalizeDexcomEntries } from '@glucoseiq/core/connectors'
 
 const result = safeNormalizeDexcomEntries([
@@ -170,7 +167,7 @@ each error reports the original input index and message.
 
 Capability descriptors expose source behavior without performing transport:
 
-```ts
+```ts typecheck
 import {
   DEXCOM_CAPABILITIES,
   LIBRE_CAPABILITIES,
@@ -189,15 +186,14 @@ NIGHTSCOUT_CAPABILITIES.clockModel    // 'relay'
 | Nightscout | 2 | 300 s | 900 s | `full` | 90 days | `relay` |
 
 Tier 1 describes a full-fidelity vendor feed; tier 2 describes a community or
-relay source. Treat these values as declarative defaults for your scheduling,
-freshness, and gap policies—not as a polling engine or a guarantee from the
-upstream service.
+relay source. Use these values as starting points for scheduling and staleness
+checks, then verify them against the current upstream service.
 
 ## A practical ingestion boundary
 
 Keep transport and analysis separate in application code:
 
-```ts
+```ts typecheck
 import { analyzeGlucose } from '@glucoseiq/core'
 import { safeNormalizeNightscoutEntries } from '@glucoseiq/core/connectors'
 
@@ -215,5 +211,5 @@ async function buildReport() {
 }
 ```
 
-Your server route owns authorization and network policy. GlucoseIQ owns the
-pure, testable translation into a vendor-neutral analytics contract.
+Authorize and fetch vendor data in your server route, then pass the payload to
+a GlucoseIQ normalizer.

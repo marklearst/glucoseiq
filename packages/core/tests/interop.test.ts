@@ -8,7 +8,7 @@ import {
   buildOMHBloodGlucoseList,
 } from '../src/interop'
 import { calculateEnhancedTIR } from '../src'
-import type { GlucoseReading, EnhancedTIRResult } from '../src'
+import type { GlucoseReading } from '../src'
 
 const sampleReadings: GlucoseReading[] = Array.from({ length: 50 }, (_, i) => ({
   value: 90 + i * 2,

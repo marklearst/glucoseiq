@@ -1,16 +1,14 @@
 /**
  * @file src/csv.ts
  *
- * Generic CSV → glucose readings parser. Point it at any CGM export (Dexcom
- * Clarity, LibreView, Nightscout, Tidepool, …) by naming the timestamp and
- * value columns; it handles quoted fields, custom delimiters, and skips rows
- * that don't parse. Pure, dependency-free, and format-agnostic (no fragile
- * hard-coded vendor layouts).
+ * Mapped header-row delimited data parser. Name the timestamp and value
+ * columns explicitly; it handles quoted fields, custom one-character
+ * delimiters, and skips rows that do not parse.
  */
 
 import type { GlucoseReading, GlucoseUnit } from './types'
 import { MG_DL } from './constants'
-import { ParseError } from './errors'
+import { DomainError, ParseError } from './errors'
 
 /** Options for {@link parseGlucoseCSV}. */
 export interface CSVParseOptions {
@@ -20,7 +18,10 @@ export interface CSVParseOptions {
   readonly valueColumn: string
   /** Unit of the values (default 'mg/dL'). */
   readonly unit?: GlucoseUnit
-  /** Field delimiter (default ','). */
+  /**
+   * Field delimiter (default `,`). Must be exactly one UTF-16 code unit other
+   * than double quote, NUL, CR, or LF.
+   */
   readonly delimiter?: string
 }
 
@@ -63,13 +64,25 @@ function cell(fields: string[], index: number): string {
 /**
  * Parses CSV text into glucose readings.
  *
+ * Empty and blank-only documents return an empty array. A header-only document
+ * also returns an empty array after validating both mapped columns. Quoted
+ * fields and doubled quotes are supported, but physical newlines inside a
+ * quoted field are not.
+ *
  * @param text - The CSV document
  * @param options - Column names, unit, and delimiter
  * @returns Parsed readings (rows with an unparseable value or timestamp are skipped)
- * @throws {Error} If a named column is not present in the header
+ * @throws {DomainError} If the delimiter is invalid
+ * @throws {ParseError} If a named column is not present in the header
  *
  * @example
- * ```ts
+ * ```ts typecheck
+ * import { parseGlucoseCSV } from '@glucoseiq/core'
+ *
+ * const csv: string = [
+ *   'Timestamp (YYYY-MM-DDThh:mm:ss),Glucose Value (mg/dL)',
+ *   '2024-01-01T08:00:00Z,120',
+ * ].join('\n')
  * const readings = parseGlucoseCSV(csv, {
  *   timestampColumn: 'Timestamp (YYYY-MM-DDThh:mm:ss)',
  *   valueColumn: 'Glucose Value (mg/dL)',
@@ -81,10 +94,25 @@ function cell(fields: string[], index: number): string {
  */
 export function parseGlucoseCSV(text: string, options: CSVParseOptions): GlucoseReading[] {
   const unit = options.unit ?? MG_DL
-  const delimiter = options.delimiter ?? ','
+  const configuredDelimiter: unknown = options.delimiter
+  const delimiter = configuredDelimiter === undefined ? ',' : configuredDelimiter
+  if (
+    typeof delimiter !== 'string' ||
+    delimiter.length !== 1 ||
+    delimiter === '"' ||
+    delimiter === '\0' ||
+    delimiter === '\r' ||
+    delimiter === '\n'
+  ) {
+    throw new DomainError(
+      'parseGlucoseCSV: delimiter must be exactly one character other than double quote, NUL, CR, or LF',
+      'INVALID_OPTION'
+    )
+  }
 
-  const lines = text.split(/\r?\n/).filter((l) => l.length > 0)
-  if (lines.length < 2) return []
+  const document = text.startsWith('\ufeff') ? text.slice(1) : text
+  const lines = document.split(/\r?\n/).filter((line) => line.trim().length > 0)
+  if (lines.length === 0) return []
 
   const header = parseLine(lines[0], delimiter).map((h) => h.trim())
   const tsIdx = header.indexOf(options.timestampColumn)
