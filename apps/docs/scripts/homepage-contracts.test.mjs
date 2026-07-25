@@ -391,6 +391,7 @@ test('hero mark lands before its ring completes one clockwise pass', () => {
   assert.match(logo, /data-logo-part="ring-reveal"/u)
   assert.match(logo, /pathLength="1"/u)
   assert.match(logo, /strokeDasharray="1"/u)
+  assert.match(logo, /strokeDashoffset="0"/u)
   assert.match(logo, /transform="rotate\(-90 32 52\)"/u)
   assert.match(logo, /mask=\{props\.motion \? `url\(#\$\{ringRevealId\}\)` : undefined\}/u)
   assert.doesNotMatch(logo, /ring-tip|tipShadow|feDropShadow/u)
@@ -403,9 +404,12 @@ test('hero mark lands before its ring completes one clockwise pass', () => {
     /animation:\s*homeRingReveal 720ms cubic-bezier\(0\.65,\s*0,\s*0\.35,\s*1\) 360ms both;/u,
   )
   const ringKeyframes = /@keyframes homeRingReveal\s*\{([\s\S]*?)\n\}/u.exec(styles)?.[1]
+  const dropKeyframes = /@keyframes homeDropLand\s*\{([\s\S]*?)\n\}/u.exec(styles)?.[1]
   assert.notEqual(ringKeyframes, undefined)
+  assert.notEqual(dropKeyframes, undefined)
   assert.match(ringKeyframes, /stroke-dashoffset:\s*1;/u)
   assert.match(ringKeyframes, /stroke-dashoffset:\s*0;/u)
+  assert.doesNotMatch(dropKeyframes, /scale|rotate|animation-timing-function/u)
   assert.doesNotMatch(styles, /homeRingTip|rotate\(360deg\)/u)
   assert.match(
     styles,
