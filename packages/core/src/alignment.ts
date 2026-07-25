@@ -22,7 +22,8 @@ import {
  *
  * Formula: HOMA-IR = (fasting glucose [mg/dL] × fasting insulin [µIU/mL]) / 405
  *
- * Used for estimating insulin resistance. Not a diagnostic tool.
+ * Returns the calculated value with the function's cutoff label. The result
+ * does not diagnose insulin resistance.
  *
  * @param glucose - Fasting glucose value in mg/dL. Must be a positive finite number.
  * @param insulin - Fasting insulin value in µIU/mL. Must be a positive finite number.
@@ -78,15 +79,10 @@ function interpretHOMAIR(score: number): string {
 }
 
 /**
- * Checks consistency among A1C, fasting glucose, and fasting insulin markers.
- *
- * Returns:
- *   - Estimated average glucose (mg/dL), calculated per CDC formula
- *   - HOMA-IR result (value and interpretation)
- *   - Flags for potential inconsistencies
- *   - Informational note and disclaimer
- *
- * Used for high-level insight and trend alignment, not for diagnosis.
+ * Compares A1C-derived estimated average glucose with fasting glucose and
+ * calculates HOMA-IR from fasting glucose and insulin. Returns both calculated
+ * values, flags from fixed comparison rules, and an informational disclaimer.
+ * The result does not diagnose a condition.
  *
  * @param a1c - A1C value (percentage). Must be a positive finite number.
  * @param glucose - Fasting glucose value in mg/dL. Must be a positive finite number.

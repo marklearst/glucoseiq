@@ -13,7 +13,7 @@ alignToGrid(readings: GlucoseReading[], options?: AlignOptions): GridPoint[]
 
 Resamples readings onto a fixed time grid.
 
-**Returns** — Grid points from the first to the last reading; genuine gaps are holes
+**Returns:** Grid points from the first to the last reading; genuine gaps are holes
 
 ```ts typecheck
 import { alignToGrid, type GlucoseReading } from '@glucoseiq/core'
@@ -43,7 +43,7 @@ detectGaps(readings: GlucoseReading[], options?: GapDetectionOptions): GlucoseGa
 
 Finds gaps (sensor dropouts) between consecutive readings.
 
-**Returns** — Gaps in chronological order (empty if none)
+**Returns:** Gaps in chronological order (empty if none)
 
 | Parameter | Description |
 | --- | --- |
@@ -64,9 +64,9 @@ splitDayNight(readings: GlucoseReading[], options?: DayNightOptions): DayNightSp
 Splits readings into daytime and nighttime by local hour. The night window
 may wrap past midnight (e.g. 22:00–06:00).
 
-**Returns** — Readings partitioned into `day` and `night`
+**Returns:** Readings partitioned into `day` and `night`
 
-**Throws** — If the time zone is invalid
+**Throws:** If the time zone is invalid
 
 | Parameter | Description |
 | --- | --- |

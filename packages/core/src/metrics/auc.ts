@@ -4,13 +4,9 @@
  * Area-under-the-curve helpers for glucose time-series, including the
  * incremental AUC (iAUC) used to quantify meal / postprandial responses.
  *
- * iAUC follows the Wolever & Jenkins convention: only area *above* the baseline
- * is counted, and segments that cross the baseline contribute only the
- * above-baseline triangle. This is the definition used for glycemic-response
- * and glycemic-index work, and is the piece naive trapezoid implementations
- * get wrong.
- *
- * Pure and dependency-free.
+ * iAUC follows the Wolever & Jenkins convention and counts only area above the
+ * baseline. A segment that crosses the baseline contributes its above-baseline
+ * triangle.
  *
  * @see https://pubmed.ncbi.nlm.nih.gov/2379513/  Wolever & Jenkins (1986)
  */

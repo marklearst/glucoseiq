@@ -706,18 +706,18 @@ function renderBlockComment(comment, owner, links) {
             owner,
           )
         })
-      if (lines.length === 1) sections.push(`**See** — ${lines[0]}`)
+      if (lines.length === 1) sections.push(`**See:** ${lines[0]}`)
       else if (lines.length > 1) {
-        sections.push(`**See**\n\n${lines.map((line) => `- ${line}`).join('\n')}`)
+        sections.push(`**See:**\n\n${lines.map((line) => `- ${line}`).join('\n')}`)
       }
       continue
     }
     const rendered = commentText(tag.content, owner, links)
     if (!rendered && tag.tag !== '@deprecated') continue
-    if (tag.tag === '@remarks') sections.push(`**Remarks** — ${rendered}`)
-    else if (tag.tag === '@deprecated') sections.push(`**Deprecated** — ${rendered || 'Deprecated.'}`)
-    else if (tag.tag === '@returns') sections.push(`**Returns** — ${rendered}`)
-    else if (tag.tag === '@throws') sections.push(`**Throws** — ${rendered}`)
+    if (tag.tag === '@remarks') sections.push(`**Remarks:** ${rendered}`)
+    else if (tag.tag === '@deprecated') sections.push(`**Deprecated:** ${rendered || 'Deprecated.'}`)
+    else if (tag.tag === '@returns') sections.push(`**Returns:** ${rendered}`)
+    else if (tag.tag === '@throws') sections.push(`**Throws:** ${rendered}`)
     else if (tag.tag === '@example') {
       const raw = renderCommentParts(tag.content, owner, links, {
         neutralizeRawMarkdown: false,
@@ -729,10 +729,10 @@ function renderBlockComment(comment, owner, links) {
           ? codeBlock(existingFence[3], `${exampleLanguage} typecheck`)
           : codeBlock(raw, 'ts typecheck'),
       )
-    } else if (tag.tag === '@defaultValue') sections.push(`**Default** — ${rendered}`)
+    } else if (tag.tag === '@defaultValue') sections.push(`**Default:** ${rendered}`)
   }
-  if (comment.modifierTags?.includes('@deprecated') && !sections.some((entry) => entry.startsWith('**Deprecated**'))) {
-    sections.push('**Deprecated** — Deprecated.')
+  if (comment.modifierTags?.includes('@deprecated') && !sections.some((entry) => entry.startsWith('**Deprecated:**'))) {
+    sections.push('**Deprecated:** Deprecated.')
   }
   return sections.length ? `${sections.join('\n\n')}\n\n` : ''
 }
@@ -743,7 +743,7 @@ function renderImport(reflection) {
 
 function tableCell(value) {
   const rendered = escapeMdx(value ?? '', 'table').trim()
-  return rendered || '—'
+  return rendered
 }
 
 function codeSpan(value, { table = false } = {}) {

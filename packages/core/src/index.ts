@@ -1,5 +1,6 @@
 /**
- * @glucoseiq/core — a dependency-free headless engine for glucose and CGM data.
+ * @glucoseiq/core normalizes and analyzes glucose and CGM data without runtime
+ * dependencies.
  *
  * Mixed-unit-aware GlucoseReading APIs normalize each reading's declared unit.
  * Legacy `calculateTIR` instead requires readings and target bounds in one

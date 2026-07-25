@@ -13,11 +13,11 @@ buildAGPProfile(readings: GlucoseReading[], options?: AGPProfileOptions): AGPPro
 
 Builds an AGP-style time-of-day percentile-band series from glucose readings.
 
-**Returns** — Render-ready full-day bin grid with per-bin percentiles
+**Returns:** Full-day bin grid with per-bin percentiles
 
-**Throws** — If `binMinutes` is not an integer in \[1, 1440]
+**Throws:** If `binMinutes` is not an integer in \[1, 1440]
 
-**Throws** — If `timeZone` is not a valid IANA time zone
+**Throws:** If `timeZone` is not a valid IANA time zone
 
 ```ts typecheck
 import { type GlucoseReading } from '@glucoseiq/core'
@@ -55,11 +55,11 @@ This convenience function computes the fields in [AGPMetricsResult](/docs/api/co
 one call. Other public metrics remain available through their focused
 functions.
 
-**Returns** — Selected aggregate AGP metrics result
+**Returns:** Selected aggregate AGP metrics result
 
-**Throws** — If readings array is empty
+**Throws:** If readings array is empty
 
-**Throws** — If a nested metric rejects a reading or option
+**Throws:** If a nested metric rejects a reading or option
 
 | Parameter | Description |
 | --- | --- |

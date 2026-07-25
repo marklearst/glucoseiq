@@ -2,7 +2,7 @@
  * @file src/connectors/index.ts
  *
  * CGM vendor data normalization adapters.
- * Pure transformation helpers that map vendor payloads into the canonical
+ * Pure transformation helpers that map vendor payloads into the shared
  * `NormalizedCGMReading` type for reading-based analytics.
  */
 

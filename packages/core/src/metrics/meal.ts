@@ -1,12 +1,9 @@
 /**
  * @file src/metrics/meal.ts
  *
- * Meal / postprandial glucose-response analysis: baseline, peak, delta,
- * time-to-peak, return-to-baseline, and incremental AUC over a window after a
- * meal. This is the "what did that meal do to me?" primitive behind consumer
- * CGM meal cards (Levels, Nutrisense, Signos, Lingo).
- *
- * Pure and dependency-free.
+ * Meal and postprandial glucose-response analysis. This module calculates
+ * baseline, peak, delta, time to peak, return to baseline, and incremental AUC
+ * over a window after a meal.
  *
  * @see https://pubmed.ncbi.nlm.nih.gov/2379513/  Wolever & Jenkins (1986)
  */

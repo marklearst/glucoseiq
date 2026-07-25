@@ -14,7 +14,7 @@ classifyGlucoseTrend(rocPerMin: number): CGMTrend
 Classifies a rate-of-change (mg/dL per minute) into a CGM trend using
 Dexcom-style thresholds: &lt;1 flat, 1–2 slight, 2–3 single, ≥3 rapid.
 
-**Returns** — The corresponding [CGMTrend](/docs/api/core/types#cgmtrend)
+**Returns:** The corresponding [CGMTrend](/docs/api/core/types#cgmtrend)
 
 | Parameter | Description |
 | --- | --- |
@@ -37,9 +37,9 @@ Fits a least-squares slope over readings in the trailing window, normalizing
 mixed units to mg/dL. Useful for feeding a live trend arrow, and for
 back-filling a trend when a feed (e.g. Nightscout) does not provide one.
 
-**Returns** — Rate-of-change (mg/dL/min) and derived trend
+**Returns:** Rate-of-change (mg/dL/min) and derived trend
 
-**Throws** — If `windowMin` is not a finite positive number
+**Throws:** If `windowMin` is not a finite positive number
 
 ```ts typecheck
 import { computeGlucoseTrend, type GlucoseReading } from '@glucoseiq/core'
@@ -72,7 +72,7 @@ Returns the most recent fully usable reading by timestamp (readings need not
 be sorted). A usable reading has a supported unit, a finite positive value at
 or below 600 mg/dL after normalization, and a parseable timestamp.
 
-**Returns** — The latest fully usable reading, or `null` when none are usable
+**Returns:** The latest fully usable reading, or `null` when none are usable
 
 | Parameter | Description |
 | --- | --- |
@@ -91,9 +91,9 @@ minutesSinceLastReading(readings: GlucoseReading[], now?: string | number | Date
 
 Returns minutes elapsed since the most recent reading (sensor staleness).
 
-**Returns** — Minutes since the latest reading, or `null` if there are none
+**Returns:** Minutes since the latest reading, or `null` if there are none
 
-**Throws** — If an explicit reference time is invalid
+**Throws:** If an explicit reference time is invalid
 
 | Parameter | Description |
 | --- | --- |

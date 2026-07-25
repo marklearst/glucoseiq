@@ -11,7 +11,7 @@
  *     MG   = ⌊mean glucose over readings that begin a valid step⌋ (mg/dL)
  *     PTIR = in-range fraction over all readings, in-range = [low, high)
  *
- * Pure and dependency-free. Computed in mg/dL.
+ * The calculation uses mg/dL.
  *
  * @see https://doi.org/10.1089/dia.2008.0132  Rodbard (2009)
  * @see https://github.com/nightscout/cgm-remote-monitor  Nightscout GVI/PGS

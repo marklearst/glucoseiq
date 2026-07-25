@@ -1,14 +1,13 @@
 /**
  * @file src/live.ts
  *
- * Live / real-time glucose helpers: rate-of-change, trend derivation, and
- * latest-reading / staleness utilities for CGM home screens and dashboards.
+ * Live and real-time glucose helpers for rate of change, trend derivation,
+ * latest readings, and staleness on CGM home screens and dashboards.
  * Watch surfaces require host-application integration.
  *
- * All functions here are *descriptive of past readings* — rate-of-change is
- * computed from observed values, not projected forward. Short-horizon
- * forecasting is intentionally outside this descriptive zero-dependency core
- * to avoid implying a predictive medical-device function.
+ * These functions calculate rate of change and trend from observed readings.
+ * They do not forecast future glucose. Forecasting remains outside this
+ * descriptive package to avoid implying a predictive medical-device function.
  *
  * @see {@link https://www.dexcom.com | Dexcom trend-arrow rate thresholds}
  */

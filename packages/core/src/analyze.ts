@@ -11,8 +11,6 @@
  * their documented pairing, window, and sufficiency requirements. Input with
  * no usable screened readings returns a typed `valid: false` report rather
  * than throwing.
- *
- * Pure and dependency-free.
  */
 
 import type { GlucoseReading, EnhancedTIRResult } from './types'
@@ -26,7 +24,7 @@ import { detectEpisodes, type EpisodeResult } from './metrics/episodes'
 import type { GRADEResult } from './metrics/grade'
 import type { GRIResult } from './metrics/gri'
 
-/** Maximum physiologically-plausible glucose value (mg/dL) used to screen input. */
+/** Maximum accepted glucose value in mg/dL; higher readings are discarded. */
 const MAX_PLAUSIBLE_MGDL = 600
 /** Consensus data-sufficiency defaults (Battelino 2019). */
 const DEFAULT_MIN_DAYS = 14
@@ -117,7 +115,7 @@ export function analyzeGlucose(
   const minDays = options?.minDays ?? DEFAULT_MIN_DAYS
   const minActivePercent = options?.minActivePercent ?? DEFAULT_MIN_ACTIVE_PERCENT
 
-  // Single cleaning pass: physiologically plausible value + parseable timestamp.
+  // Keep supported units, values in (0, 600] mg/dL, and parseable timestamps.
   const clean = readings.filter((r) => {
     if (!Number.isFinite(r.value) || r.value <= 0) return false
     if (r.unit !== MG_DL && r.unit !== MMOL_L) return false

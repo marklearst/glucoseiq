@@ -1,13 +1,10 @@
 /**
  * @file src/render/trend-tile.ts
  *
- * Renders a glanceable current-glucose tile — the big value, trend arrow, and
- * zone label — as a self-contained SVG string. This dashboard element is
- * driven by the live model (latest reading + derived trend). Native and watch
- * surfaces require host-application integration. Identity is carried by the
- * value, arrow, and text label, not color alone.
- *
- * Pure and dependency-free.
+ * Returns a self-contained SVG tile that shows the latest value together with
+ * a derived trend arrow and zone label. Text and position communicate the
+ * status without relying on color. Native and watch surfaces require
+ * host-application integration.
  */
 
 import type { GlucoseReading } from '../types'

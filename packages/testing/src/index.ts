@@ -1,10 +1,11 @@
 /**
- * @glucoseiq/testing — deterministic mock-CGM data for tests, demos, and docs.
+ * @glucoseiq/testing generates synthetic CGM-shaped data for tests, demos,
+ * and documentation.
  *
  * A seedable generator producing synthetic glucose curves (circadian baseline,
- * meal spikes, noise, optional nocturnal hypos) plus ready-made scenario
- * fixtures. Identical complete generator options, including the seed, produce
- * identical output and are suitable for golden tests.
+ * meal spikes, noise, optional nocturnal hypos) and fixed scenario fixtures.
+ * Identical complete generator options, including the seed, produce identical
+ * output for golden tests.
  */
 
 import type { GlucoseReading, GlucoseUnit } from '@glucoseiq/core'
@@ -20,7 +21,7 @@ export interface GenerateOptions {
   readonly days?: number
   /** Minutes between readings (default 5). */
   readonly intervalMin?: number
-  /** Deterministic seed (default 42). */
+  /** Safe-integer seed used to repeat a generated series (default 42). */
   readonly seed?: number
   /** ISO 8601 start timestamp (default '2024-01-01T00:00:00Z'). */
   readonly start?: string
@@ -38,7 +39,7 @@ export interface GenerateOptions {
   readonly unit?: GlucoseUnit
 }
 
-/** Mulberry32 — tiny deterministic PRNG. @internal */
+/** Small Mulberry32 PRNG seeded from a safe integer. @internal */
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0
   return () => {
@@ -51,7 +52,7 @@ function mulberry32(seed: number): () => number {
 }
 
 /**
- * Generates a deterministic synthetic CGM series for tests and demos.
+ * Generates a synthetic CGM series for tests and demos.
  *
  * @param options - Shape of the generated data
  * @returns Chronological readings; same options (incl. seed) → identical output
@@ -191,7 +192,7 @@ export function generateCGMSeries(options?: GenerateOptions): GlucoseReading[] {
   return readings
 }
 
-/** Ready-made scenario fixtures (all deterministic). */
+/** Scenario fixtures with fixed settings and seeds. */
 export const scenarios = {
   /** A calm, mostly in-range day. */
   steadyDay(): GlucoseReading[] {

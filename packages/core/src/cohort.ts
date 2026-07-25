@@ -1,10 +1,9 @@
 /**
  * @file src/cohort.ts
  *
- * Cohort / population aggregation — summarize per-patient glucose metrics across
- * many patients (the distribution of TIR, GMI, CV, and mean glucose over a
- * study population). Pure and dependency-free; a differentiator for research
- * workflows that no single-series metric can provide.
+ * Cohort and population aggregation. This module calculates per-patient TIR,
+ * GMI, CV, and mean glucose, then summarizes their distributions across the
+ * cohort.
  */
 
 import type { GlucoseReading } from './types'
@@ -78,7 +77,7 @@ function distribution(values: number[]): DistributionStats {
  *   { value: 7.2, unit: 'mmol/L', timestamp: '2024-01-01T08:00:00Z' },
  * ]
  * const cohort = aggregateCohort([patientA, patientB])
- * cohort.tir.median // 100 — both example readings are in range
+ * cohort.tir.median // 100; both example readings are in range
  * ```
  *
  * @category Cohort

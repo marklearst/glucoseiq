@@ -1,15 +1,13 @@
 /**
  * @file src/score.ts
  *
- * "Glucose IQ" score — a project-defined 0–100 wellness heuristic derived from
- * the Glycemia Risk Index (GRI): higher is better (100 − GRI).
+ * The "Glucose IQ" score is a project-defined 0–100 wellness heuristic derived
+ * from the Glycemia Risk Index (GRI). It calculates 100 minus GRI, so higher
+ * values indicate lower GRI.
  *
- * This configurable wellness heuristic is intended for glanceable feedback.
  * It is not diagnostic and does not constitute medical advice.
  *
- * Pure and dependency-free.
- *
- * @see https://doi.org/10.1177/19322968221085273  Klonoff et al. (2023) — GRI
+ * @see https://doi.org/10.1177/19322968221085273  Klonoff et al. (2023), GRI
  */
 
 import type { GlucoseReading } from './types'

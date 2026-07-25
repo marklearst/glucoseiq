@@ -4,8 +4,8 @@
  * Mean of Daily Differences (MODD).
  *
  * MODD quantifies day-to-day glucose variability by comparing glucose values
- * at matching times on consecutive days. It measures how consistently glucose
- * behaves across days — lower values indicate more predictable patterns.
+ * at matching times on consecutive days. Lower values indicate smaller
+ * day-to-day differences.
  *
  * Formula (Service & Nelson, 1980):
  *   MODD = mean(|G(t) - G(t - 24h)|) for all t where both values exist

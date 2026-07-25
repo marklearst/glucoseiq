@@ -804,7 +804,7 @@ describe('calculateAGPMetrics', () => {
     expect(() => calculateAGPMetrics([])).toThrow('readings array is empty')
   })
 
-  it('returns comprehensive metrics for multi-day CGM data', () => {
+  it('returns finite aggregate fields for multi-day CGM data', () => {
     const readings = makeReadings(3)
     const result = calculateAGPMetrics(readings)
 

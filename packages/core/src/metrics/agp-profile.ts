@@ -3,17 +3,11 @@
  *
  * AGP-style time-of-day percentile-band series.
  *
- * Where {@link calculateAGPMetrics} returns scalar summary metrics, this builds
- * a renderable percentile-band series: readings are pooled by
- * minute-of-day (in a configurable IANA time zone) across all days, then reduced
- * to per-bin percentile bands (default 5/25/50/75/95). The result is a plain,
- * render-ready structure you can draw with any charting library as two shaded
- * areas (5–95, 25–75) plus a median line.
- *
- * Pure and dependency-free. Descriptive summary of past data only — not a
- * predictive or diagnostic function.
- *
- * This is not a complete standardized Ambulatory Glucose Profile report.
+ * {@link buildAGPProfile} groups readings by local minute of day and calculates
+ * configured percentiles for each bin. It returns data for a percentile-band
+ * chart. A complete Ambulatory Glucose Profile report requires additional
+ * sections. The function summarizes past readings and has no predictive or
+ * diagnostic behavior.
  *
  * @see {@link https://doi.org/10.2337/dci19-0028 | International Consensus on Time in Range (2019)}
  * @see {@link https://cran.r-project.org/web/packages/iglu/vignettes/agp.html | iglu: AGP}
@@ -25,7 +19,7 @@ import { DomainError } from '../errors'
 
 /** Minutes in a 24-hour day. */
 const MINUTES_PER_DAY = 1440
-/** Default bin width — 5 minutes matches standard CGM sampling (288 bins/day). */
+/** Default bin width. Five minutes produces 288 bins per day. */
 const DEFAULT_BIN_MINUTES = 5
 /** Default AGP percentile bands per the 2019 international consensus. */
 const DEFAULT_PERCENTILES = [5, 25, 50, 75, 95]
@@ -71,7 +65,7 @@ export interface AGPProfileResult {
   readonly percentiles: number[]
   /** Output unit of percentile values. */
   readonly unit: GlucoseUnit
-  /** IANA time zone used for bucketing. */
+  /** IANA time zone applied when bucketing readings. */
   readonly timeZone: string
   /** Count of valid readings pooled into the profile. */
   readonly totalReadings: number
@@ -93,7 +87,7 @@ function quantile(sorted: number[], p: number, method: PercentileMethod): number
     if (lo === hi) return sorted[lo]
     return sorted[lo] + (rank - lo) * (sorted[hi] - sorted[lo])
   }
-  // Nearest-rank — identical formula to glucosePercentiles for reproducibility.
+  // Use the glucosePercentiles nearest-rank formula for reproducibility.
   const rank = Math.ceil((p / 100) * n)
   const idx = rank < 1 ? 0 : rank - 1
   return sorted[idx]
@@ -109,7 +103,7 @@ function round1(v: number): number {
  *
  * @param readings - Glucose readings with ISO 8601 timestamps
  * @param options - Bin width, percentiles, time zone, output unit, and method
- * @returns Render-ready full-day bin grid with per-bin percentiles
+ * @returns Full-day bin grid with per-bin percentiles
  * @throws {Error} If `binMinutes` is not an integer in [1, 1440]
  * @throws {Error} If `timeZone` is not a valid IANA time zone
  *

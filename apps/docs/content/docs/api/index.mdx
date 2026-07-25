@@ -3,48 +3,25 @@ title: API Reference
 description: Public package references for the GlucoseIQ workspace.
 ---
 
-GlucoseIQ publishes focused packages for core analytics, framework bindings, design tokens, synthetic test data, command-line workflows, and legacy compatibility.
+Choose the package that owns the API you need.
 
-## [@glucoseiq/core](/docs/api/core)
+| Package | Use it for | Reference |
+| --- | --- | --- |
+| `@glucoseiq/core` | Analytics, ingestion, connectors, interoperability, and SVG rendering | [Core API](/docs/api/core) |
+| `@glucoseiq/react` | React hooks, live view models, and SVG components | [React API](/docs/api/react) |
+| `@glucoseiq/tokens` | Fixed presentation thresholds, palettes, glyphs, and CSS variables | [Tokens API](/docs/api/tokens) |
+| `@glucoseiq/testing` | Repeatable CGM-shaped data and named scenarios | [Testing API](/docs/api/testing) |
+| `@glucoseiq/cli` | The command, output schema, exit behavior, and injectable `run` function | [CLI API](/docs/api/cli) |
+| `diabetic-utils` | Compatibility with the 107 exports from version 1.5 | [Migration guide](/docs/migration) |
 
-The zero-runtime-dependency analytics engine, including metrics, connectors, interoperability helpers, SVG renderers, public types, constants, and coded errors.
+New applications should use the scoped packages. Existing `diabetic-utils`
+applications can use version 2 as a compatibility bridge to
+`@glucoseiq/core`.
 
-The documentation generator builds the core reference from TypeScript
-declarations and TSDoc, then checks the committed files byte for byte against
-the source model.
+## Supporting guides
 
-## [@glucoseiq/react](/docs/api/react)
-
-Client-only hooks, live view models, and optional React wrappers around the
-core SVG renderers. The reference lists its public exports, component props, and
-memoization boundary.
-
-## [@glucoseiq/tokens](/docs/api/tokens)
-
-The five-zone model, fixed presentation thresholds, palettes, brand values,
-trend glyphs, and CSS-variable helper.
-
-## [@glucoseiq/testing](/docs/api/testing)
-
-The deterministic generator contract, option validation, output limit, and
-four named synthetic scenario factories.
-
-## [@glucoseiq/cli](/docs/api/cli)
-
-Executable flags, mapped delimited-data behavior, JSON schema, stream rules,
-exit codes, and the injectable `run` API.
-
-## `diabetic-utils`
-
-Version 2 is the compatibility bridge to `@glucoseiq/core` and preserves the
-107 exports from `diabetic-utils` 1.5. New applications should use scoped
-packages directly. Existing applications should follow the
-[migration guide](/docs/migration); the compatible analytics contracts are in
-the [core reference](/docs/api/core).
-
-## Choose a reference
-
-Use [Choose a Package](/docs/packages) when the package boundary is not yet
-clear. Use [Runtime Support](/docs/runtime-support) for Node, module,
-declaration, and React compatibility, and [Safety and Limitations](/docs/safety)
-before presenting an analytics result to a person.
+- [Choose a Package](/docs/packages) explains package boundaries.
+- [Runtime Support](/docs/runtime-support) lists Node, module, declaration, and
+  React compatibility.
+- [Safety and Limitations](/docs/safety) defines the requirements for
+  presenting analytics to a person.

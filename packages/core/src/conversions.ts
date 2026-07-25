@@ -15,7 +15,6 @@ import { DomainError } from './errors'
 
 /**
  * Estimates A1C (percentage) from average glucose in mg/dL.
- * Intended for informational analytics and display.
  * @param avgMgDl - Average glucose in mg/dL
  * @returns Estimated A1C value (percentage)
  * @see https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html
@@ -26,7 +25,6 @@ export function estimateA1CFromAvgGlucose(avgMgDl: number): number {
 
 /**
  * Estimates average glucose (mg/dL) from an A1C value (percentage).
- * Intended for informational analytics and display.
  * @param a1c - A1C value (percentage)
  * @returns Estimated average glucose in mg/dL
  * @see https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html
@@ -36,8 +34,8 @@ export function estimateAvgGlucoseFromA1C(a1c: number): number {
 }
 
 /**
- * Estimates eAG (estimated average glucose, mg/dL) from an A1C value.
- * Throws if input is negative. Suitable for analytics and display workflows.
+ * Estimates eAG (estimated average glucose, mg/dL) from an A1C value and
+ * rejects negative input.
  * @param a1c - A1C value (percentage)
  * @returns Estimated average glucose (mg/dL)
  * @throws {DomainError} If a1c is negative
@@ -140,7 +138,6 @@ export function estimateGMI(
 
 /**
  * Converts a glucose value from mg/dL to mmol/L.
- * Used for international interoperability and reporting.
  * @param val - Glucose value in mg/dL
  * @returns Value in mmol/L
  * @throws {DomainError} If val is not a finite number or is negative/zero
@@ -163,7 +160,6 @@ export function mgDlToMmolL(val: number): number {
 
 /**
  * Converts a glucose value from mmol/L to mg/dL.
- * Used for international interoperability and reporting.
  * @param val - Glucose value in mmol/L
  * @returns Value in mg/dL
  * @throws {DomainError} If val is not a finite number or is negative/zero
@@ -186,7 +182,6 @@ export function mmolLToMgDl(val: number): number {
 
 /**
  * Converts a glucose value between mg/dL and mmol/L.
- * Used for interoperability and analytics.
  * @param input - Glucose value and its current unit
  * @returns Object with converted value and new unit
  * @throws {DomainError} If value is not a finite number or is negative/zero

@@ -11,9 +11,6 @@
  * Event duration (percent-time) can hide clinically important episodes (one
  * long overnight low reads the same as scattered brief dips); this surfaces the
  * individual events, their level, extreme value, and duration.
- *
- * Pure and dependency-free.
- *
  * @see https://doi.org/10.2337/dc17-1600  Danne et al. (2017)
  * @see {@link https://diabetesjournals.org/care/article/42/8/1593 | International Consensus on Time in Range (2019)}
  */

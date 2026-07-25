@@ -4,8 +4,7 @@ import { DomainError, TimestampError } from './errors'
 import type { GlucoseUnit } from './types'
 
 /**
- * Formats a glucose value with unit and optional rounding.
- * Used for analytics output, charting, and data export.
+ * Formats a numeric glucose value with optional rounding and a unit suffix.
  * @param val - Glucose value (number)
  * @param unit - Glucose unit ('mg/dL' or 'mmol/L')
  * @param options - Formatting options: { digits?: number; suffix?: boolean } (default: { digits: 0, suffix: true })
@@ -24,8 +23,7 @@ export function formatGlucose(
 }
 
 /**
- * Formats a value as a percentage string (e.g., '85.0%').
- * Used for displaying TIR, CV, and other metrics.
+ * Formats a number with fixed decimal places and a percent sign.
  * @param val - Value to format (fraction or percent)
  * @param digits - Number of decimal places (default: 1)
  * @returns Formatted percentage string (e.g., '85.0%')
@@ -35,8 +33,7 @@ export function formatPercentage(val: number, digits = 1): string {
 }
 
 /**
- * Formats a UTC ISO 8601 timestamp to a local-readable date/time string.
- * Used for charts, logs, and analytics summaries. Supports an optional IANA time zone.
+ * Formats a UTC ISO 8601 timestamp in the requested IANA time zone.
  * @param iso - ISO 8601 timestamp string (e.g., '2024-03-20T10:00:00Z')
  * @param timeZone - Optional IANA time zone (e.g., 'America/New_York')
  * @returns Localized date/time string (e.g., 'Mar 20, 2024, 06:00 AM')
