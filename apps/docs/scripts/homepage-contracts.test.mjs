@@ -391,7 +391,7 @@ test('hero mark lands before its ring completes one clockwise pass', () => {
   assert.match(logo, /data-logo-part="ring-reveal"/u)
   assert.match(logo, /pathLength="1"/u)
   assert.match(logo, /strokeDasharray="1"/u)
-  assert.match(logo, /strokeDashoffset="0"/u)
+  assert.match(logo, /strokeDashoffset="1"/u)
   assert.match(logo, /transform="rotate\(-90 32 52\)"/u)
   assert.match(logo, /mask=\{props\.motion \? `url\(#\$\{ringRevealId\}\)` : undefined\}/u)
   assert.doesNotMatch(logo, /ring-tip|tipShadow|feDropShadow/u)
