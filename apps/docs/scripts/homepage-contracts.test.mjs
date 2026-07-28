@@ -466,9 +466,43 @@ test('homepage renders one server-owned Signal Passage instrument', () => {
     signalStyles,
     /@media\s*\(max-width:\s*480px\)\s*\{[\s\S]*?\.tracePlot,\s*\.traceSvg\s*\{[^}]*height:\s*184px;[\s\S]*?\.traceTimeAxis \[data-minor='true'\]\s*\{[^}]*display:\s*none;/u,
   )
+  const nativeKeyframesStart = signalStyles.indexOf(
+    '@keyframes signalStageIn',
+  )
+  const nativeGateStart = signalStyles.indexOf(
+    '@media (scripting: enabled)',
+  )
+  assert.notEqual(
+    nativeKeyframesStart,
+    -1,
+    'native keyframes must follow the complete settled frame',
+  )
+  assert.equal(
+    nativeGateStart > nativeKeyframesStart,
+    true,
+    'native declarations must follow their keyframes',
+  )
+
+  const settledFrameStyles = signalStyles.slice(
+    0,
+    nativeKeyframesStart,
+  )
+  const nativeKeyframes = signalStyles.slice(
+    nativeKeyframesStart,
+    nativeGateStart,
+  )
+  assert.doesNotMatch(
+    settledFrameStyles,
+    /\b(?:animation|filter|box-shadow|opacity):\s*(?:0|[^;]+)/u,
+  )
   assert.doesNotMatch(
     signalStyles,
-    /\b(?:animation|filter|box-shadow|opacity):\s*(?:0|[^;]+)/u,
+    /\b(?:filter|box-shadow)\s*:/u,
+  )
+  assert.doesNotMatch(signalStyles, /\btransition:\s*all\b/u)
+  assert.doesNotMatch(
+    nativeKeyframes,
+    /\b(?:width|height|min-height|max-height|top|right|bottom|left|inset|margin|padding|gap|grid-template-columns|font-size|border)\s*:/u,
   )
   assert.doesNotMatch(signalStyles, /font-family:[^;]*mono/u)
   assert.doesNotMatch(
