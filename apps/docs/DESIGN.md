@@ -37,6 +37,7 @@ width:
 motion:
   drop: "700ms fall from above the page with one restrained impact"
   ring: "720ms clockwise reveal, delayed 760ms"
+  signalPassage: "Homepage report only; a completed report is available without JavaScript and for reduced motion."
 ---
 
 # Design System: GlucoseIQ Documentation
@@ -47,7 +48,7 @@ The homepage uses one black surface from navigation through footer. A compact gl
 
 The design takes its cues from precise software documentation: direct system type, generous spacing, sharp alignment, and controls with a small fixed radius. Glucose range colors appear in the mark and data visual. The rest of the page stays black, white, and muted gray.
 
-Avoid canned landing-page patterns: centered gradient text, card walls, fake terminal controls, decorative status metrics, frosted cards, repeated labels, and scroll-triggered reveals. Blur belongs only to the sticky navigation boundary. The shallow red field below it is atmosphere, not a section background.
+Avoid canned landing-page patterns: centered gradient text, card walls, fake terminal controls, decorative status metrics, frosted cards, repeated labels, and broad scroll effects. Blur belongs only to the sticky navigation boundary. The shallow red field below it is atmosphere, not a section background.
 
 ## 2. Color
 
@@ -93,7 +94,7 @@ Use sentence case. Uppercase remains limited to established terms such as CGM, A
 - The outer page width stops at `1400px`.
 - Hero copy, sections, captions, and footer stop at `1120px`.
 - The hero is centered with generous top spacing. Its mark is `92px`; its display type never exceeds `96px`.
-- The glucose instrument stops at the content width. Its top row pairs the latest reading with the 14-day range breakdown. A 24-hour trace spans the row below, followed by one shared caption.
+- The glucose instrument stops at the content width. Its top row pairs the latest reading with the observed 24-hour and target ranges. A 24-hour trace spans the row below, followed by one shared caption.
 - Content sections use spacing and one-pixel rules instead of separate surfaces.
 - Code scrolls inside its own region if a line exceeds the available width.
 - At `860px` and below, report columns stack.
@@ -114,11 +115,9 @@ Use sentence case. Uppercase remains limited to established terms such as CGM, A
 
 ### Glucose Instrument
 
-The docs build runs `latestReading`, `computeGlucoseTrend`, and `analyzeGlucose` against the repeatable 14-day homepage fixture. The top row keeps the current reading, trend, range breakdown, and four report values in view. The 24-hour trace sits below that row, so the chart adds detail without displacing the report.
+The docs build runs `latestReading`, `computeGlucoseTrend`, and `analyzeGlucose` against the repeatable 14-day homepage fixture. The settled frame uses one `#0e0e10` plane with a `24px` radius. Its header identifies latest, observed, and target values. A 2.15-pixel monotone trace covers the latest 24 hours. White marks in-range segments, yellow marks high segments, and red marks low segments.
 
-The chart renderer draws a monotone cubic curve through each valid five-minute reading. Each segment stays within its two readings, so the curve cannot add a false peak or low. GlucoseIQ reports the observed 24-hour low and high from the raw readings. The horizontal scale covers the 24 hours before the latest reading, with labels from the data timezone and the last point at Now. Sensor gaps stay open, and isolated readings remain visible as points. A `224px` signal field gives the data room on desktop; it steps down to `196px` on tablet and `184px` on small screens.
-
-The 70–180 mg/dL target range is a quiet illuminated field with labeled boundary lines. Sparse time guides and three right-axis labels provide context without turning the chart into a spreadsheet. In-range segments use Ink; high and low segments use their range colors. A broad, low-opacity under-stroke adds depth while the crisp path keeps the real data shape. The latest reading uses a thin ring, a short guide, and a plain sans label. The plot does not animate. The caption states the time span, unit, and synthetic-data limitation.
+A 5-percent target field spans the report. The chart uses only 70 and 180 mg/dL hairlines for target boundaries. Four support metrics and one caption complete the frame. The report uses no glow, graph-paper grid, five-part legend, or repeated values. Sensor gaps stay open, isolated readings remain visible as points, and the caption states the time span and synthetic-data limitation.
 
 ### Code and Output
 
@@ -148,8 +147,14 @@ The package index uses a full-width list. Every row has a top or bottom hairline
 - Reduced motion renders the finished mark immediately and shortens interaction transitions.
 - The mobile stack keeps outer page scrolling vertical. Code manages its own overflow.
 
+### Signal Passage
+
+Signal Passage is limited to the homepage report. The complete report remains visible without JavaScript. Reduced motion shows the completed report. Other homepage sections do not gain reveal effects. Native page scrolling is never captured, replaced, snapped, or slowed.
+
+Signal Passage is the only homepage exception to the broad scroll-effects prohibition. The CSS module `glucose-signal.module.css` defines the `--signal-passage` view timeline after a 900-by-720 gate confirms a suitable viewport. An observer fallback runs once and reveals the completed report. Its normal 25-percent gate steps down when the instrument grows beyond twice the viewport height. The smaller value is half the maximum visible ratio, leaving room for browser chrome and rounding at extreme zoom. While armed, it recalculates after viewport changes so a live zoom cannot leave the report hidden. A scroll-end check latches the final frame if a fast jump skips the completion sentinel. Mobile uses normal flow. The report uses no third-party animation library.
+
 ## 7. Use and Avoid
 
 Use the GlucoseIQ mark, one dark page, a compact synthetic-data instrument, direct copy, thin rules, fixed control geometry, flat package rows, visible focus, and one purposeful mark entrance.
 
-Avoid card-based section layouts, fake product frames, decorative charts, broad claims, scroll effects, or controls that change size during interaction.
+Avoid card-based section layouts, fake product frames, decorative charts, broad claims, broad scroll effects, or controls that change size during interaction.
