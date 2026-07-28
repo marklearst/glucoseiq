@@ -802,12 +802,12 @@ export function extractHomepageSnippet({ path, text, marker }) {
     ) {
       return
     }
-    const sourceAttribute = opening.attributes.properties.find(
+    const codeAttribute = opening.attributes.properties.find(
       (attribute) =>
         ts.isJsxAttribute(attribute) &&
-        attribute.name.getText(sourceFile) === 'source'
+        attribute.name.getText(sourceFile) === 'code'
     )
-    const initializer = sourceAttribute?.initializer
+    const initializer = codeAttribute?.initializer
     if (
       initializer !== undefined &&
       ts.isJsxExpression(initializer) &&
@@ -819,6 +819,7 @@ export function extractHomepageSnippet({ path, text, marker }) {
   }
 
   function findRenderedIdentifier(node) {
+    collectHighlightedSource(node)
     if (
       ts.isJsxElement(node) &&
       node.openingElement.tagName.getText(sourceFile) === 'code'
@@ -831,7 +832,6 @@ export function extractHomepageSnippet({ path, text, marker }) {
         ) {
           renderedIdentifiers.push(child.expression)
         }
-        collectHighlightedSource(child)
       }
       return
     }
@@ -935,7 +935,7 @@ export function extractHomepageSnippet({ path, text, marker }) {
           code: 'homepage-snippet-source',
           path,
           line,
-          message: 'The marked homepage sample must render one static string variable inside code.',
+          message: 'The marked homepage sample must render one static string variable through the visible code block.',
         }),
       ],
     }

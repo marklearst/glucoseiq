@@ -13,3 +13,20 @@
   min-width: 44px;
   min-height: 44px;
 }
+
+.installer :global([role='tabpanel'] figure > div[role='region']) {
+  padding-right: 64px;
+  text-align: left;
+}
+
+.installer :global([role='tabpanel'] pre) {
+  min-width: 0;
+  width: max-content;
+  margin: 0;
+}
+
+.installer :global([role='tabpanel'] figure > div:not([role])) {
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+}
