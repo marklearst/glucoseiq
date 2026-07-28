@@ -35,6 +35,7 @@ const signalFigure = existsSync(signalFigurePath)
 const signalStyles = existsSync(signalStylesPath)
   ? readFileSync(signalStylesPath, 'utf8')
   : ''
+const signalMarkup = `${signalStory}\n${signalFigure}`
 
 const nativeMediaHeader =
   '@media (scripting: enabled) and (prefers-reduced-motion: no-preference) and (min-width: 900px) and (min-height: 720px)'
@@ -947,6 +948,14 @@ const semanticMotionParts = [
   'metrics',
   'caption',
 ]
+const signalAncestorClassNames = new Map([
+  ['signal-story', 'signalStory'],
+  ['signal-section', 'signalSection'],
+  ['signal-instrument', 'signalInstrument'],
+  ['signal-header', 'signalHeader'],
+  ['signal-trace', 'trace'],
+  ['signal-trace-plot', 'tracePlot'],
+])
 const motionPartClassNames = new Map([
   ['instrument', 'signalInstrument'],
   ['target-field', 'traceTarget'],
@@ -1088,6 +1097,12 @@ function selectorMotionPart(selector) {
     }
   }
 
+  for (const [ancestor, className] of signalAncestorClassNames) {
+    if (compoundHasClass(selector, className)) {
+      return ancestor
+    }
+  }
+
   return null
 }
 
@@ -1139,9 +1154,25 @@ function validateMeaningfulMotionVisibility(source, markup) {
       `${motionPart} must not become aria hidden`,
     )
   }
+
+  for (const [ancestor, className] of signalAncestorClassNames) {
+    const openingTag = new RegExp(
+      `<[^>]*className=\\{styles\\.${className}\\}[^>]*>`,
+      'u',
+    ).exec(markup)
+    if (openingTag === null) {
+      continue
+    }
+
+    assert.doesNotMatch(
+      openingTag[0],
+      /aria-hidden\s*=\s*["']true["']/u,
+      `${ancestor} must not become aria hidden`,
+    )
+  }
 }
 
-function validateFallbackMotionSource(source, markup = signalFigure) {
+function validateFallbackMotionSource(source, markup = signalMarkup) {
   const armedOpacityRule = findOnlyStyleRuleList(
     source,
     [
@@ -2073,17 +2104,17 @@ test('the fallback contract rejects meaningful motion-part concealment mutations
       () =>
         validateMeaningfulMotionVisibility(
           concealedCaption,
-          signalFigure,
+          signalMarkup,
         ),
       /caption must not hide outside its exact armed flow start/u,
     )
   }
 
-  const ariaHiddenCaption = signalFigure.replace(
+  const ariaHiddenCaption = signalMarkup.replace(
     'data-motion-part="caption"',
     'aria-hidden="true" data-motion-part="caption"',
   )
-  assert.notEqual(ariaHiddenCaption, signalFigure)
+  assert.notEqual(ariaHiddenCaption, signalMarkup)
   assert.throws(
     () =>
       validateMeaningfulMotionVisibility(
@@ -2092,4 +2123,60 @@ test('the fallback contract rejects meaningful motion-part concealment mutations
       ),
     /caption must not become aria hidden/u,
   )
+})
+
+test('the fallback contract rejects broad signal ancestor concealment mutations', () => {
+  for (const [ancestor, selector] of [
+    [
+      'signal-story',
+      ".signalStory[data-motion-layout='flow'][data-motion-state='armed']",
+    ],
+    ['signal-section', '.signalSection'],
+    ['instrument', '.signalInstrument'],
+  ]) {
+    for (const declaration of [
+      'display: none;',
+      'visibility: hidden;',
+      'opacity: 0;',
+      'transform: scaleX(0);',
+    ]) {
+      const concealedStory = `${signalStyles}
+${selector} {
+  ${declaration}
+}
+`
+
+      assert.throws(
+        () =>
+          validateMeaningfulMotionVisibility(
+            concealedStory,
+            signalMarkup,
+          ),
+        new RegExp(
+          `${ancestor} must not hide outside its exact armed flow start`,
+          'u',
+        ),
+      )
+    }
+  }
+
+  for (const [ancestor, className] of [
+    ['signal-story', 'signalStory'],
+    ['signal-section', 'signalSection'],
+    ['instrument', 'signalInstrument'],
+  ]) {
+    const ariaHiddenAncestor = signalMarkup.replace(
+      `className={styles.${className}}`,
+      `aria-hidden="true" className={styles.${className}}`,
+    )
+    assert.notEqual(ariaHiddenAncestor, signalMarkup)
+    assert.throws(
+      () =>
+        validateMeaningfulMotionVisibility(
+          signalStyles,
+          ariaHiddenAncestor,
+        ),
+      new RegExp(`${ancestor} must not become aria hidden`, 'u'),
+    )
+  }
 })
