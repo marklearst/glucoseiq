@@ -1498,30 +1498,163 @@ const nativeAlternateResetTargets = [
   "[data-motion-part='caption']",
 ]
 
-test('the design and product documents bound Signal Passage to the homepage report', () => {
-  for (const document of [design, product]) {
-    assert.match(document, /Signal Passage is limited to the homepage report\./u)
-    assert.match(document, /The complete report remains visible without JavaScript\./u)
-    assert.match(document, /Reduced motion shows the completed report\./u)
-    assert.match(document, /Other homepage sections do not gain reveal effects\./u)
-    assert.match(
-      document,
-      /Native page scrolling is never captured, replaced, snapped, or slowed\./u,
+const sharedSignalPassagePolicy = [
+  'Signal Passage is limited to the homepage report.',
+  'The complete report remains visible without JavaScript.',
+  'Reduced motion shows the completed report.',
+  'Other homepage sections do not gain reveal effects.',
+  'Native page scrolling is never captured, replaced, snapped, or slowed.',
+]
+
+function section(document, heading) {
+  const match = new RegExp(
+    `^## ${heading}\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`,
+    'mu',
+  ).exec(document)
+  assert.notEqual(match, null, `${heading} section must exist`)
+  return match[1]
+}
+
+function assertSentences(document, sentences, scope) {
+  for (const sentence of sentences) {
+    assert.equal(
+      document.includes(sentence),
+      true,
+      `${scope} must state: ${sentence}`,
     )
   }
+}
+
+function validateSignalPassageDesign(document) {
+  const signalPassage = section(document, '6. Interaction and Accessibility')
+  assertSentences(
+    signalPassage,
+    sharedSignalPassagePolicy,
+    'Signal Passage design policy',
+  )
+  assertSentences(
+    signalPassage,
+    [
+      'Signal Passage is the only homepage exception to the broad scroll-effects prohibition.',
+      'The CSS module `glucose-signal.module.css` defines the `--signal-passage` view timeline after a 900-by-720 gate confirms a suitable viewport.',
+      'An observer fallback runs once and reveals the completed report.',
+      'Mobile uses normal flow.',
+      'The report has no runtime animation dependency.',
+    ],
+    'Signal Passage implementation boundary',
+  )
+  assertSentences(
+    section(document, '5. Components'),
+    [
+      'A 5-percent target field spans the report.',
+      'The chart uses only 70 and 180 mg/dL hairlines for target boundaries.',
+    ],
+    'Glucose Instrument chart policy',
+  )
+}
+
+function validateSignalPassageProduct(document) {
+  assertSentences(
+    section(document, 'Users'),
+    [
+      'The primary audience is a TypeScript developer building a product that works with CGM data.',
+      'Designers, researchers, creative directors, and technical leads are a secondary audience.',
+      'Teams moving from `diabetic-utils` are also supported.',
+    ],
+    'Product audience policy',
+  )
+  assertSentences(
+    section(document, 'Product Purpose'),
+    [
+      'GlucoseIQ analyzes CGM readings and returns typed metrics, chart-ready data, and optional SVG.',
+      'Product teams own credentials, storage, workflows, and interface design.',
+    ],
+    'Product boundary',
+  )
+  assertSentences(
+    section(document, 'Anti-references'),
+    [
+      'Do not imitate an awards portfolio, a brokerage dashboard, or a patient-facing health app.',
+      ...sharedSignalPassagePolicy,
+    ],
+    'Anti-reference policy',
+  )
+  assertSentences(
+    section(document, 'Design Principles'),
+    [
+      'Treat glucose data with care.',
+      'Label units, preserve safety language, and never let decoration imply a medical conclusion.',
+    ],
+    'Safety policy',
+  )
+}
+
+test('the design document records the complete Signal Passage boundary', () => {
+  validateSignalPassageDesign(design)
 })
 
-test('the design document records the approved Signal Passage implementation boundary', () => {
-  assert.match(design, /900-by-720 gate/u)
-  assert.match(design, /component-local CSS module/u)
-  assert.match(design, /70\/180-only chart treatment/u)
-  assert.match(design, /no runtime animation dependency/u)
+test('the product document retains audience, boundary, safety, and anti-reference policy', () => {
+  validateSignalPassageProduct(product)
 })
 
-test('the product document retains the product boundary around Signal Passage', () => {
-  assert.match(product, /awards portfolio/u)
-  assert.match(product, /dashboard/u)
-  assert.match(product, /patient-facing health app/u)
+test('the design contract rejects missing Signal Passage implementation rules', () => {
+  assert.throws(
+    () =>
+      validateSignalPassageDesign(
+        design.replace('`--signal-passage`', '`--other-timeline`'),
+      ),
+    /--signal-passage/u,
+  )
+  assert.throws(
+    () =>
+      validateSignalPassageDesign(
+        design.replace(
+          'An observer fallback runs once and reveals the completed report.',
+          'A fallback reveals the completed report.',
+        ),
+      ),
+    /observer fallback/u,
+  )
+  assert.throws(
+    () =>
+      validateSignalPassageDesign(
+        design.replace('Mobile uses normal flow.', 'Mobile stacks the report.'),
+      ),
+    /Mobile uses normal flow/u,
+  )
+})
+
+test('the product contract rejects weakened audience, safety, and anti-reference policy', () => {
+  assert.throws(
+    () =>
+      validateSignalPassageProduct(
+        product.replace(
+          'The primary audience is a TypeScript developer building a product that works with CGM data.',
+          'The primary audience builds CGM products.',
+        ),
+      ),
+    /primary audience/u,
+  )
+  assert.throws(
+    () =>
+      validateSignalPassageProduct(
+        product.replace(
+          'Treat glucose data with care.',
+          'Use care with glucose data.',
+        ),
+      ),
+    /Treat glucose data with care/u,
+  )
+  assert.throws(
+    () =>
+      validateSignalPassageProduct(
+        product.replace(
+          'Do not imitate an awards portfolio, a brokerage dashboard, or a patient-facing health app.',
+          'Do not imitate a dashboard.',
+        ),
+      ),
+    /awards portfolio/u,
+  )
 })
 
 test('the pure motion selector exists without a client or React boundary', () => {
