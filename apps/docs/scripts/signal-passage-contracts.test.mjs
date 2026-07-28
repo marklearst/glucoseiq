@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
+import { parse as parseCss } from 'postcss'
 
 const docsRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 const designPath = join(docsRoot, 'DESIGN.md')
@@ -993,25 +994,121 @@ const approvedArmedConcealment = new Set(
   ),
 )
 
-function getSelectorSpecificity(selector) {
-  return (
-    (selector.match(/\.[\w-]+/gu) ?? []).length +
-    (selector.match(/\[[^\]]+\]/gu) ?? []).length
+const approvedStaticTransforms = [
+  ['.traceLatestMarker', 'transform', 'translate(-50%, -50%)'],
+  ['.traceMask', 'transform', 'scaleX(1)'],
+  ['.traceLatestPoint', 'transform', 'scale(1)'],
+  [
+    `${fallbackArmedRoot} [data-motion-part='target-field'], ${fallbackArmedRoot} [data-motion-part='trace-mask']`,
+    'transform',
+    'scaleX(0)',
+  ],
+  [
+    `${fallbackArmedRoot} [data-motion-part='latest-reading']`,
+    'transform',
+    'translateY(6px)',
+  ],
+  [
+    `${fallbackArmedRoot} [data-motion-part='latest-point']`,
+    'transform',
+    'scale(0.92)',
+  ],
+  [
+    `${fallbackArmedRoot} [data-motion-part='metrics'] > div`,
+    'transform',
+    'translateY(8px)',
+  ],
+  [
+    ".signalStory[data-motion-state='latched'] .signalInstrument, .signalStory[data-motion-state='latched'] .traceLatestPoint",
+    'transform',
+    'scale(1)',
+  ],
+  [
+    ".signalStory[data-motion-state='latched'] .traceTarget, .signalStory[data-motion-state='latched'] .traceMask",
+    'transform',
+    'scaleX(1)',
+  ],
+  [
+    ".signalStory[data-motion-state='latched'] .latestReading, .signalStory[data-motion-state='latched'] .signalMetrics > div",
+    'transform',
+    'translateY(0)',
+  ],
+  [
+    ".signalStory[data-motion-state='latched'] [data-motion-part='instrument'], .signalStory[data-motion-state='latched'] [data-motion-part='target-field'], .signalStory[data-motion-state='latched'] [data-motion-part='trace-mask'], .signalStory[data-motion-state='latched'] [data-motion-part='latest-reading'], .signalStory[data-motion-state='latched'] [data-motion-part='latest-point'], .signalStory[data-motion-state='latched'] [data-motion-part='metrics'] > div",
+    'transform',
+    'none',
+  ],
+  [
+    ".signalStory[data-motion-state='latched'] [data-motion-part='trace-mask']",
+    'transform',
+    'scaleX(1)',
+  ],
+  [
+    '.signalStory [data-motion-part]',
+    'transform',
+    'none',
+  ],
+  [
+    ".signalStory [data-motion-part='trace-mask']",
+    'transform',
+    'scaleX(1)',
+  ],
+]
+  .map(
+    ([selector, property, value]) =>
+      `${normalizeSelector(selector)}|${property}|${value}`,
   )
-}
+  .sort()
 
-function selectorTargetsTraceMask(selector) {
-  return (
-    (selector.includes('.traceMask') ||
-      /\[\s*data-motion-part\s*=\s*(?:"trace-mask"|'trace-mask'|trace-mask)\s*\]/u.test(
-        selector,
-      ) || /\[\s*data-motion-part\s*\]/u.test(selector)) &&
-    !/\[\s*data-motion-state\s*=\s*(?:"(?:armed|revealing|idle)"|'(?:armed|revealing|idle)'|(?:armed|revealing|idle))\s*\]/u.test(
-      selector,
-    ) &&
-    !/:not\([^)]*\[\s*data-motion-state\s*=\s*(?:"latched"|'latched'|latched)\s*\]/u.test(
-      selector,
+function validateStaticTransformOwnership(source) {
+  const actual = []
+  const transformProperties = new Map([
+    ['rotate', 'rotate'],
+    ['scale', 'scale'],
+    ['transform', 'transform'],
+    ['translate', 'translate'],
+    ['-moz-transform', 'transform'],
+    ['-ms-transform', 'transform'],
+    ['-o-transform', 'transform'],
+    ['-webkit-transform', 'transform'],
+  ])
+
+  parseCss(source).walkDecls((declaration) => {
+    const property = transformProperties.get(
+      declaration.prop.toLowerCase(),
     )
+    if (property === undefined) {
+      return
+    }
+
+    for (
+      let ancestor = declaration.parent;
+      ancestor !== undefined;
+      ancestor = ancestor.parent
+    ) {
+      if (
+        ancestor.type === 'atrule' &&
+        ancestor.name.toLowerCase().endsWith('keyframes')
+      ) {
+        return
+      }
+    }
+
+    assert.equal(
+      declaration.parent?.type,
+      'rule',
+      'static transform ownership requires declarations inside style rules',
+    )
+    const selector = declaration.parent.selector
+    actual.push(
+      `${normalizeSelector(selector)}|${property}|${normalizeCssText(declaration.value)}${declaration.important ? ' !important' : ''}`,
+    )
+  })
+
+  assert.deepEqual(
+    actual.sort(),
+    approvedStaticTransforms,
+    'static transform ownership must match the approved signal stylesheet',
   )
 }
 
@@ -1046,46 +1143,14 @@ function validateTraceMaskFinalTransform(
     'the broad latched transform reset must include the trace mask',
   )
   assert.equal(
-    getSelectorSpecificity(finalMaskRule.selector),
-    getSelectorSpecificity(broadMaskSelector),
-    'the explicit latched trace-mask final transform must win the equal-specificity reset by order',
+    normalizeSelector(broadMaskSelector),
+    normalizeSelector(finalMaskRule.selector),
+    'the broad reset and explicit trace-mask final rule must target the same trace mask',
   )
   assert.ok(
     reducedMaskRule.start > reducedGenericRule.start,
     'the reduced-motion trace mask must follow the generic final-frame reset',
   )
-  assert.equal(
-    getSelectorSpecificity(reducedMaskRule.selector),
-    getSelectorSpecificity(reducedGenericRule.selector),
-    'the reduced-motion trace mask must win the equal-specificity reset by order',
-  )
-
-  for (const rule of getStyleRules(source)) {
-    if (rule.start <= finalMaskRule.start) {
-      continue
-    }
-
-    const transform = parseDeclarations(rule.declarations).find(
-      ([property]) => property === 'transform',
-    )?.[1]
-    if (transform === undefined) {
-      continue
-    }
-
-    for (const selector of splitSelectorList(rule.selector)) {
-      if (
-        selectorTargetsTraceMask(selector) &&
-        getSelectorSpecificity(selector) >=
-          getSelectorSpecificity(finalMaskRule.selector)
-      ) {
-        assert.equal(
-          transform,
-          'scaleX(1)',
-          'a later equal or higher-specificity trace-mask rule must retain scaleX(1)',
-        )
-      }
-    }
-  }
 }
 
 function selectorMotionPart(selector) {
@@ -1181,6 +1246,8 @@ function validateMeaningfulMotionVisibility(source, markup) {
 }
 
 function validateFallbackMotionSource(source, markup = signalMarkup) {
+  validateStaticTransformOwnership(source)
+
   const armedOpacityRule = findOnlyStyleRuleList(
     source,
     [
@@ -1538,16 +1605,28 @@ function validateSignalPassageDesign(document) {
       'Signal Passage is the only homepage exception to the broad scroll-effects prohibition.',
       'The CSS module `glucose-signal.module.css` defines the `--signal-passage` view timeline after a 900-by-720 gate confirms a suitable viewport.',
       'An observer fallback runs once and reveals the completed report.',
+      'Its normal 25-percent gate steps down when the instrument grows beyond twice the viewport height.',
+      'The smaller value is half the maximum visible ratio, leaving room for browser chrome and rounding at extreme zoom.',
+      'While armed, it recalculates after viewport changes so a live zoom cannot leave the report hidden.',
+      'A scroll-end check latches the final frame if a fast jump skips the completion sentinel.',
       'Mobile uses normal flow.',
-      'The report has no runtime animation dependency.',
+      'The report uses no third-party animation library.',
     ],
     'Signal Passage implementation boundary',
+  )
+  assertSentences(
+    section(document, '4. Layout'),
+    [
+      'Its top row pairs the latest reading with the observed 24-hour and target ranges.',
+    ],
+    'Glucose Instrument layout policy',
   )
   assertSentences(
     section(document, '5. Components'),
     [
       'A 5-percent target field spans the report.',
       'The chart uses only 70 and 180 mg/dL hairlines for target boundaries.',
+      'Sensor gaps stay open, isolated readings remain visible as points, and the caption states the time span and synthetic-data limitation.',
     ],
     'Glucose Instrument chart policy',
   )
@@ -1687,7 +1766,7 @@ test('SignalStory is the only signal client boundary and accepts rendered childr
     'classifySignalPosition',
     'FALLBACK_DURATION_MS',
     'FALLBACK_ROOT_MARGIN',
-    'FALLBACK_THRESHOLD',
+    'getSignalFallbackThreshold',
     'MAX_NATIVE_INSTRUMENT_HEIGHT',
     'REDUCED_MOTION_QUERY',
     'SCROLL_MEDIA_QUERY',
@@ -1766,7 +1845,7 @@ test('capability selection measures the approved viewport, motion, CSS, and heig
 test('flow fallback and scroll completion use separate one-shot observers', () => {
   assert.match(
     signalStory,
-    /new IntersectionObserver\([\s\S]*?\{\s*threshold: FALLBACK_THRESHOLD,\s*rootMargin: FALLBACK_ROOT_MARGIN,\s*\},\s*\)/u,
+    /const fallbackThreshold = getSignalFallbackThreshold\(\s*signalInstrument\.offsetHeight,\s*window\.innerHeight,\s*\)[\s\S]*?new IntersectionObserver\([\s\S]*?\{\s*threshold: fallbackThreshold,\s*rootMargin: FALLBACK_ROOT_MARGIN,\s*\},\s*\)/u,
   )
   assert.match(
     signalMotion,
@@ -1783,6 +1862,38 @@ test('flow fallback and scroll completion use separate one-shot observers', () =
   assert.match(
     signalStory,
     /completionObserver = new IntersectionObserver/u,
+  )
+  assert.match(
+    signalStory,
+    /hasReachedSignalIntersection\(\s*entries,\s*fallbackThreshold,\s*\)/u,
+  )
+  assert.match(
+    signalStory,
+    /function observeFallback\(\): void \{[\s\S]*?triggerObserver\?\.disconnect\(\)[\s\S]*?triggerObserver = new IntersectionObserver/u,
+    'the fallback setup must be reusable after a live viewport change',
+  )
+  assert.match(
+    signalStory,
+    /if \(layout === 'flow' && state === 'armed'\) \{\s*observeFallback\(\)\s*\}/u,
+    'the initial armed flow state must start the reusable fallback observer',
+  )
+  assert.equal(
+    (
+      signalStory.match(
+        /triggerObserver\.observe\(signalInstrument\)/gu,
+      ) ?? []
+    ).length,
+    1,
+    'the fallback observer must attach to the instrument exactly once',
+  )
+  assert.equal(
+    (
+      signalStory.match(
+        /completionObserver\.observe\(completionSentinel\)/gu,
+      ) ?? []
+    ).length,
+    1,
+    'the completion observer must attach to the sentinel exactly once',
   )
   assert.match(signalStory, /triggerObserver\?\.disconnect\(\)/u)
   assert.match(
@@ -1817,6 +1928,24 @@ test('restoration and capability changes latch without switching the visit layou
     signalStory,
     /window\.addEventListener\('orientationchange', onViewportChange\)/u,
   )
+  assert.match(
+    signalStory,
+    /const onViewportChange = \(\): void => \{[\s\S]*?if \(layout === 'flow' && state === 'armed'\) \{\s*observeFallback\(\)\s*return\s*\}/u,
+    'an untouched flow fallback must recompute its reachable threshold after resize or zoom',
+  )
+  assert.equal(
+    (
+      signalStory.match(
+        /document\.addEventListener\('scrollend', onScrollEnd\)/gu,
+      ) ?? []
+    ).length,
+    1,
+    'scroll completion must attach one scrollend safety listener',
+  )
+  assert.match(
+    signalStory,
+    /shouldLatchSignalAfterScrollEnd\(\{\s*layout,\s*state,\s*chapterBottom: storyRoot\.getBoundingClientRect\(\)\.bottom,\s*viewportHeight: window\.innerHeight,\s*\}\)/u,
+  )
 })
 
 test('controller cleanup is complete and guards Strict Mode teardown', () => {
@@ -1843,6 +1972,15 @@ test('controller cleanup is complete and guards Strict Mode teardown', () => {
   assert.match(
     signalStory,
     /window\.removeEventListener\(\s*'orientationchange',\s*onViewportChange,\s*\)/u,
+  )
+  assert.equal(
+    (
+      signalStory.match(
+        /document\.removeEventListener\('scrollend', onScrollEnd\)/gu,
+      ) ?? []
+    ).length,
+    2,
+    'scroll completion must detach on latch and cleanup',
   )
   assert.match(signalStory, /triggerObserver\?\.disconnect\(\)/u)
   assert.match(signalStory, /completionObserver\?\.disconnect\(\)/u)
@@ -2235,20 +2373,24 @@ test('flow fallback timing and reduced-motion safety preserve a complete final f
   )
 })
 
-test('the fallback contract rejects later equal or higher trace-mask resets', () => {
-  for (const selector of [
-    ".signalStory[data-motion-state='latched'] [data-motion-part='trace-mask']",
-    ".signalStory[data-motion-layout='flow'][data-motion-state='latched'] [data-motion-part='trace-mask']",
-  ]) {
-    const laterMaskReset = `${signalStyles}
-${selector} {
-  transform: none;
+test('the fallback contract rejects unowned static transforms', () => {
+  const structuralMaskResets = [
+    `${signalStyles}
+.traceSvg mask > rect:first-child:only-child {
+  transform: scaleX(0.25);
 }
-`
+`,
+    `${signalStyles}
+.traceSvg mask > rect:first-child:only-child {
+  -webkit-transform: scaleX(0.25);
+}
+`,
+  ]
 
+  for (const structuralMaskReset of structuralMaskResets) {
     assert.throws(
-      () => validateFallbackMotionSource(laterMaskReset),
-      /latched trace masks must have one|later equal or higher-specificity trace-mask rule/u,
+      () => validateFallbackMotionSource(structuralMaskReset),
+      /static transform ownership/u,
     )
   }
 })

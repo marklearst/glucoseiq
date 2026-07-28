@@ -716,7 +716,7 @@
   - The only lifecycle values are `idle`, `armed`, `revealing`, and `latched`.
   - The only sticky values are `enabled` and `disabled`.
   - Capability selection checks the 900-by-720 query, reduced motion, `view-timeline-name`, and `animation-range`.
-  - The fallback observer uses `threshold: 0.25` and `rootMargin: '0px'`.
+  - The fallback observer uses `rootMargin: '0px'`. Its threshold is `0.25` while the instrument is no more than twice the viewport height. For a taller instrument, use half the viewport divided by the instrument height so the trigger stays below the maximum visible ratio.
   - A second observer targets `completion-sentinel`.
   - `pageshow` checks `event.persisted`.
   - Reduced-motion, viewport, resize, and orientation listeners are removed during cleanup.
@@ -805,7 +805,7 @@
   }
   ```
 
-- [ ] Add pure `classifySignalPosition(rect, viewportHeight)` and `shouldLatchScrollLayout({ layout, viewportEligible, instrumentHeight })` helpers. The latter returns `true` only when the stored layout is `scroll` and the viewport gate fails or the instrument is taller than `MAX_NATIVE_INSTRUMENT_HEIGHT`.
+- [ ] Add pure `classifySignalPosition(rect, viewportHeight)`, `getSignalFallbackThreshold(instrumentHeight, viewportHeight)`, and `shouldLatchScrollLayout({ layout, viewportEligible, instrumentHeight })` helpers. The fallback threshold returns `0.25` while the instrument is no more than twice the viewport height. For a taller instrument, it returns half the viewport divided by the instrument height. The latch helper returns `true` only when the stored layout is `scroll` and the viewport gate fails or the instrument is taller than `MAX_NATIVE_INSTRUMENT_HEIGHT`.
 
 ### 3.5 Implement the client lifecycle controller
 
@@ -879,28 +879,28 @@
 - [ ] Find the instrument with `[data-motion-part="instrument"]`, classify its initial rectangle, and call `selectSignalMotion()`. For this first selection, pass `viewportEligible: scrollQuery.matches && instrument.offsetHeight <= MAX_NATIVE_INSTRUMENT_HEIGHT`. Use `offsetHeight`, not the transformed client rectangle height, so the prepaint scale cannot under-report the settled figure. Write the chosen layout once and never change it during that page visit.
 - [ ] Set `data-motion-sticky="enabled"` only for a selected `scroll` layout that fits. Set it to `disabled` for every selected `flow` layout. This post-hydration attribute releases the prepaint sticky gate when measured fit rejects native motion.
 - [ ] Native selection starts as `revealing` so the named timeline is active and reversible. Reduced motion or a figure already partly visible/above the viewport starts as `latched`. Never arm content the user can already see.
-- [ ] For `flow`, set `armed` only when the instrument is entirely below the viewport. Observe the instrument with:
+- [ ] For `flow`, set `armed` only when the instrument is entirely below the viewport. Compute `fallbackThreshold` once from `instrument.offsetHeight` and `window.innerHeight`. Observe the instrument with:
 
   ```ts
   {
-    threshold: FALLBACK_THRESHOLD,
+    threshold: fallbackThreshold,
     rootMargin: FALLBACK_ROOT_MARGIN,
   }
   ```
 
-- [ ] On the first intersecting fallback entry:
+- [ ] On the first fallback entry whose `isIntersecting` value is `true` and whose `intersectionRatio` is at least `fallbackThreshold`:
 
   1. Set `revealing`.
   2. Disconnect the trigger observer.
   3. Start one 1100-millisecond timer.
   4. Set `latched` and clear the timer reference when it finishes.
 
-- [ ] For `scroll`, observe `[data-motion-part="completion-sentinel"]`. Latch when it intersects. Do not derive scroll progress in JavaScript.
+- [ ] For `scroll`, observe `[data-motion-part="completion-sentinel"]`. Latch when it intersects. Also listen for `document` `scrollend`; after a completed scroll, latch when the outer chapter's bottom edge has reached or passed `window.innerHeight`. This closes the fast-jump path without deriving scroll progress continuously in JavaScript.
 - [ ] On a persisted `pageshow`, latch unconditionally. On a non-persisted `pageshow`, latch when any part of the instrument is already visible.
 - [ ] On a reduced-motion media-query change to `reduce`, latch and set `data-motion-sticky="disabled"` without changing the stored layout.
-- [ ] On resize, orientation change, or scroll-query change, call `shouldLatchScrollLayout()` with `instrument.offsetHeight`. When it returns `true`, latch and set `data-motion-sticky="disabled"`. Do not switch the visit to `flow`.
+- [ ] On resize, orientation change, or scroll-query change while an untouched `flow` fallback remains `armed`, disconnect and recreate its observer with the current instrument and viewport heights, then return. For `scroll`, call `shouldLatchScrollLayout()` with `instrument.offsetHeight`. When it returns `true`, latch and set `data-motion-sticky="disabled"`. Do not switch the visit to `flow`, and do not restart a reveal already in progress.
 - [ ] Make `latch()` idempotent and guard all writes after cleanup so React Strict Mode can set up, clean up, and set up again safely.
-- [ ] Cleanup must disconnect both observers, clear the timer, remove both media-query listeners, and remove `pageshow`, `resize`, and `orientationchange` listeners.
+- [ ] Cleanup must disconnect both observers, clear the timer, remove both media-query listeners, and remove `pageshow`, `resize`, `orientationchange`, and `scrollend` listeners. Latching removes the `scrollend` listener immediately.
 
 ### 3.6 Wrap the server figure
 
@@ -1554,6 +1554,8 @@
 
 - [ ] Check 390, 768, 1024, and 1440 pixels wide.
 - [ ] At 1024 pixels, check one viewport at least 720 pixels tall and one below 720 pixels.
+- [ ] Check a 320-by-180 CSS-pixel viewport, equivalent to 400-percent zoom on a 1280-by-720 display. Confirm the over-tall instrument enters `revealing` and settles at `latched`.
+- [ ] Before reaching the instrument, resize a desktop visit to 320 by 180 CSS pixels. Confirm the armed fallback replaces its 25-percent observer with the zoom-safe threshold and still completes.
 - [ ] At every size confirm:
 
   - content order matches the specification
@@ -1582,13 +1584,14 @@
   - reversal before completion follows scroll position
   - fast scrolling cannot strand hidden content
   - the sentinel latches the final state
+  - a direct jump past the sentinel latches on `scrollend`
   - returning after completion stays complete
   - direct reload while the chapter is visible stays complete
   - back-forward-cache restoration stays complete
   - resize and orientation changes settle safely without collapsing the chapter
 
-- [ ] On macOS Safari 26.4, repeat endpoint completion and back-forward-cache restoration. Confirm the 99-percent final animation range, completion sentinel, and `pageshow` handler prevent a stranded partial frame despite that release's endpoint and restoration defects.
-- [ ] Disable CSS view-timeline support in the test path or use a browser without it. Confirm the observer fallback starts at 25-percent visibility, completes in 1100 milliseconds, and never replays.
+- [ ] On macOS Safari 26.4, repeat endpoint completion and back-forward-cache restoration. Confirm the 99-percent final animation range, completion sentinel, `scrollend` check, and `pageshow` handler prevent a stranded partial frame despite that release's endpoint and restoration defects.
+- [ ] Disable CSS view-timeline support in the test path or use a browser without it. Confirm a normal-height instrument starts at 25-percent visibility, a taller-than-two-viewports instrument starts at its computed adaptive threshold, and both complete in 1100 milliseconds without replaying.
 - [ ] Enable reduced motion before loading. Confirm normal document flow, no excess sticky chapter, no animation, and complete content.
 - [ ] Disable JavaScript and reload. Confirm the final figure, title, description, values, units, caption, and safety statement are present.
 - [ ] Run an axe browser audit on the completed homepage. Expected: zero violations.
@@ -1605,7 +1608,7 @@
   - no layout-shift entry attributed to Signal Passage
   - no controller/style main-thread task above 50 milliseconds
   - no sustained paint loop from the SVG mask
-  - no scroll listener or React render loop
+  - no continuous scroll handler or React render loop
 
 - [ ] Record start, midpoint, and settled screenshots on desktop and iPad.
 - [ ] Capture one short iPad Safari recording that shows downward progression, reversal before completion, and the latched final state.

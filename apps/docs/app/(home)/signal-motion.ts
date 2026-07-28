@@ -34,10 +34,22 @@ interface SignalRect {
   readonly bottom: number
 }
 
+interface SignalIntersection {
+  readonly isIntersecting: boolean
+  readonly intersectionRatio: number
+}
+
 interface ScrollLayoutEnvironment {
   readonly layout: SignalMotionLayout
   readonly viewportEligible: boolean
   readonly instrumentHeight: number
+}
+
+interface ScrollCompletionEnvironment {
+  readonly layout: SignalMotionLayout
+  readonly state: SignalMotionState
+  readonly chapterBottom: number
+  readonly viewportHeight: number
 }
 
 export function selectSignalMotion(
@@ -88,5 +100,47 @@ export function shouldLatchScrollLayout({
     layout === 'scroll' &&
     (!viewportEligible ||
       instrumentHeight > MAX_NATIVE_INSTRUMENT_HEIGHT)
+  )
+}
+
+export function hasReachedSignalIntersection(
+  entries: readonly SignalIntersection[],
+  threshold: number,
+): boolean {
+  return entries.some(
+    (entry) =>
+      entry.isIntersecting &&
+      entry.intersectionRatio >= threshold,
+  )
+}
+
+export function getSignalFallbackThreshold(
+  instrumentHeight: number,
+  viewportHeight: number,
+): number {
+  if (
+    !Number.isFinite(instrumentHeight) ||
+    instrumentHeight <= 0 ||
+    !Number.isFinite(viewportHeight)
+  ) {
+    return FALLBACK_THRESHOLD
+  }
+
+  return Math.min(
+    FALLBACK_THRESHOLD,
+    Math.max(0, viewportHeight) / instrumentHeight / 2,
+  )
+}
+
+export function shouldLatchSignalAfterScrollEnd({
+  layout,
+  state,
+  chapterBottom,
+  viewportHeight,
+}: ScrollCompletionEnvironment): boolean {
+  return (
+    layout === 'scroll' &&
+    state !== 'latched' &&
+    chapterBottom <= viewportHeight
   )
 }
