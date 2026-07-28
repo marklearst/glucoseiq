@@ -1,0 +1,359 @@
+.signalSection {
+  width: 100%;
+}
+
+.signalInstrument {
+  width: calc(100% - var(--home-gutter) - var(--home-gutter));
+  max-width: var(--home-content-width);
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 24px;
+  background: #0e0e10;
+  color: var(--home-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.signalHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: clamp(48px, 8vw, 112px);
+  align-items: end;
+  padding: 36px 40px 30px;
+}
+
+.latestReading {
+  min-width: 0;
+}
+
+.signalLabel {
+  margin: 0;
+  color: var(--home-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.readingValue {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  margin-top: 14px;
+}
+
+.readingValue strong {
+  color: var(--home-ink);
+  font-size: clamp(3.75rem, 6vw, 5rem);
+  font-weight: 680;
+  letter-spacing: -0.04em;
+  line-height: 0.88;
+}
+
+.readingValue span {
+  color: var(--home-muted);
+  font-size: 0.8125rem;
+  letter-spacing: -0.01em;
+}
+
+.readingStatus {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  margin: 22px 0 0;
+  color: var(--home-muted);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.trendArrow {
+  color: var(--home-ink);
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.statusCheck {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  margin-left: 3px;
+}
+
+.statusCheck[data-zone='low'] {
+  color: var(--home-red-low);
+}
+
+.statusCheck[data-zone='normal'] {
+  color: var(--home-green);
+}
+
+.statusCheck[data-zone='high'] {
+  color: var(--home-yellow);
+}
+
+.signalRanges {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(144px, 1fr));
+  gap: 40px;
+  padding-bottom: 4px;
+}
+
+.signalRanges > div {
+  min-width: 0;
+}
+
+.signalRanges span,
+.signalRanges strong {
+  display: block;
+}
+
+.signalRanges span {
+  color: var(--home-muted);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+}
+
+.signalRanges strong {
+  margin-top: 8px;
+  color: var(--home-ink);
+  font-size: 0.875rem;
+  font-weight: 620;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.trace {
+  min-width: 0;
+  border-block: 1px solid rgb(255 255 255 / 8%);
+  padding: 20px 40px 16px;
+  background: #09090b;
+}
+
+.tracePlot {
+  height: 224px;
+  overflow: visible;
+}
+
+.traceSvg {
+  display: block;
+  width: 100%;
+  height: 224px;
+  overflow: visible;
+}
+
+.traceTarget {
+  fill: rgb(48 209 88 / 5%);
+}
+
+.traceThreshold {
+  stroke: rgb(48 209 88 / 24%);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.traceThresholdLabel {
+  fill: rgb(161 161 166 / 62%);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.traceMask {
+  transform: scaleX(1);
+  transform-origin: left center;
+}
+
+.traceLine {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.15;
+  vector-effect: non-scaling-stroke;
+}
+
+.traceIsolatedPoint {
+  stroke: #09090b;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.traceLatestPoint {
+  color: var(--home-green);
+  transform: scale(1);
+  transform-origin: center;
+}
+
+.traceLatestPoint[data-zone='low'] {
+  color: var(--home-red-low);
+}
+
+.traceLatestPoint[data-zone='high'] {
+  color: var(--home-yellow);
+}
+
+.traceLatestRing {
+  fill: #09090b;
+  stroke: currentcolor;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.traceLatestCore {
+  fill: currentcolor;
+}
+
+.traceTimeAxis {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  color: rgb(161 161 166 / 78%);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+}
+
+.signalMetrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(18px, 4vw, 48px);
+  margin: 0;
+  padding: 24px 40px 26px;
+}
+
+.signalMetrics > div {
+  min-width: 0;
+}
+
+.signalMetrics dt {
+  color: var(--home-muted);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+}
+
+.signalMetrics dd {
+  margin: 7px 0 0;
+  color: var(--home-ink);
+  font-size: clamp(0.8125rem, 1.4vw, 0.9375rem);
+  font-weight: 620;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.signalCaption {
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+  padding: 16px 40px 18px;
+  color: var(--home-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.signalCaption span:last-child {
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .signalHeader {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 34px;
+    align-items: start;
+  }
+
+  .signalRanges {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .signalCaption {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .signalCaption span:last-child {
+    text-align: left;
+  }
+}
+
+@media (max-width: 768px) {
+  .signalHeader {
+    padding: 30px 24px 26px;
+  }
+
+  .trace {
+    padding: 18px 24px 14px;
+  }
+
+  .tracePlot,
+  .traceSvg {
+    height: 196px;
+  }
+
+  .signalMetrics {
+    gap: 16px;
+    padding: 22px 24px 24px;
+  }
+
+  .signalCaption {
+    padding-inline: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .signalHeader {
+    padding: 26px 20px 22px;
+  }
+
+  .readingValue strong {
+    font-size: 3.5rem;
+  }
+
+  .signalRanges {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .trace {
+    padding: 16px 20px 12px;
+  }
+
+  .tracePlot,
+  .traceSvg {
+    height: 184px;
+  }
+
+  .traceTimeAxis [data-minor='true'] {
+    display: none;
+  }
+
+  .signalMetrics {
+    gap: 10px;
+    padding: 20px;
+  }
+
+  .signalMetrics dd {
+    font-size: 0.75rem;
+  }
+
+  .signalCaption {
+    padding: 15px 20px 17px;
+  }
+}
+
+@media (max-width: 360px) {
+  .signalMetrics {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .signalMetrics > div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .signalMetrics dd {
+    margin: 0;
+    text-align: right;
+  }
+}

@@ -1,13 +1,12 @@
 import {
   analyzeGlucose,
   computeGlucoseTrend,
-  getGlucoseLabel,
   latestReading,
 } from '@glucoseiq/core'
 import { generateCGMSeries } from '@glucoseiq/testing'
 import { InstallCommand } from '@/components/install-command'
 import { LogoMark } from '@/lib/logo'
-import { GlucoseTrace } from './glucose-trace'
+import { GlucoseSignalFigure } from './glucose-signal-figure'
 import { HighlightedCode } from './highlighted-code'
 import styles from './home.module.css'
 import type { JSX } from 'react'
@@ -37,75 +36,8 @@ if (
 
 const completeProfile = profile
 const displayedReading = currentReading
+const displayedTrend = currentTrend.trend
 const timeInRange = report.timeInRange.inRange.percentage
-const RANGE_SEGMENTS = [
-  {
-    label: 'Very low',
-    range: '<54 mg/dL',
-    percentage: report.timeInRange.veryLow.percentage,
-    className: styles.rangeVeryLow,
-  },
-  {
-    label: 'Low',
-    range: '54–69 mg/dL',
-    percentage: report.timeInRange.low.percentage,
-    className: styles.rangeLow,
-  },
-  {
-    label: 'In range',
-    range: '70–180 mg/dL',
-    percentage: timeInRange,
-    className: styles.rangeInRange,
-  },
-  {
-    label: 'High',
-    range: '181–250 mg/dL',
-    percentage: report.timeInRange.high.percentage,
-    className: styles.rangeHigh,
-  },
-  {
-    label: 'Very high',
-    range: '>250 mg/dL',
-    percentage: report.timeInRange.veryHigh.percentage,
-    className: styles.rangeVeryHigh,
-  },
-] as const
-const rangeSummaryLabel = RANGE_SEGMENTS.map(
-  ({ label, percentage, range }) => `${label} (${range}): ${percentage}%`,
-).join(', ')
-
-const TREND_ARROW = {
-  rapidRising: '⇈',
-  rising: '↑',
-  slightlyRising: '↗',
-  flat: '→',
-  slightlyFalling: '↘',
-  falling: '↓',
-  rapidFalling: '⇊',
-  unknown: '·',
-} as const
-
-const TREND_LABEL = {
-  rapidRising: 'Rising quickly',
-  rising: 'Rising',
-  slightlyRising: 'Rising slowly',
-  flat: 'Steady',
-  slightlyFalling: 'Falling slowly',
-  falling: 'Falling',
-  rapidFalling: 'Falling quickly',
-  unknown: 'Trend unavailable',
-} as const
-
-const ZONE_LABEL = {
-  low: 'Low',
-  normal: 'In range',
-  high: 'High',
-} as const
-const currentZone = getGlucoseLabel(
-  displayedReading.value,
-  displayedReading.unit,
-)
-const totalReadings = report.dataSufficiency.totalReadings
 const REPORT_RESULT = JSON.stringify(
   {
     meanGlucose: report.meanGlucose,
@@ -200,110 +132,17 @@ export default function HomePage(): JSX.Element {
           </div>
         </header>
 
-        <section className={styles.signalSection} aria-label="Example report">
-          <figure className={styles.signalInstrument}>
-            <div className={styles.currentReading}>
-              <p className={styles.signalLabel}>Latest synthetic reading</p>
-              <div className={styles.readingValue}>
-                <strong>{displayedReading.value}</strong>
-                <span>{displayedReading.unit}</span>
-              </div>
-              <p className={styles.readingStatus}>
-                <span aria-hidden="true" className={styles.trendArrow}>
-                  {TREND_ARROW[currentTrend.trend]}
-                </span>
-                <span>{TREND_LABEL[currentTrend.trend]}</span>
-                <svg
-                  aria-hidden="true"
-                  className={styles.statusCheck}
-                  data-zone={currentZone}
-                  fill="none"
-                  viewBox="0 0 16 16"
-                >
-                  <path
-                    d="m3.25 8.25 3 3 6.5-6.5"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.5"
-                  />
-                </svg>
-                <span>{ZONE_LABEL[currentZone]}</span>
-              </p>
-            </div>
-
-            <div className={styles.rangeSummary}>
-              <div className={styles.rangeHeading}>
-                <div>
-                  <p className={styles.signalLabel}>14-day distribution</p>
-                  <p className={styles.rangeResult}>
-                    <strong>{timeInRange}%</strong> in 70–180 mg/dL
-                  </p>
-                </div>
-                <span>{totalReadings.toLocaleString('en-US')} readings</span>
-              </div>
-
-              <div
-                aria-label={rangeSummaryLabel}
-                className={styles.rangeRail}
-                role="img"
-              >
-                {RANGE_SEGMENTS.map((segment) => (
-                  <span
-                    aria-hidden="true"
-                    className={segment.className}
-                    key={segment.label}
-                    style={{
-                      flexBasis: `${segment.percentage}%`,
-                      flexGrow: segment.percentage,
-                      minWidth: segment.percentage > 0 ? 3 : 0,
-                    }}
-                  />
-                ))}
-              </div>
-              <ul
-                aria-label="Glucose range distribution"
-                className={styles.rangeLegend}
-              >
-                {RANGE_SEGMENTS.map((segment) => (
-                  <li key={segment.label}>
-                    <strong>{segment.percentage}%</strong>
-                    <span>{segment.label}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <dl className={styles.signalMetrics}>
-                <div>
-                  <dt>Time in range</dt>
-                  <dd>{timeInRange}%</dd>
-                </div>
-                <div>
-                  <dt>Mean · mg/dL</dt>
-                  <dd>{report.meanGlucose}</dd>
-                </div>
-                <div>
-                  <dt>GMI</dt>
-                  <dd>{report.gmi}%</dd>
-                </div>
-                <div>
-                  <dt>CV</dt>
-                  <dd>{report.cv}%</dd>
-                </div>
-              </dl>
-            </div>
-
-            <GlucoseTrace
-              readings={readings}
-              timeZone={completeProfile.timeZone}
-            />
-
-            <figcaption className={styles.signalCaption}>
-              <span>14 days of synthetic readings · mg/dL</span>
-              <span>Synthetic data. Not clinically representative.</span>
-            </figcaption>
-          </figure>
-        </section>
+        <GlucoseSignalFigure
+          currentReading={displayedReading}
+          currentTrend={displayedTrend}
+          cv={report.cv}
+          gmi={report.gmi}
+          meanGlucose={report.meanGlucose}
+          readings={readings}
+          timeInRange={timeInRange}
+          timeZone={completeProfile.timeZone}
+          totalReadings={report.dataSufficiency.totalReadings}
+        />
 
         <section
           aria-labelledby="report-heading"
