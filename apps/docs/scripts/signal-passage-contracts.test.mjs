@@ -38,66 +38,81 @@ const activeMotionRoot =
 const nativeAnimationTuples = [
   {
     target: '.signalInstrument',
+    motionPart: 'instrument',
     name: 'signalStageIn',
     easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
     range: 'contain 0% contain 15%',
   },
   {
     target: '.traceTarget',
+    motionPart: 'target-field',
     name: 'signalScaleXIn',
     easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
     range: 'contain 10% contain 28%',
   },
   {
     target: '.traceThresholdOverlay',
+    motionPart: 'thresholds',
     name: 'signalFadeIn',
     easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
     range: 'contain 10% contain 28%',
   },
   {
     target: '.traceMask',
+    motionPart: 'trace-mask',
     name: 'signalScaleXIn',
     easing: 'cubic-bezier(0.65, 0, 0.35, 1)',
     range: 'contain 22% contain 68%',
   },
   {
     target: '.traceLatestPoint',
+    motionPart: 'latest-point',
     name: 'signalPointIn',
     easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
     range: 'contain 58% contain 76%',
   },
   {
     target: '.latestReading',
+    motionPart: 'latest-reading',
     name: 'signalCurrentIn',
     easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
     range: 'contain 58% contain 76%',
   },
   {
     target: '.signalMetrics > div:nth-child(1)',
+    metricIndex: 1,
+    motionPart: 'metrics',
     name: 'signalMetricIn',
     easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
     range: 'contain 70% contain 82%',
   },
   {
     target: '.signalMetrics > div:nth-child(2)',
+    metricIndex: 2,
+    motionPart: 'metrics',
     name: 'signalMetricIn',
     easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
     range: 'contain 72% contain 84%',
   },
   {
     target: '.signalMetrics > div:nth-child(3)',
+    metricIndex: 3,
+    motionPart: 'metrics',
     name: 'signalMetricIn',
     easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
     range: 'contain 74% contain 86%',
   },
   {
     target: '.signalMetrics > div:nth-child(4)',
+    metricIndex: 4,
+    motionPart: 'metrics',
     name: 'signalMetricIn',
     easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
     range: 'contain 76% contain 88%',
   },
   {
     target: '.signalCaption',
+    motionPart: 'caption',
     name: 'signalCaptionIn',
     easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
     range: 'contain 88% contain 99%',
@@ -227,6 +242,221 @@ function normalizeSelector(value) {
     .replaceAll(/\(\s+/gu, '(')
     .replaceAll(/\s+\)/gu, ')')
     .replaceAll(/\s*>\s*/gu, ' > ')
+}
+
+function splitSelectorList(selector) {
+  const selectors = []
+  let current = ''
+  let bracketDepth = 0
+  let parenthesisDepth = 0
+  let quote = ''
+
+  for (let index = 0; index < selector.length; index += 1) {
+    const character = selector[index]
+
+    if (quote !== '') {
+      current += character
+      if (character === '\\' && index + 1 < selector.length) {
+        current += selector[index + 1]
+        index += 1
+      } else if (character === quote) {
+        quote = ''
+      }
+      continue
+    }
+
+    if (character === "'" || character === '"') {
+      quote = character
+      current += character
+      continue
+    }
+
+    if (character === '[') {
+      bracketDepth += 1
+    } else if (character === ']') {
+      bracketDepth -= 1
+    } else if (character === '(') {
+      parenthesisDepth += 1
+    } else if (character === ')') {
+      parenthesisDepth -= 1
+    }
+
+    if (
+      character === ',' &&
+      bracketDepth === 0 &&
+      parenthesisDepth === 0
+    ) {
+      if (current.trim() !== '') {
+        selectors.push(current.trim())
+      }
+      current = ''
+      continue
+    }
+
+    current += character
+  }
+
+  if (current.trim() !== '') {
+    selectors.push(current.trim())
+  }
+
+  return selectors
+}
+
+function parseSelectorCompounds(selector) {
+  const compounds = []
+  let bracketDepth = 0
+  let current = ''
+  let parenthesisDepth = 0
+  let pendingCombinator = null
+  let quote = ''
+
+  function pushCompound() {
+    const compound = current.trim()
+    if (compound === '') {
+      return
+    }
+
+    compounds.push({
+      compound,
+      combinator:
+        compounds.length === 0
+          ? null
+          : (pendingCombinator ?? ' '),
+    })
+    current = ''
+    pendingCombinator = null
+  }
+
+  for (let index = 0; index < selector.length; index += 1) {
+    const character = selector[index]
+
+    if (quote !== '') {
+      current += character
+      if (character === '\\' && index + 1 < selector.length) {
+        current += selector[index + 1]
+        index += 1
+      } else if (character === quote) {
+        quote = ''
+      }
+      continue
+    }
+
+    if (character === "'" || character === '"') {
+      quote = character
+      current += character
+      continue
+    }
+
+    if (character === '[') {
+      bracketDepth += 1
+    } else if (character === ']') {
+      bracketDepth -= 1
+    } else if (character === '(') {
+      parenthesisDepth += 1
+    } else if (character === ')') {
+      parenthesisDepth -= 1
+    }
+
+    if (bracketDepth === 0 && parenthesisDepth === 0) {
+      if (character === '>' || character === '+' || character === '~') {
+        pushCompound()
+        pendingCombinator = character
+        continue
+      }
+
+      if (/\s/u.test(character)) {
+        if (current.trim() !== '') {
+          pushCompound()
+          pendingCombinator = ' '
+        }
+        continue
+      }
+    }
+
+    current += character
+  }
+
+  pushCompound()
+  return compounds
+}
+
+function compoundHasClass(compound, className) {
+  const escapedClassName = className.replaceAll(
+    /[.*+?^${}()|[\]\\]/gu,
+    '\\$&',
+  )
+  return new RegExp(
+    `\\.${escapedClassName}(?![\\w-])`,
+    'u',
+  ).test(compound)
+}
+
+function compoundHasMotionPart(compound, motionPart) {
+  return Array.from(
+    compound.matchAll(
+      /\[\s*data-motion-part\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\]\s]+))\s*\]/gu,
+    ),
+    (match) => match[1] ?? match[2] ?? match[3],
+  ).includes(motionPart)
+}
+
+function selectorTargetsNativeTuple(selector, tuple) {
+  const targetClass = /^\.([\w-]+)/u.exec(tuple.target)?.[1]
+  assert.notEqual(
+    targetClass,
+    undefined,
+    `${tuple.target} must expose a target class`,
+  )
+
+  return splitSelectorList(selector).some((selectorPart) => {
+    const compounds = parseSelectorCompounds(selectorPart)
+    const subject = compounds.at(-1)
+
+    if (
+      subject === undefined ||
+      subject.compound.includes('::')
+    ) {
+      return false
+    }
+
+    if (tuple.motionPart !== 'metrics') {
+      return (
+        compoundHasClass(subject.compound, targetClass) ||
+        compoundHasMotionPart(
+          subject.compound,
+          tuple.motionPart,
+        )
+      )
+    }
+
+    const parent = compounds.at(-2)
+    const subjectName = subject.compound.toLowerCase()
+    const targetsDiv =
+      subjectName === 'div' ||
+      ['div.', 'div#', 'div[', 'div:'].some((prefix) =>
+        subjectName.startsWith(prefix),
+      )
+    const nthChild = /:nth-child\(\s*(\d+)\s*\)/u.exec(
+      subject.compound,
+    )
+
+    if (
+      parent === undefined ||
+      (subject.combinator !== '>' &&
+        subject.combinator !== ' ') ||
+      !targetsDiv ||
+      (nthChild !== null &&
+        Number(nthChild[1]) !== tuple.metricIndex)
+    ) {
+      return false
+    }
+
+    return (
+      compoundHasClass(parent.compound, targetClass) ||
+      compoundHasMotionPart(parent.compound, tuple.motionPart)
+    )
+  })
 }
 
 function findMatchingBrace(source, openIndex, end = source.length) {
@@ -378,6 +608,31 @@ function collectStyleRules(
   return rules
 }
 
+function collectKeyframeBlocks(
+  source,
+  start = 0,
+  end = source.length,
+) {
+  const keyframes = []
+
+  for (const block of getTopLevelBlocks(source, start, end)) {
+    if (block.header.startsWith('@keyframes ')) {
+      keyframes.push(block)
+      continue
+    }
+
+    keyframes.push(
+      ...collectKeyframeBlocks(
+        source,
+        block.bodyStart,
+        block.bodyEnd,
+      ),
+    )
+  }
+
+  return keyframes
+}
+
 function getLeafRules(source) {
   return collectStyleRules(source).map(
     ({ selector, declarations }) => ({
@@ -432,9 +687,10 @@ function expectedNativeDeclarations(tuple) {
   ]
 }
 
-function validateNativeKeyframes(source, rootBlocks) {
+function validateNativeKeyframes(source) {
   const expectedNames = new Set(nativeKeyframeBodies.keys())
-  const nativeBlocks = rootBlocks.filter((block) => {
+  const keyframeBlocks = collectKeyframeBlocks(source)
+  const nativeBlocks = keyframeBlocks.filter((block) => {
     const match = /^@keyframes\s+([\w-]+)$/u.exec(
       normalizeCssText(block.header),
     )
@@ -444,14 +700,14 @@ function validateNativeKeyframes(source, rootBlocks) {
   assert.equal(
     nativeBlocks.length,
     nativeKeyframeBodies.size,
-    'native motion must define exactly seven approved keyframes',
+    'each approved native keyframe must be defined exactly once across the stylesheet',
   )
 
   for (const [name, expectedFrames] of nativeKeyframeBodies) {
     const keyframeBlock = findOnlyBlock(
-      rootBlocks,
+      keyframeBlocks,
       `@keyframes ${name}`,
-      `native keyframe ${name} must be defined exactly once`,
+      `native keyframe ${name} must be defined exactly once across the stylesheet`,
     )
     const frames = getTopLevelBlocks(
       source,
@@ -492,7 +748,7 @@ function validateNativeKeyframes(source, rootBlocks) {
 
 function validateNativeMotionSource(source) {
   const rootBlocks = getTopLevelBlocks(source)
-  validateNativeKeyframes(source, rootBlocks)
+  validateNativeKeyframes(source)
 
   const mediaBlock = findOnlyBlock(
     rootBlocks,
@@ -562,15 +818,10 @@ function validateNativeMotionSource(source) {
   }
 
   for (const [tuple, nativeRule] of matchedNativeRules) {
-    const targetMarker = tuple.target.startsWith(
-      '.signalMetrics ',
-    )
-      ? '.signalMetrics'
-      : tuple.target
     const laterReset = allStyleRules.find(
       (rule) =>
         rule.start > nativeRule.end &&
-        normalizeSelector(rule.selector).includes(targetMarker) &&
+        selectorTargetsNativeTuple(rule.selector, tuple) &&
         parseDeclarations(rule.declarations).some(
           ([property]) => property === 'animation',
         ),
@@ -624,6 +875,20 @@ function moveNativeRuleOutsideGate(source, target) {
 const nativeResetTargets = nativeAnimationTuples.map(
   ({ target }) => target,
 )
+const nativeAlternateResetTargets = [
+  "[data-motion-part='instrument']",
+  "[data-motion-part='target-field']",
+  "[data-motion-part='thresholds']",
+  "[data-motion-part='trace-mask']",
+  "[data-motion-part='latest-point']",
+  "[data-motion-part='latest-reading']",
+  "[data-motion-part='metrics'] > div",
+  "[data-motion-part='metrics'] > div:nth-child(1)",
+  "[data-motion-part='metrics'] > div:nth-child(2)",
+  "[data-motion-part='metrics'] > div:nth-child(3)",
+  "[data-motion-part='metrics'] > div:nth-child(4)",
+  "[data-motion-part='caption']",
+]
 
 test('the pure motion selector exists without a client or React boundary', () => {
   assert.equal(
@@ -978,6 +1243,29 @@ test('the native contract rejects a timeline rule escaped from the exact capabil
   )
 })
 
+test('the native contract rejects a duplicate keyframe nested in a conditional', () => {
+  const nestedDuplicate = `${signalStyles}
+@media (min-width: 900px) {
+  @keyframes signalScaleXIn {
+    from {
+      opacity: 0;
+      transform: scaleX(0);
+    }
+
+    to {
+      opacity: 1;
+      transform: scaleX(1);
+    }
+  }
+}
+`
+
+  assert.throws(
+    () => validateNativeMotionSource(nestedDuplicate),
+    /defined exactly once across the stylesheet/u,
+  )
+})
+
 test('the native contract rejects unsafe and indirect keyframe properties', () => {
   for (const [property, replacement, message] of [
     ['width', 'width: 0;', /SVG geometry property/u],
@@ -1012,6 +1300,36 @@ test('the native contract rejects later animation shorthand resets for every tar
         ),
       /later animation shorthand reset/u,
       `${target} must retain its named timeline`,
+    )
+  }
+})
+
+test('the native contract rejects later shorthand resets through every alternate target selector', () => {
+  for (const target of nativeAlternateResetTargets) {
+    assert.throws(
+      () =>
+        validateNativeMotionSource(
+          `${signalStyles}\n${target} { animation: none; }\n`,
+        ),
+      /later animation shorthand reset/u,
+      `${target} must retain its named timeline`,
+    )
+  }
+})
+
+test('the native contract ignores shorthand on selector substrings and pseudo-elements', () => {
+  for (const unrelatedTarget of [
+    '.signalInstrumentSummary',
+    '.signalMetricsSummary',
+    '.signalInstrument::before',
+    "[data-motion-part='instrument-note']",
+  ]) {
+    assert.doesNotThrow(
+      () =>
+        validateNativeMotionSource(
+          `${signalStyles}\n${unrelatedTarget} { animation: none; }\n`,
+        ),
+      `${unrelatedTarget} is not a native target reset`,
     )
   }
 })
