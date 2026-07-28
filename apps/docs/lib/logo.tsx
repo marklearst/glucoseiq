@@ -4,12 +4,14 @@ import { useId, type JSX } from 'react'
 export function LogoMark(props: {
   size?: number
   motion?: boolean
+  variant?: 'full' | 'drop'
 }): JSX.Element {
   const id = useId().replaceAll(':', '')
   const gradientId = `giq-ring-${id}`
   const ringRevealId = `giq-ring-reveal-${id}`
   const tipShadowId = `giq-ring-tip-shadow-${id}`
   const s = props.size ?? 28
+  const showRing = props.variant !== 'drop'
   return (
     <svg
       aria-hidden="true"
@@ -81,15 +83,17 @@ export function LogoMark(props: {
         strokeLinejoin="round"
         strokeLinecap="round"
       />
-      <path
-        clipRule="evenodd"
-        d="M32 37a15 15 0 1 1 0 30 15 15 0 1 1 0-30ZM32 44a8 8 0 1 0 0 16 8 8 0 1 0 0-16Z"
-        data-logo-part="ring"
-        fill={`url(#${gradientId})`}
-        fillRule="evenodd"
-        mask={props.motion ? `url(#${ringRevealId})` : undefined}
-      />
-      {props.motion ? (
+      {showRing ? (
+        <path
+          clipRule="evenodd"
+          d="M32 37a15 15 0 1 1 0 30 15 15 0 1 1 0-30ZM32 44a8 8 0 1 0 0 16 8 8 0 1 0 0-16Z"
+          data-logo-part="ring"
+          fill={`url(#${gradientId})`}
+          fillRule="evenodd"
+          mask={props.motion ? `url(#${ringRevealId})` : undefined}
+        />
+      ) : null}
+      {showRing && props.motion ? (
         <g data-logo-part="ring-tip">
           <circle
             cx="32"
@@ -110,7 +114,7 @@ export function LogoLockup(props: { size?: number }): JSX.Element {
   const s = props.size ?? 24
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: Math.round(s * 0.42) }}>
-      <LogoMark size={s} />
+      <LogoMark size={s} variant="drop" />
       <span
         style={{
           fontWeight: 700,

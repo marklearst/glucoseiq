@@ -22,6 +22,7 @@ const installerStylesPath = join(
 )
 const gettingStartedPath = join(docsRoot, 'content/docs/index.mdx')
 const stylesPath = join(docsRoot, 'app/(home)/home.module.css')
+const globalStylesPath = join(docsRoot, 'app/global.css')
 const layoutPath = join(docsRoot, 'app/(home)/layout.tsx')
 const logoPath = join(docsRoot, 'lib/logo.tsx')
 const page = readFileSync(pagePath, 'utf8')
@@ -39,8 +40,30 @@ const installerStyles = existsSync(installerStylesPath)
   : ''
 const gettingStarted = readFileSync(gettingStartedPath, 'utf8')
 const styles = readFileSync(stylesPath, 'utf8')
+const globalStyles = readFileSync(globalStylesPath, 'utf8')
 const layout = readFileSync(layoutPath, 'utf8')
 const logo = readFileSync(logoPath, 'utf8')
+
+test('docs prose links use a quiet underline until hover or focus', () => {
+  assert.match(
+    globalStyles,
+    /--giq-link-underline:\s*color-mix\(\s*in srgb,\s*var\(--color-fd-primary\) 58%,\s*transparent\s*\);/u,
+  )
+  assert.match(
+    globalStyles,
+    /#nd-page\s+\.prose\s+:where\(a:not\(\[data-card\]\)\):not\([\s\S]*?\)\s*\{[\s\S]*?text-decoration-color:\s*var\(--giq-link-underline\);[\s\S]*?text-decoration-thickness:\s*1px;[\s\S]*?text-underline-offset:\s*0\.18em;/u,
+  )
+  assert.match(
+    globalStyles,
+    /#nd-page\s+\.prose\s+:where\(a:not\(\[data-card\]\):is\(:hover,\s*:focus-visible\)\):not\([\s\S]*?\)\s*\{[\s\S]*?opacity:\s*1;[\s\S]*?text-decoration-color:\s*var\(--color-fd-primary\);/u,
+  )
+})
+
+test('docs lockup opts into the drop-only logo variant', () => {
+  assert.match(logo, /variant\?: 'full' \| 'drop'/u)
+  assert.match(logo, /const showRing = props\.variant !== 'drop'/u)
+  assert.match(logo, /<LogoMark size=\{s\} variant="drop" \/>/u)
+})
 
 test('logo mark keeps a finished ring and exposes a clockwise motion path', () => {
   assert.match(logo, /const id = useId\(\)\.replaceAll\(':', ''\)/u)
