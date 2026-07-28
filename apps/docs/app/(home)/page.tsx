@@ -293,7 +293,10 @@ export default function HomePage(): JSX.Element {
               </dl>
             </div>
 
-            <GlucoseTrace profile={completeProfile} readings={readings} />
+            <GlucoseTrace
+              readings={readings}
+              timeZone={completeProfile.timeZone}
+            />
 
             <figcaption className={styles.signalCaption}>
               <span>14 days of synthetic readings · mg/dL</span>

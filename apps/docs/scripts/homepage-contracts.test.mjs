@@ -252,11 +252,11 @@ test('homepage keeps the distribution proof when it adds a glucose trace', () =>
   assert.match(page, /aria-label=\{rangeSummaryLabel\}/u)
   assert.match(
     page,
-    /<GlucoseTrace\s+profile=\{completeProfile\}\s+readings=\{readings\}\s*\/>/u,
+    /<GlucoseTrace\s+readings=\{readings\}\s+timeZone=\{completeProfile\.timeZone\}\s*\/>/u,
   )
   assert.match(
     page,
-    /className=\{styles\.currentReading\}[\s\S]*?className=\{styles\.readingStatus\}[\s\S]*?className=\{styles\.rangeSummary\}[\s\S]*?<GlucoseTrace\s+profile=\{completeProfile\}\s+readings=\{readings\}\s*\/>[\s\S]*?<figcaption/u,
+    /className=\{styles\.currentReading\}[\s\S]*?className=\{styles\.readingStatus\}[\s\S]*?className=\{styles\.rangeSummary\}[\s\S]*?<GlucoseTrace\s+readings=\{readings\}\s+timeZone=\{completeProfile\.timeZone\}\s*\/>[\s\S]*?<figcaption/u,
   )
   assert.match(page, /className=\{styles\.signalMetrics\}/u)
   assert.match(page, /report\.dataSufficiency\.totalReadings/u)
@@ -280,7 +280,7 @@ test('homepage keeps the distribution proof when it adds a glucose trace', () =>
   )
   assert.match(
     glucoseTrace,
-    /import \{ createGlucoseProfileGeometry \} from '@\/lib\/glucose-profile'/u,
+    /import \{ createGlucoseTraceGeometry \} from '@\/lib\/glucose-profile'/u,
   )
   assert.match(glucoseTrace, /<svg[\s\S]*?role="img"/u)
   assert.match(glucoseTrace, /aria-labelledby=\{`\$\{titleId\} \$\{descriptionId\}`\}/u)
