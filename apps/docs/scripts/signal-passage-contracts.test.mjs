@@ -29,15 +29,601 @@ const signalStyles = existsSync(signalStylesPath)
   ? readFileSync(signalStylesPath, 'utf8')
   : ''
 
+const nativeMediaHeader =
+  '@media (scripting: enabled) and (prefers-reduced-motion: no-preference) and (min-width: 900px) and (min-height: 720px)'
+const nativeSupportsHeader =
+  '@supports (view-timeline-name: --signal-passage) and (animation-range: contain 0% contain 15%)'
+const activeMotionRoot =
+  ".signalStory[data-motion-sticky='enabled']:not([data-motion-state='latched'])"
+const nativeAnimationTuples = [
+  {
+    target: '.signalInstrument',
+    name: 'signalStageIn',
+    easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    range: 'contain 0% contain 15%',
+  },
+  {
+    target: '.traceTarget',
+    name: 'signalScaleXIn',
+    easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    range: 'contain 10% contain 28%',
+  },
+  {
+    target: '.traceThresholdOverlay',
+    name: 'signalFadeIn',
+    easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    range: 'contain 10% contain 28%',
+  },
+  {
+    target: '.traceMask',
+    name: 'signalScaleXIn',
+    easing: 'cubic-bezier(0.65, 0, 0.35, 1)',
+    range: 'contain 22% contain 68%',
+  },
+  {
+    target: '.traceLatestPoint',
+    name: 'signalPointIn',
+    easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    range: 'contain 58% contain 76%',
+  },
+  {
+    target: '.latestReading',
+    name: 'signalCurrentIn',
+    easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    range: 'contain 58% contain 76%',
+  },
+  {
+    target: '.signalMetrics > div:nth-child(1)',
+    name: 'signalMetricIn',
+    easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    range: 'contain 70% contain 82%',
+  },
+  {
+    target: '.signalMetrics > div:nth-child(2)',
+    name: 'signalMetricIn',
+    easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    range: 'contain 72% contain 84%',
+  },
+  {
+    target: '.signalMetrics > div:nth-child(3)',
+    name: 'signalMetricIn',
+    easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    range: 'contain 74% contain 86%',
+  },
+  {
+    target: '.signalMetrics > div:nth-child(4)',
+    name: 'signalMetricIn',
+    easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    range: 'contain 76% contain 88%',
+  },
+  {
+    target: '.signalCaption',
+    name: 'signalCaptionIn',
+    easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    range: 'contain 88% contain 99%',
+  },
+].map((tuple) => ({
+  ...tuple,
+  selector: `${activeMotionRoot} ${tuple.target}`,
+}))
+const nativeKeyframeBodies = new Map([
+  [
+    'signalStageIn',
+    [
+      [
+        'from',
+        [
+          ['opacity', '0.84'],
+          ['transform', 'scale(0.985)'],
+        ],
+      ],
+      [
+        'to',
+        [
+          ['opacity', '1'],
+          ['transform', 'scale(1)'],
+        ],
+      ],
+    ],
+  ],
+  [
+    'signalScaleXIn',
+    [
+      [
+        'from',
+        [
+          ['opacity', '0'],
+          ['transform', 'scaleX(0)'],
+        ],
+      ],
+      [
+        'to',
+        [
+          ['opacity', '1'],
+          ['transform', 'scaleX(1)'],
+        ],
+      ],
+    ],
+  ],
+  [
+    'signalFadeIn',
+    [
+      ['from', [['opacity', '0']]],
+      ['to', [['opacity', '1']]],
+    ],
+  ],
+  [
+    'signalCurrentIn',
+    [
+      [
+        'from',
+        [
+          ['opacity', '0'],
+          ['transform', 'translateY(6px)'],
+        ],
+      ],
+      [
+        'to',
+        [
+          ['opacity', '1'],
+          ['transform', 'translateY(0)'],
+        ],
+      ],
+    ],
+  ],
+  [
+    'signalPointIn',
+    [
+      [
+        'from',
+        [
+          ['opacity', '0'],
+          ['transform', 'scale(0.92)'],
+        ],
+      ],
+      [
+        'to',
+        [
+          ['opacity', '1'],
+          ['transform', 'scale(1)'],
+        ],
+      ],
+    ],
+  ],
+  [
+    'signalMetricIn',
+    [
+      [
+        'from',
+        [
+          ['opacity', '0'],
+          ['transform', 'translateY(8px)'],
+        ],
+      ],
+      [
+        'to',
+        [
+          ['opacity', '1'],
+          ['transform', 'translateY(0)'],
+        ],
+      ],
+    ],
+  ],
+  [
+    'signalCaptionIn',
+    [
+      ['from', [['opacity', '0.55']]],
+      ['to', [['opacity', '1']]],
+    ],
+  ],
+])
+
+function normalizeCssText(value) {
+  return value.replaceAll(/\s+/gu, ' ').trim()
+}
+
+function normalizeSelector(value) {
+  return normalizeCssText(value)
+    .replaceAll(/\(\s+/gu, '(')
+    .replaceAll(/\s+\)/gu, ')')
+    .replaceAll(/\s*>\s*/gu, ' > ')
+}
+
+function findMatchingBrace(source, openIndex, end = source.length) {
+  let depth = 0
+  let quote = ''
+
+  for (let index = openIndex; index < end; index += 1) {
+    const character = source[index]
+    const nextCharacter = source[index + 1]
+
+    if (quote !== '') {
+      if (character === '\\') {
+        index += 1
+      } else if (character === quote) {
+        quote = ''
+      }
+      continue
+    }
+
+    if (character === '/' && nextCharacter === '*') {
+      const commentEnd = source.indexOf('*/', index + 2)
+      assert.notEqual(
+        commentEnd,
+        -1,
+        'CSS comments must terminate before native contracts run',
+      )
+      index = commentEnd + 1
+      continue
+    }
+
+    if (character === "'" || character === '"') {
+      quote = character
+      continue
+    }
+
+    if (character === '{') {
+      depth += 1
+    } else if (character === '}') {
+      depth -= 1
+      if (depth === 0) {
+        return index
+      }
+    }
+  }
+
+  assert.fail(`CSS block at offset ${openIndex} is not closed`)
+}
+
+function getTopLevelBlocks(
+  source,
+  start = 0,
+  end = source.length,
+) {
+  const blocks = []
+  let headerStart = start
+  let quote = ''
+
+  for (let index = start; index < end; index += 1) {
+    const character = source[index]
+    const nextCharacter = source[index + 1]
+
+    if (quote !== '') {
+      if (character === '\\') {
+        index += 1
+      } else if (character === quote) {
+        quote = ''
+      }
+      continue
+    }
+
+    if (character === '/' && nextCharacter === '*') {
+      const commentEnd = source.indexOf('*/', index + 2)
+      assert.notEqual(
+        commentEnd,
+        -1,
+        'CSS comments must terminate before native contracts run',
+      )
+      index = commentEnd + 1
+      continue
+    }
+
+    if (character === "'" || character === '"') {
+      quote = character
+      continue
+    }
+
+    if (character === ';') {
+      headerStart = index + 1
+      continue
+    }
+
+    if (character !== '{') {
+      continue
+    }
+
+    const closeIndex = findMatchingBrace(source, index, end)
+    const header = source
+      .slice(headerStart, index)
+      .replaceAll(/\/\*[\s\S]*?\*\//gu, '')
+      .trim()
+
+    if (header !== '') {
+      blocks.push({
+        header,
+        start: headerStart,
+        openIndex: index,
+        bodyStart: index + 1,
+        bodyEnd: closeIndex,
+        end: closeIndex + 1,
+        body: source.slice(index + 1, closeIndex),
+      })
+    }
+
+    index = closeIndex
+    headerStart = closeIndex + 1
+  }
+
+  return blocks
+}
+
+function collectStyleRules(
+  source,
+  start = 0,
+  end = source.length,
+) {
+  const rules = []
+
+  for (const block of getTopLevelBlocks(source, start, end)) {
+    if (!block.header.startsWith('@')) {
+      rules.push({
+        ...block,
+        selector: block.header,
+        declarations: block.body,
+      })
+      continue
+    }
+
+    if (!block.header.startsWith('@keyframes ')) {
+      rules.push(
+        ...collectStyleRules(
+          source,
+          block.bodyStart,
+          block.bodyEnd,
+        ),
+      )
+    }
+  }
+
+  return rules
+}
+
 function getLeafRules(source) {
-  return Array.from(
-    source.matchAll(/([^{}]+)\{([^{}]*)\}/gu),
-    ([, selector, declarations]) => ({
-      selector: selector.trim(),
+  return collectStyleRules(source).map(
+    ({ selector, declarations }) => ({
+      selector,
       declarations,
     }),
   )
 }
+
+function parseDeclarations(source) {
+  return source
+    .split(';')
+    .map((declaration) => declaration.trim())
+    .filter(Boolean)
+    .map((declaration) => {
+      const colonIndex = declaration.indexOf(':')
+      assert.ok(
+        colonIndex > 0,
+        `CSS declaration must include a property: ${declaration}`,
+      )
+      return [
+        declaration.slice(0, colonIndex).trim().toLowerCase(),
+        normalizeCssText(declaration.slice(colonIndex + 1)),
+      ]
+    })
+}
+
+function findOnlyBlock(blocks, header, errorMessage) {
+  const matches = blocks.filter(
+    (block) => normalizeCssText(block.header) === header,
+  )
+  assert.equal(matches.length, 1, errorMessage)
+  return matches[0]
+}
+
+function assertExactStructure(actual, expected, message) {
+  try {
+    assert.deepEqual(actual, expected)
+  } catch {
+    assert.fail(message)
+  }
+}
+
+function expectedNativeDeclarations(tuple) {
+  return [
+    ['animation-name', tuple.name],
+    ['animation-duration', '1ms'],
+    ['animation-fill-mode', 'both'],
+    ['animation-timing-function', tuple.easing],
+    ['animation-timeline', '--signal-passage'],
+    ['animation-range', tuple.range],
+  ]
+}
+
+function validateNativeKeyframes(source, rootBlocks) {
+  const expectedNames = new Set(nativeKeyframeBodies.keys())
+  const nativeBlocks = rootBlocks.filter((block) => {
+    const match = /^@keyframes\s+([\w-]+)$/u.exec(
+      normalizeCssText(block.header),
+    )
+    return match !== null && expectedNames.has(match[1])
+  })
+
+  assert.equal(
+    nativeBlocks.length,
+    nativeKeyframeBodies.size,
+    'native motion must define exactly seven approved keyframes',
+  )
+
+  for (const [name, expectedFrames] of nativeKeyframeBodies) {
+    const keyframeBlock = findOnlyBlock(
+      rootBlocks,
+      `@keyframes ${name}`,
+      `native keyframe ${name} must be defined exactly once`,
+    )
+    const frames = getTopLevelBlocks(
+      source,
+      keyframeBlock.bodyStart,
+      keyframeBlock.bodyEnd,
+    ).map((frame) => [
+      normalizeCssText(frame.header),
+      parseDeclarations(frame.body),
+    ])
+
+    for (const [, declarations] of frames) {
+      for (const [property] of declarations) {
+        if (property.startsWith('--')) {
+          assert.fail(
+            `${name} must not animate a custom property`,
+          )
+        }
+        if (property === 'x' || property === 'width') {
+          assert.fail(
+            `${name} must not animate an SVG geometry property`,
+          )
+        }
+        if (property !== 'opacity' && property !== 'transform') {
+          assert.fail(
+            `${name} must stay inside the transform/opacity compositor allowlist`,
+          )
+        }
+      }
+    }
+
+    assertExactStructure(
+      frames,
+      expectedFrames,
+      `${name} must preserve its exact approved keyframe body and final state`,
+    )
+  }
+}
+
+function validateNativeMotionSource(source) {
+  const rootBlocks = getTopLevelBlocks(source)
+  validateNativeKeyframes(source, rootBlocks)
+
+  const mediaBlock = findOnlyBlock(
+    rootBlocks,
+    nativeMediaHeader,
+    'native animations must use the exact native capability gate',
+  )
+  const mediaBlocks = getTopLevelBlocks(
+    source,
+    mediaBlock.bodyStart,
+    mediaBlock.bodyEnd,
+  )
+  const supportsBlock = findOnlyBlock(
+    mediaBlocks,
+    nativeSupportsHeader,
+    'native animations must use the exact native capability gate',
+  )
+  const allStyleRules = collectStyleRules(source)
+  const timelineRules = allStyleRules.filter((rule) =>
+    parseDeclarations(rule.declarations).some(
+      ([property, value]) =>
+        property === 'animation-timeline' &&
+        value === '--signal-passage',
+    ),
+  )
+  const escapedTimelineRules = timelineRules.filter(
+    (rule) =>
+      rule.start < supportsBlock.bodyStart ||
+      rule.end > supportsBlock.bodyEnd,
+  )
+
+  assert.equal(
+    escapedTimelineRules.length,
+    0,
+    'all timeline rules must remain inside the exact native capability gate',
+  )
+  assert.equal(
+    timelineRules.length,
+    nativeAnimationTuples.length,
+    'the exact native capability gate must own all eleven timeline rules',
+  )
+
+  const gatedRules = getTopLevelBlocks(
+    source,
+    supportsBlock.bodyStart,
+    supportsBlock.bodyEnd,
+  ).filter((block) => !block.header.startsWith('@'))
+  const matchedNativeRules = []
+
+  for (const tuple of nativeAnimationTuples) {
+    const selector = normalizeSelector(tuple.selector)
+    const matches = gatedRules.filter(
+      (rule) => normalizeSelector(rule.header) === selector,
+    )
+    assert.equal(
+      matches.length,
+      1,
+      `native animation tuple for ${tuple.target} must exist exactly once inside the gate`,
+    )
+
+    const [rule] = matches
+    assertExactStructure(
+      parseDeclarations(rule.body),
+      expectedNativeDeclarations(tuple),
+      `native animation tuple for ${tuple.target} must preserve its selector, keyframe, duration, fill, easing, timeline, and range`,
+    )
+    matchedNativeRules.push([tuple, rule])
+  }
+
+  for (const [tuple, nativeRule] of matchedNativeRules) {
+    const targetMarker = tuple.target.startsWith(
+      '.signalMetrics ',
+    )
+      ? '.signalMetrics'
+      : tuple.target
+    const laterReset = allStyleRules.find(
+      (rule) =>
+        rule.start > nativeRule.end &&
+        normalizeSelector(rule.selector).includes(targetMarker) &&
+        parseDeclarations(rule.declarations).some(
+          ([property]) => property === 'animation',
+        ),
+    )
+
+    assert.equal(
+      laterReset,
+      undefined,
+      `${tuple.target} must not receive a later animation shorthand reset`,
+    )
+  }
+}
+
+function moveNativeRuleOutsideGate(source, target) {
+  const rootBlocks = getTopLevelBlocks(source)
+  const mediaBlock = findOnlyBlock(
+    rootBlocks,
+    nativeMediaHeader,
+    'mutation fixture needs the native media gate',
+  )
+  const supportsBlock = findOnlyBlock(
+    getTopLevelBlocks(
+      source,
+      mediaBlock.bodyStart,
+      mediaBlock.bodyEnd,
+    ),
+    nativeSupportsHeader,
+    'mutation fixture needs the native supports gate',
+  )
+  const expectedSelector = normalizeSelector(
+    `${activeMotionRoot} ${target}`,
+  )
+  const nativeRule = getTopLevelBlocks(
+    source,
+    supportsBlock.bodyStart,
+    supportsBlock.bodyEnd,
+  ).find(
+    (block) =>
+      normalizeSelector(block.header) === expectedSelector,
+  )
+
+  assert.notEqual(
+    nativeRule,
+    undefined,
+    `mutation fixture needs ${target}`,
+  )
+
+  return `${source.slice(0, nativeRule.start)}${source.slice(nativeRule.end)}\n${source.slice(nativeRule.start, nativeRule.end).trim()}\n`
+}
+
+const nativeResetTargets = nativeAnimationTuples.map(
+  ({ target }) => target,
+)
 
 test('the pure motion selector exists without a client or React boundary', () => {
   assert.equal(
@@ -367,6 +953,73 @@ test('native eligibility keeps the settled desktop frame inside its 616-pixel fi
   )
   assert.match(signalStyles, /@media \(max-width: 899px\)/u)
   assert.doesNotMatch(signalStyles, /@media \(max-width: 900px\)/u)
+})
+
+test('the native contract rejects a swapped selector-animation tuple', () => {
+  const swappedTuple = signalStyles.replace(
+    'animation-name: signalStageIn;',
+    'animation-name: signalScaleXIn;',
+  )
+
+  assert.notEqual(swappedTuple, signalStyles)
+  assert.throws(
+    () => validateNativeMotionSource(swappedTuple),
+    /native animation tuple/u,
+  )
+})
+
+test('the native contract rejects a timeline rule escaped from the exact capability gate', () => {
+  assert.throws(
+    () =>
+      validateNativeMotionSource(
+        moveNativeRuleOutsideGate(signalStyles, '.traceMask'),
+      ),
+    /exact native capability gate/u,
+  )
+})
+
+test('the native contract rejects unsafe and indirect keyframe properties', () => {
+  for (const [property, replacement, message] of [
+    ['width', 'width: 0;', /SVG geometry property/u],
+    ['x', 'x: 0;', /SVG geometry property/u],
+    [
+      'custom property',
+      '--trace-progress: 0;',
+      /custom property/u,
+    ],
+    ['filter', 'filter: blur(2px);', /compositor allowlist/u],
+  ]) {
+    const unsafeKeyframe = signalStyles.replace(
+      'transform: scaleX(0);',
+      replacement,
+    )
+
+    assert.notEqual(unsafeKeyframe, signalStyles)
+    assert.throws(
+      () => validateNativeMotionSource(unsafeKeyframe),
+      message,
+      `${property} must not pass the native keyframe contract`,
+    )
+  }
+})
+
+test('the native contract rejects later animation shorthand resets for every target', () => {
+  for (const target of nativeResetTargets) {
+    assert.throws(
+      () =>
+        validateNativeMotionSource(
+          `${signalStyles}\n${target} { animation: none; }\n`,
+        ),
+      /later animation shorthand reset/u,
+      `${target} must retain its named timeline`,
+    )
+  }
+})
+
+test('native motion binds all exact tuples, keyframe bodies, and gate nesting', () => {
+  assert.doesNotThrow(() =>
+    validateNativeMotionSource(signalStyles),
+  )
 })
 
 test('native motion declares every approved beat, range, and easing', () => {
