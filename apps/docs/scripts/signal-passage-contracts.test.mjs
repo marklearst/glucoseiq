@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 
 const docsRoot = dirname(dirname(fileURLToPath(import.meta.url)))
+const designPath = join(docsRoot, 'DESIGN.md')
+const productPath = join(docsRoot, 'PRODUCT.md')
 const pagePath = join(docsRoot, 'app/(home)/page.tsx')
 const signalMotionPath = join(
   docsRoot,
@@ -39,6 +41,8 @@ const signalTrace = existsSync(signalTracePath)
 const signalStyles = existsSync(signalStylesPath)
   ? readFileSync(signalStylesPath, 'utf8')
   : ''
+const design = readFileSync(designPath, 'utf8')
+const product = readFileSync(productPath, 'utf8')
 const signalMarkup = `${signalStory}\n${signalFigure}\n${signalTrace}`
 
 const nativeMediaHeader =
@@ -1493,6 +1497,32 @@ const nativeAlternateResetTargets = [
   "[data-motion-part='metrics'] > div:nth-child(4)",
   "[data-motion-part='caption']",
 ]
+
+test('the design and product documents bound Signal Passage to the homepage report', () => {
+  for (const document of [design, product]) {
+    assert.match(document, /Signal Passage is limited to the homepage report\./u)
+    assert.match(document, /The complete report remains visible without JavaScript\./u)
+    assert.match(document, /Reduced motion shows the completed report\./u)
+    assert.match(document, /Other homepage sections do not gain reveal effects\./u)
+    assert.match(
+      document,
+      /Native page scrolling is never captured, replaced, snapped, or slowed\./u,
+    )
+  }
+})
+
+test('the design document records the approved Signal Passage implementation boundary', () => {
+  assert.match(design, /900-by-720 gate/u)
+  assert.match(design, /component-local CSS module/u)
+  assert.match(design, /70\/180-only chart treatment/u)
+  assert.match(design, /no runtime animation dependency/u)
+})
+
+test('the product document retains the product boundary around Signal Passage', () => {
+  assert.match(product, /awards portfolio/u)
+  assert.match(product, /dashboard/u)
+  assert.match(product, /patient-facing health app/u)
+})
 
 test('the pure motion selector exists without a client or React boundary', () => {
   assert.equal(
