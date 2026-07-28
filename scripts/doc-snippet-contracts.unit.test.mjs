@@ -1180,14 +1180,14 @@ test('extracts a lexical homepage binding passed to the visible code renderer', 
     path: 'apps/docs/app/(home)/page.tsx',
     text: `
 const sample = "import { analyzeGlucose } from '@glucoseiq/core'"
-function HighlightedCode({ source }: { source: string }) {
-  return <>{source}</>
+function HighlightedCode({ code }: { code: string }) {
+  return <>{code}</>
 }
 export default function Page() {
   return (
-    <pre data-doc-snippet="home-report">
-      <code><HighlightedCode source={sample} /></code>
-    </pre>
+    <div data-doc-snippet="home-report">
+      <HighlightedCode code={sample} />
+    </div>
   )
 }
 `,
