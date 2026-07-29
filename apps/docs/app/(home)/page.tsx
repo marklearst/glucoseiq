@@ -113,11 +113,6 @@ const PACKAGES = [
     href: '/docs/cli',
     role: 'CGM CSV analysis with JSON and AGP-style SVG output.',
   },
-  {
-    name: 'diabetic-utils',
-    href: '/docs/migration',
-    role: 'diabetic-utils@2 keeps the existing import path while you move to @glucoseiq/core.',
-  },
 ] as const
 
 export default function HomePage(): JSX.Element {

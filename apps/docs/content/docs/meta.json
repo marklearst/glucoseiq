@@ -25,7 +25,6 @@
     "integration-testing",
     "deployment",
     "---Reference---",
-    "api",
-    "migration"
+    "api"
   ]
 }

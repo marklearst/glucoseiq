@@ -31,7 +31,6 @@ const packageDirectories = [
   'tokens',
   'testing',
   'cli',
-  'diabetic-utils',
 ]
 
 function readPublicFile(repoRoot, path) {

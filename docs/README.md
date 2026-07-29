@@ -2,8 +2,7 @@
 
 This directory preserves the generated API reference for the published
 `diabetic-utils` 1.5.x line. It documents that historical artifact; it is not
-the API reference for the scoped GlucoseIQ packages or the 2.0 compatibility
-bridge.
+the API reference for the scoped GlucoseIQ packages.
 
 Use the [archive index](./index.md) to browse the historical reference:
 
@@ -14,9 +13,8 @@ Use the [archive index](./index.md) to browse the historical reference:
 - [Globals](./globals.md)
 
 For current development, use the
-[GlucoseIQ guides](https://glucoseiq.dev/docs),
-[current API reference](https://glucoseiq.dev/docs/api), and
-[migration guide](https://glucoseiq.dev/docs/migration).
+[GlucoseIQ guides](https://glucoseiq.dev/docs) and
+[current API reference](https://glucoseiq.dev/docs/api).
 
 The historical package remains available from npm as
 [`diabetic-utils`](https://www.npmjs.com/package/diabetic-utils). GlucoseIQ is
