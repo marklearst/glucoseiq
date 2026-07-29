@@ -14,11 +14,11 @@ Prepare the reviewed GlucoseIQ package candidate for publication. Keep this pull
 - [ ] Review all package versions and changelogs against the approved release entries.
 - [ ] Review packed manifests and tarball contents, including declaration routes and internal dependency ranges.
 - [ ] Confirm the release branch is current with main and no newer Changesets remain before merge.
-- [ ] Confirm the clean consumer matrix passes for both React peer majors, both module systems, both TypeScript resolvers, the CLI, and all compatibility exports.
+- [ ] Confirm the clean consumer matrix passes for both React peer majors, both module systems, both TypeScript resolvers, the CLI.
 
 ## Bootstrap credential
 
-- [ ] Create the one-day npm credential with only the six required package permissions and 2FA bypass.
+- [ ] Create the one-day npm credential with only the five required package permissions and 2FA bypass.
 - [ ] Replace the repository npm secret immediately before the approved bootstrap publication.
 
 ## Metadata and approval
@@ -30,7 +30,7 @@ Prepare the reviewed GlucoseIQ package candidate for publication. Keep this pull
 
 This post-bootstrap section is a durable follow-up record, not a pre-merge gate for this release pull request.
 
-- [ ] Confirm a trusted publisher configured for all six packages after their package pages exist.
+- [ ] Confirm a trusted publisher configured for all five packages after their package pages exist.
 - [ ] Confirm workflow token references and the repository npm secret removed before the credential-free release.
 - [ ] Confirm the first credential-free publication succeeds with provenance.
 - [ ] Confirm the temporary credential expired or was revoked after trusted publishing succeeds.

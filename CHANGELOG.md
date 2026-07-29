@@ -11,8 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Introduced GlucoseIQ 1.0 as the `@glucoseiq` package ecosystem, led by the
   zero-dependency `@glucoseiq/core` engine.
-- Prepared `diabetic-utils` 2.0 as the compatibility bridge from the 1.5.x
-  package to `@glucoseiq/core` while preserving existing root imports.
+- Removed the unpublished `diabetic-utils` compatibility package from the
+  monorepo. GlucoseIQ 1.0 ships five `@glucoseiq` packages only.
 - Moved development, documentation, and releases to the
   [GlucoseIQ repository](https://github.com/marklearst/glucoseiq).
 - Updated `estimateGMI` and `GMI_COEFFICIENTS` to use the published mean-CGM
@@ -26,13 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Corrected the default `getA1CCategory` boundaries in `@glucoseiq/core` 1.0
-  and the `diabetic-utils` 2.0 compatibility bridge to match the
+- Corrected the default `getA1CCategory` boundaries in `@glucoseiq/core` 1.0 to match the
   [CDC categories](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html):
   normal is below 5.7%, prediabetes is 5.7% to below 6.5%, and diabetes is 6.5%
-  or higher. Explicit custom maxima remain inclusive. The published
-  `diabetic-utils` 1.5.x artifacts are unchanged and remain available via the
-  `legacy` dist-tag.
+  or higher. Explicit custom maxima remain inclusive.
 - Corrected Enhanced and pregnancy TIR target assessment to use strict,
   unrounded population boundaries and cumulative TBR/TAR checks, with separate
   Level 2 checks and explicit configured-range disclosure.

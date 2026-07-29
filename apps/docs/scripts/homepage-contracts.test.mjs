@@ -312,7 +312,6 @@ test('homepage links directly to every public package boundary', () => {
     '/docs/tokens',
     '/docs/testing',
     '/docs/cli',
-    '/docs/migration',
   ]) {
     assert.equal(page.includes(`href: '${href}'`), true)
   }
@@ -322,7 +321,6 @@ test('homepage links directly to every public package boundary', () => {
     '@glucoseiq/tokens',
     '@glucoseiq/testing',
     '@glucoseiq/cli',
-    'diabetic-utils',
   ]) {
     assert.equal(page.includes(name), true)
   }

@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process'
 import {
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -80,6 +81,34 @@ function synchronizeFixturePackageManager(repository) {
   )
 }
 
+function synchronizeLaunchFixture(repository) {
+  for (const directory of readdirSync(join(repository, 'packages'))) {
+    if (PUBLIC_PACKAGE_DIRECTORIES.includes(`packages/${directory}`)) continue
+    rmSync(join(repository, 'packages', directory), { force: true, recursive: true })
+  }
+  writeFileSync(
+    join(repository, '.changeset/launch-glucoseiq-one.md'),
+    readFileSync(join(REPOSITORY_ROOT, '.changeset/launch-glucoseiq-one.md'), 'utf8'),
+  )
+  runFixtureCommand('git', ['add', '-A', '--'], repository)
+  const pending = runFixtureCommand('git', ['status', '--porcelain'], repository)
+  if (pending.length === 0) return
+  runFixtureCommand(
+    'git',
+    [
+      '-c',
+      'user.name=Release Fixture',
+      '-c',
+      'user.email=release-fixture@example.invalid',
+      'commit',
+      '--quiet',
+      '-m',
+      'test: synchronize launch package set',
+    ],
+    repository,
+  )
+}
+
 function createGeneratedVersionFixture({
   generate = true,
   mutate,
@@ -120,6 +149,7 @@ function createGeneratedVersionFixture({
     )
   }
   synchronizeFixturePackageManager(repository)
+  synchronizeLaunchFixture(repository)
   if (prepareBase) {
     prepareBase(repository)
     runFixtureCommand('git', ['add', '-A', '--'], repository)
@@ -250,7 +280,6 @@ function createCommandFixture({
   const packageNames = new Map([
     ['packages/cli', '@glucoseiq/cli'],
     ['packages/core', '@glucoseiq/core'],
-    ['packages/diabetic-utils', 'diabetic-utils'],
     ['packages/react', '@glucoseiq/react'],
     ['packages/testing', '@glucoseiq/testing'],
     ['packages/tokens', '@glucoseiq/tokens'],
@@ -288,11 +317,10 @@ function createCommandFixture({
   return { calls, execFile }
 }
 
-test('defines exactly the six public package directories', () => {
+test('defines exactly the five public package directories', () => {
   assert.deepEqual(PUBLIC_PACKAGE_DIRECTORIES, [
     'packages/cli',
     'packages/core',
-    'packages/diabetic-utils',
     'packages/react',
     'packages/testing',
     'packages/tokens',
@@ -849,7 +877,7 @@ test('accepts a future independent major release and its dependent bumps', () =>
     prepareBase: (repository) => {
       for (const packageDirectory of PUBLIC_PACKAGE_DIRECTORIES) {
         updateFixtureManifest(repository, packageDirectory, (manifest) => {
-          manifest.version = manifest.name === 'diabetic-utils' ? '2.4.0' : '1.4.0'
+          manifest.version = '1.4.0'
         })
       }
       writeFileSync(

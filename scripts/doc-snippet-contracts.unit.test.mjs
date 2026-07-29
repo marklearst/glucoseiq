@@ -67,17 +67,16 @@ test('shares one frozen, line-stable manual fragment allowlist', () => {
   ])
 })
 
-test('shares one frozen six-package README contract and derives tracked docs routes', () => {
+test('shares one frozen five-package README contract and derives tracked docs routes', () => {
   assert.equal(Object.isFrozen(PACKAGE_README_CONTRACTS), true)
-  assert.equal(PACKAGE_README_CONTRACTS.length, 6)
+  assert.equal(PACKAGE_README_CONTRACTS.length, 5)
   assert.ok(PACKAGE_README_CONTRACTS.every((contract) => Object.isFrozen(contract)))
   assert.deepEqual(
-    PACKAGE_README_CONTRACTS.map(({ packageName, path, guideUrl, apiUrl, migrationUrl }) => ({
+    PACKAGE_README_CONTRACTS.map(({ packageName, path, guideUrl, apiUrl }) => ({
       packageName,
       path,
       guideUrl,
       apiUrl,
-      migrationUrl,
     })),
     [
       {
@@ -85,42 +84,30 @@ test('shares one frozen six-package README contract and derives tracked docs rou
         path: 'packages/core/README.md',
         guideUrl: 'https://glucoseiq.dev/docs/core-concepts',
         apiUrl: 'https://glucoseiq.dev/docs/api/core',
-        migrationUrl: 'https://glucoseiq.dev/docs/migration',
       },
       {
         packageName: '@glucoseiq/react',
         path: 'packages/react/README.md',
         guideUrl: 'https://glucoseiq.dev/docs/react',
         apiUrl: 'https://glucoseiq.dev/docs/api',
-        migrationUrl: 'https://glucoseiq.dev/docs/migration',
       },
       {
         packageName: '@glucoseiq/tokens',
         path: 'packages/tokens/README.md',
         guideUrl: 'https://glucoseiq.dev/docs/tokens',
         apiUrl: 'https://glucoseiq.dev/docs/api',
-        migrationUrl: 'https://glucoseiq.dev/docs/migration',
       },
       {
         packageName: '@glucoseiq/testing',
         path: 'packages/testing/README.md',
         guideUrl: 'https://glucoseiq.dev/docs/testing',
         apiUrl: 'https://glucoseiq.dev/docs/api',
-        migrationUrl: 'https://glucoseiq.dev/docs/migration',
       },
       {
         packageName: '@glucoseiq/cli',
         path: 'packages/cli/README.md',
         guideUrl: 'https://glucoseiq.dev/docs/cli',
         apiUrl: 'https://glucoseiq.dev/docs/api',
-        migrationUrl: 'https://glucoseiq.dev/docs/migration',
-      },
-      {
-        packageName: 'diabetic-utils',
-        path: 'packages/diabetic-utils/README.md',
-        guideUrl: 'https://glucoseiq.dev/docs/migration',
-        apiUrl: 'https://glucoseiq.dev/docs/api/core',
-        migrationUrl: 'https://glucoseiq.dev/docs/migration',
       },
     ]
   )
@@ -400,7 +387,6 @@ test('requires every packed README contract and accepts a complete one', () => {
     packageName: '@glucoseiq/example',
     guideUrl: 'https://glucoseiq.dev/docs/example',
     apiUrl: 'https://glucoseiq.dev/docs/api',
-    migrationUrl: 'https://glucoseiq.dev/docs/migration',
   }
   const incomplete = validateReadmeContract({ ...base, text: '# Example' })
   assert.deepEqual(codes(incomplete), [
@@ -412,7 +398,6 @@ test('requires every packed README contract and accepts a complete one', () => {
     'readme-safety',
     'readme-guide-link',
     'readme-api-link',
-    'readme-migration-link',
     'readme-license-link',
     'readme-changelog-link',
   ])
@@ -444,7 +429,7 @@ Invalid input throws a typed error.
 
 Output is informational and bounded.
 
-[Guide](https://glucoseiq.dev/docs/example) · [API](https://glucoseiq.dev/docs/api) · [Migration](https://glucoseiq.dev/docs/migration) · [License](https://github.com/marklearst/glucoseiq/blob/main/LICENSE) · [Changelog](https://github.com/marklearst/glucoseiq/blob/main/CHANGELOG.md)
+[Guide](https://glucoseiq.dev/docs/example) · [API](https://glucoseiq.dev/docs/api) · [License](https://github.com/marklearst/glucoseiq/blob/main/LICENSE) · [Changelog](https://github.com/marklearst/glucoseiq/blob/main/CHANGELOG.md)
 `
   assert.deepEqual(validateReadmeContract({ ...base, text: complete }), [])
   assert.ok(
@@ -485,7 +470,7 @@ Invalid input is rejected.
 
 The package has explicit limits.
 
-[Guide](${guideUrl}) [API](${apiUrl}) [Migration](https://glucoseiq.dev/docs/migration) [License](https://github.com/marklearst/glucoseiq/blob/main/LICENSE) [Changelog](https://github.com/marklearst/glucoseiq/blob/main/CHANGELOG.md)
+[Guide](${guideUrl}) [API](${apiUrl}) [License](https://github.com/marklearst/glucoseiq/blob/main/LICENSE) [Changelog](https://github.com/marklearst/glucoseiq/blob/main/CHANGELOG.md)
 `
   }
 
@@ -547,12 +532,6 @@ The package has explicit limits.
         'readme-cli-svg-json',
       ],
     },
-    {
-      packageName: 'diabetic-utils',
-      guideUrl: 'https://glucoseiq.dev/docs/migration',
-      apiUrl: 'https://glucoseiq.dev/docs/api/core',
-      expected: ['readme-compat-legacy', 'readme-compat-scoped'],
-    },
   ]
 
   for (const fixture of fixtures) {
@@ -561,7 +540,6 @@ The package has explicit limits.
       packageName: fixture.packageName,
       guideUrl: fixture.guideUrl,
       apiUrl: fixture.apiUrl,
-      migrationUrl: 'https://glucoseiq.dev/docs/migration',
       text: genericReadme(
         fixture.packageName,
         fixture.guideUrl,
@@ -571,9 +549,7 @@ The package has explicit limits.
     assert.deepEqual(
       codes(diagnostics).filter((code) =>
         code.startsWith(
-          fixture.packageName === 'diabetic-utils'
-            ? 'readme-compat-'
-            : `readme-${fixture.packageName.split('/').at(-1)}-`
+          `readme-${fixture.packageName.split('/').at(-1)}-`
         )
       ),
       fixture.expected,
@@ -632,11 +608,6 @@ NUL, CR, and LF.
 Success and help return exit code 0; errors return 1. JSON is
 { report, glucoseIQ }; non-finite numbers serialize as null. With --json and
 --agp-svg, stdout remains one JSON document and suppresses the SVG success line.
-`,
-    'diabetic-utils': `
-Version 1.5 remains available through the legacy dist-tag. New projects should
-install @glucoseiq/core; follow the scoped-package migration guide before
-moving from diabetic-utils 2.
 `,
   }
   const mutations = {
@@ -702,10 +673,6 @@ moving from diabetic-utils 2.
       ['non-finite numbers serialize as null', 'readme-cli-json'],
       ['suppresses the SVG success line', 'readme-cli-svg-json'],
     ],
-    'diabetic-utils': [
-      ['legacy dist-tag', 'readme-compat-legacy'],
-      ['@glucoseiq/core', 'readme-compat-scoped'],
-    ],
   }
 
   for (const fixture of fixtures) {
@@ -714,7 +681,6 @@ moving from diabetic-utils 2.
       packageName: fixture.packageName,
       guideUrl: fixture.guideUrl,
       apiUrl: fixture.apiUrl,
-      migrationUrl: 'https://glucoseiq.dev/docs/migration',
     }
     const complete = `${genericReadme(
       fixture.packageName,
@@ -1207,7 +1173,6 @@ export * from '@glucoseiq/testing'
 import '@glucoseiq/core/render'
 const dynamicValue = import('@glucoseiq/tokens')
 type Render = import('@glucoseiq/core/render').AGPChartOptions
-const legacy = require('diabetic-utils')
 import cliModule = require('@glucoseiq/cli')
 import { run as execute } from '@glucoseiq/cli'
 execute([], { out() {}, err() {} })
@@ -1219,7 +1184,6 @@ execute([], { out() {}, err() {} })
       '@glucoseiq/testing',
       '@glucoseiq/tokens',
       '@glucoseiq/cli',
-      'diabetic-utils',
     ]),
   })
   assert.deepEqual(result.specifiers, [
@@ -1228,7 +1192,6 @@ execute([], { out() {}, err() {} })
     '@glucoseiq/core/render',
     '@glucoseiq/testing',
     '@glucoseiq/tokens',
-    'diabetic-utils',
   ])
   assert.ok(
     result.imports.some(

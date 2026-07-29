@@ -5,8 +5,7 @@ package normalizes readings, calculates metrics, and returns render data or SVG
 for your UI. Companion packages add React bindings, design tokens, fixed-seed
 test fixtures, and a command-line interface.
 
-GlucoseIQ 1.0 moves the project into the `@glucoseiq` package scope.
-`diabetic-utils` 2.0 is the compatibility bridge for existing 1.5.x imports.
+GlucoseIQ 1.0 publishes packages in the `@glucoseiq` scope.
 
 > GlucoseIQ is for informational, educational, and software-development use.
 > It is not medical advice and is not a medical device.
@@ -20,7 +19,6 @@ GlucoseIQ 1.0 moves the project into the `@glucoseiq` package scope.
 | [`@glucoseiq/tokens`](https://www.npmjs.com/package/@glucoseiq/tokens) | Shared glucose-zone colors, thresholds, trend glyphs, and CSS custom properties. |
 | [`@glucoseiq/testing`](https://www.npmjs.com/package/@glucoseiq/testing) | Fixed-seed synthetic CGM-shaped data and scenario fixtures for tests and demos. |
 | [`@glucoseiq/cli`](https://www.npmjs.com/package/@glucoseiq/cli) | The `glucoseiq` executable for analyzing mapped CSV input. |
-| [`diabetic-utils`](https://www.npmjs.com/package/diabetic-utils) | Compatibility bridge from the legacy package to `@glucoseiq/core`. |
 
 All published packages require Node.js `>=24`. `@glucoseiq/react` keeps React
 `>=18` as its peer range.
@@ -117,22 +115,6 @@ composition example.
 Package-specific options, defaults, invalid-input behavior, and safety limits
 are documented in the [GlucoseIQ guides](https://glucoseiq.dev/docs) and
 [API reference](https://glucoseiq.dev/docs/api).
-
-## Migration
-
-Existing projects can install `diabetic-utils@2` while keeping their package
-imports. New projects should use the scoped packages directly.
-
-```ts typecheck
-import { mgDlToMmolL } from 'diabetic-utils'
-
-const mmolL = mgDlToMmolL(180)
-void mmolL
-```
-
-Read the [migration guide](https://glucoseiq.dev/docs/migration) for runtime,
-type-declaration, and package-boundary changes. The published 1.5.x line remains
-available through the `legacy` npm dist-tag.
 
 ## Development
 

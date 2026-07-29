@@ -18,13 +18,12 @@ const packageDirectories = new Map([
   ['@glucoseiq/tokens', 'packages/tokens'],
   ['@glucoseiq/testing', 'packages/testing'],
   ['@glucoseiq/cli', 'packages/cli'],
-  ['diabetic-utils', 'packages/diabetic-utils'],
 ])
 const baselineVersions = new Map(
-  [...packageDirectories].map(([name]) => [name, name === 'diabetic-utils' ? '1.5.0' : '0.0.0']),
+  [...packageDirectories].map(([name]) => [name, '0.0.0']),
 )
 const launchVersions = new Map(
-  [...packageDirectories].map(([name]) => [name, name === 'diabetic-utils' ? '2.0.0' : '1.0.0']),
+  [...packageDirectories].map(([name]) => [name, '1.0.0']),
 )
 const currentVersions = new Map(
   [...packageDirectories].map(([name, directory]) => {
@@ -39,7 +38,6 @@ const expectedReleases = [
   ['@glucoseiq/react', '0.0.0', '1.0.0', 'major'],
   ['@glucoseiq/testing', '0.0.0', '1.0.0', 'major'],
   ['@glucoseiq/tokens', '0.0.0', '1.0.0', 'major'],
-  ['diabetic-utils', '1.5.0', '2.0.0', 'major'],
 ]
 
 if (!hasLaunchChangeset) {
@@ -68,9 +66,9 @@ if (!hasLaunchChangeset) {
       allLaunchVersionsPublic: publicLaunchStatus.allPublic,
     })
     if (policy === 'release') {
-      console.log('Launch changeset has been consumed and all six release versions are correct.')
+      console.log('Launch changeset has been consumed and all five release versions are correct.')
     } else {
-      console.log('All six launch versions are public and current package versions satisfy stable release floors.')
+      console.log('All five launch versions are public and current package versions satisfy stable release floors.')
     }
   } catch (error) {
     const missing = publicLaunchStatus.missing.length
@@ -116,7 +114,7 @@ try {
   assert.deepEqual(releases, expectedReleases)
   assert.equal(status.changesets.length, 1, 'the launch must use one coordinated bootstrap changeset')
   assert.equal(status.changesets[0].id, 'launch-glucoseiq-one')
-  console.log('Launch changeset predicts five scoped 1.0.0 packages and diabetic-utils 2.0.0.')
+  console.log('Launch changeset predicts five scoped 1.0.0 packages.')
 } finally {
   rmSync(temporaryRoot, { recursive: true, force: true })
 }
