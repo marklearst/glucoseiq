@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   package to `@glucoseiq/core` while preserving existing root imports.
 - Moved development, documentation, and releases to the
   [GlucoseIQ repository](https://github.com/marklearst/glucoseiq).
+- Updated `estimateGMI` and `GMI_COEFFICIENTS` to use the published mean-CGM
+  equation and normalize mmol/L inputs before calculation. Equivalent values
+  such as 100 mg/dL and 5.5 mmol/L now both return 5.7%, instead of 5.4% and
+  12.1%.
+- Deprecated `a1cToGMI`. It remains available for source compatibility and now
+  maps A1C through estimated average glucose, so `a1cToGMI(7)` returns 7.0
+  instead of 3.48. This compatibility transform is not a CGM-derived GMI.
+  It and `estimateEAG` now reject non-positive or non-finite A1C input.
 
 ### Fixed
 

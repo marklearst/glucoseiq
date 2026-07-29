@@ -45,8 +45,29 @@ npm install diabetic-utils@legacy
 
 ## Behavior changes in 1.0
 
-Conversion and metric formulas keep their 1.5.x numeric behavior except for the
-changes documented below.
+Several formulas and validation rules change in this major release. Review the
+sections below before comparing stored results or snapshot output.
+
+### GMI calculations
+
+`estimateGMI` now uses the published equation for mean CGM glucose:
+`3.31 + 0.02392 × mean mg/dL`. Values supplied in mmol/L are converted to
+mg/dL before the equation is applied, so equivalent concentrations return the
+same result. The public `GMI_COEFFICIENTS` values now match that equation.
+`A1C_SLOPE` and `A1C_INTERCEPT` remain as deprecated aliases for the mg/dL
+coefficients; they are not A1C-to-GMI coefficients.
+
+| Call | diabetic-utils 1.5.x | GlucoseIQ 1.0 and diabetic-utils 2.0 |
+| --- | ---: | ---: |
+| `estimateGMI(100, 'mg/dL')` | 5.4% | 5.7% |
+| `estimateGMI(5.5, 'mmol/L')` | 12.1% | 5.7% |
+| `a1cToGMI(7)` | 3.48 | 7.0 |
+
+`a1cToGMI` remains available for source compatibility, but it is deprecated.
+It now maps laboratory A1C through estimated average glucose before applying
+the GMI equation. That result is a compatibility transform, not a CGM-derived
+GMI. It and `estimateEAG` now reject non-positive or non-finite A1C input. New
+code should call `estimateGMI` with measured mean CGM glucose.
 
 ### Enhanced and pregnancy Time in Range
 

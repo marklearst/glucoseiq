@@ -2,9 +2,10 @@
 
 ## Status
 
-Approved homepage redesign: Signal Passage changes the signal figure and
-scroll motion. Package APIs, release behavior, and the hero mark stay
-unchanged.
+**Superseded.** This document records the earlier Signal Passage prototype.
+The homepage now uses `glucose-report-suite.tsx`,
+`glucose-report.module.css`, `report-entrance.tsx`, and `report-motion.ts` to
+present four report views without a sticky scroll chapter.
 
 ## Goal
 

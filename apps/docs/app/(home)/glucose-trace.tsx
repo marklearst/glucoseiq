@@ -1,6 +1,6 @@
 import type { GlucoseTraceGeometry } from '@/lib/glucose-profile'
 import { useId, type JSX } from 'react'
-import styles from './glucose-signal.module.css'
+import styles from './glucose-report.module.css'
 
 const THRESHOLDS = [180, 70] as const
 
@@ -20,7 +20,7 @@ export function GlucoseTrace({
   const transitionWidth = 1.5
 
   return (
-    <div className={styles.trace}>
+    <div className={styles.traceChart}>
       <div className={styles.tracePlot}>
         <svg
           aria-labelledby={`${titleId} ${descriptionId}`}
@@ -37,8 +37,7 @@ export function GlucoseTrace({
             Latest 24 hours from a synthetic 14-day glucose report. The
             observed range is {geometry.observedRange.min} to{' '}
             {geometry.observedRange.max} milligrams per deciliter. The target
-            range is 70 to 180 milligrams per deciliter. Three high excursions
-            rise above the target range. The latest reading is{' '}
+            range is 70 to 180 milligrams per deciliter. The latest reading is{' '}
             {geometry.latest.value} milligrams per deciliter. Synthetic data;
             not clinically representative.
           </desc>
@@ -192,6 +191,16 @@ export function GlucoseTrace({
             </g>
           </g>
         </svg>
+        <span
+          aria-hidden="true"
+          className={styles.traceLatestLabel}
+          data-motion-part="latest-label"
+          style={{
+            top: `${(geometry.latest.y / geometry.height) * 100}%`,
+          }}
+        >
+          Now · {geometry.latest.value}
+        </span>
       </div>
       <div aria-hidden="true" className={styles.traceTimeAxis}>
         {geometry.timeLabels.map(({ label, minor }, index) => (

@@ -35,14 +35,14 @@ export function estimateAvgGlucoseFromA1C(a1c: number): number {
 
 /**
  * Estimates eAG (estimated average glucose, mg/dL) from an A1C value and
- * rejects negative input.
+ * rejects non-positive or non-finite input.
  * @param a1c - A1C value (percentage)
  * @returns Estimated average glucose (mg/dL)
- * @throws {DomainError} If a1c is negative
+ * @throws {DomainError} If a1c is not a positive finite number
  * @see https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html
  */
 export function estimateEAG(a1c: number): number {
-  if (a1c < 0)
+  if (!Number.isFinite(a1c) || a1c <= 0)
     throw new DomainError('A1C must be positive', 'INVALID_A1C_VALUE')
   const eAG = Number(
     (a1c * A1C_TO_EAG_MULTIPLIER - A1C_TO_EAG_CONSTANT).toFixed(10)
@@ -67,28 +67,32 @@ export function estimateA1CFromAverage(
 }
 
 /**
- * Converts A1C to Glucose Management Indicator (GMI).
- * @param a1c - A1C value
- * @returns GMI value
- * @see https://diatribe.org/glucose-management-indicator-gmi
+ * Maps a laboratory A1C value through estimated average glucose before
+ * applying the GMI equation.
+ *
+ * This legacy compatibility result is not a CGM-derived GMI. GMI is defined
+ * from mean CGM glucose, not from laboratory A1C. Use {@link estimateGMI} with
+ * measured mean CGM glucose for new work.
+ *
+ * @param a1c - Laboratory A1C value
+ * @returns Legacy compatibility result derived through eAG
+ * @throws {DomainError} If A1C is not a positive finite number
+ * @deprecated Use {@link estimateGMI} with mean CGM glucose.
  */
 export function a1cToGMI(a1c: number): number {
-  return +(
-    GMI_COEFFICIENTS.A1C_INTERCEPT +
-    GMI_COEFFICIENTS.A1C_SLOPE * a1c
-  ).toFixed(2)
+  return estimateGMI(estimateEAG(a1c), MG_DL)
 }
 
 /**
- * Estimate Glucose Management Indicator (GMI) from average glucose.
- * @param valueOrOptions - Glucose value, string, or options object
+ * Estimates Glucose Management Indicator (GMI) from mean CGM glucose.
+ * @param valueOrOptions - Mean CGM glucose value, string, or options object
  * @param unit - Glucose unit (if value is a number)
- * @returns GMI value
+ * @returns GMI percentage rounded to one decimal place
  * @throws {DomainError} If unit is required but not provided when input is a number.
  * @throws {DomainError} If the glucose unit is unsupported.
  * @throws {DomainError} If the glucose value is not a positive number.
  * @throws {ParseError} If a string input cannot be parsed.
- * @see https://diatribe.org/glucose-management-indicator-gmi
+ * @see https://doi.org/10.2337/dc18-1581
  */
 export function estimateGMI(
   valueOrOptions: number | string | EstimateGMIOptions,
@@ -128,10 +132,11 @@ export function estimateGMI(
     )
   }
 
+  const meanMgDl =
+    resolvedUnit === MMOL_L ? value * MGDL_MMOLL_CONVERSION : value
   const gmi =
-    resolvedUnit === MMOL_L
-      ? GMI_COEFFICIENTS.MMOL_L_SLOPE * value + GMI_COEFFICIENTS.MMOL_L_INTERCEPT
-      : GMI_COEFFICIENTS.MG_DL_SLOPE * value + GMI_COEFFICIENTS.MG_DL_INTERCEPT
+    GMI_COEFFICIENTS.MG_DL_SLOPE * meanMgDl +
+    GMI_COEFFICIENTS.MG_DL_INTERCEPT
 
   return parseFloat(gmi.toFixed(1))
 }
