@@ -14,6 +14,8 @@ import type { GlucoseReading, GlucoseUnit } from '@glucoseiq/core'
 const MGDL_PER_MMOLL = 18.0182
 
 const MAX_GENERATED_READINGS = 100_000
+const MAX_GENERATED_MEAL_RESPONSES = 100_000
+const NOISE_STREAM_SALT = 0x9e3779b9
 
 /** Options for {@link generateCGMSeries}. */
 export interface GenerateOptions {
@@ -29,11 +31,11 @@ export interface GenerateOptions {
   readonly basal?: number
   /** Meal times as minute-of-day (default 07:00, 13:00, 19:00). */
   readonly mealTimes?: readonly number[]
-  /** Peak meal excursion amplitude in mg/dL (default 70). */
+  /** Nominal peak meal excursion amplitude in mg/dL (default 70). */
   readonly mealAmplitude?: number
-  /** Noise amplitude in mg/dL (default 8). */
+  /** Maximum correlated sensor variation in mg/dL (default 8). */
   readonly noise?: number
-  /** Zero-based day indices that get a 02:00–04:00 hypo dip (default none). */
+  /** Zero-based day indices that get a smooth 02:00–04:00 hypo dip (default none). */
   readonly nocturnalHypoDays?: readonly number[]
   /** Output unit (default 'mg/dL'). */
   readonly unit?: GlucoseUnit
@@ -49,6 +51,56 @@ function mulberry32(seed: number): () => number {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
+}
+
+interface MealResponse {
+  readonly startMinute: number
+  readonly amplitude: number
+  readonly timeToPeak: number
+  readonly recovery: number
+}
+
+interface DayProfile {
+  readonly shift: number
+  readonly meals: readonly MealResponse[]
+}
+
+/** Builds one day without retaining profiles for the full series. @internal */
+function createDayProfile(
+  rand: () => number,
+  day: number,
+  mealTimes: readonly number[],
+  mealAmplitude: number
+): DayProfile {
+  return {
+    shift: (rand() - 0.5) * 12,
+    meals: mealTimes.map((mealTime) => ({
+      startMinute: day * 1440 + mealTime - 15 + rand() * 40,
+      amplitude: mealAmplitude * (0.65 + rand() * 0.6),
+      timeToPeak: 40 + rand() * 50,
+      recovery: 120 + rand() * 90,
+    })),
+  }
+}
+
+/** Smooth interpolation with zero slope at both ends. @internal */
+function smootherstep(progress: number): number {
+  return progress ** 3 * (progress * (progress * 6 - 15) + 10)
+}
+
+/** Contribution from one seeded meal response. @internal */
+function mealContribution(meal: MealResponse, minute: number): number {
+  const elapsed = minute - meal.startMinute
+  if (elapsed <= 0 || elapsed >= meal.timeToPeak + meal.recovery) return 0
+
+  if (elapsed < meal.timeToPeak) {
+    return meal.amplitude * smootherstep(elapsed / meal.timeToPeak)
+  }
+
+  return (
+    meal.amplitude *
+    (1 - smootherstep((elapsed - meal.timeToPeak) / meal.recovery))
+  )
 }
 
 /**
@@ -149,33 +201,64 @@ export function generateCGMSeries(options?: GenerateOptions): GlucoseReading[] {
       `generateCGMSeries cannot create more than ${MAX_GENERATED_READINGS} readings`
     )
   }
+  const totalMealResponses = (days + 1) * mealTimes.length
+  if (
+    !Number.isSafeInteger(totalMealResponses) ||
+    totalMealResponses > MAX_GENERATED_MEAL_RESPONSES
+  ) {
+    throw new RangeError(
+      `generateCGMSeries cannot model more than ${MAX_GENERATED_MEAL_RESPONSES} meal responses`
+    )
+  }
   const lastMinute = (days - 1) * 1440 + (perDay - 1) * intervalMin
   const lastTimestampMs = startMs + lastMinute * 60000
   if (!Number.isFinite(lastTimestampMs) || Number.isNaN(new Date(lastTimestampMs).getTime())) {
     throw new RangeError('start must be a valid timestamp')
   }
 
+  const profileRand = mulberry32(seed)
+  const noiseRand = mulberry32(seed ^ NOISE_STREAM_SALT)
+
+  let previousProfile: DayProfile | undefined
+  let profile = createDayProfile(profileRand, 0, mealTimes, mealAmplitude)
+  let nextProfile = createDayProfile(profileRand, 1, mealTimes, mealAmplitude)
   const hypoDays = new Set(nocturnalHypoDays)
-  const rand = mulberry32(seed)
+  const noiseCorrelation = Math.exp(-intervalMin / 30)
+  let sensorVariation = (noiseRand() * 2 - 1) * noise
   const readings: GlucoseReading[] = []
 
   for (let d = 0; d < days; d++) {
-    // Per-day personality: slight basal drift + meal-size variation.
-    const dayShift = (rand() - 0.5) * 12
-    const mealScale = 0.8 + rand() * 0.5
-
     for (let i = 0; i < perDay; i++) {
       const min = i * intervalMin
+      const absoluteMinute = d * 1440 + min
       const circadian = 16 * Math.sin((2 * Math.PI * (min - 300)) / 1440)
-      const meals = mealTimes.reduce((sum, t) => {
-        const dt = min - t
-        if (dt < 0 || dt >= 210) return sum
-        return sum + mealAmplitude * mealScale * Math.exp(-dt / 70) * Math.min(1, dt / 25)
-      }, 0)
-      const jitter = (rand() - 0.5) * 2 * noise
-      const hypo = hypoDays.has(d) && min >= 120 && min <= 240 ? -55 : 0
+      let meals = previousProfile?.meals.reduce(
+        (sum, meal) => sum + mealContribution(meal, absoluteMinute),
+        0
+      ) ?? 0
+      meals += profile.meals.reduce(
+        (sum, meal) => sum + mealContribution(meal, absoluteMinute),
+        0
+      )
+      meals += nextProfile.meals.reduce(
+        (sum, meal) => sum + mealContribution(meal, absoluteMinute),
+        0
+      )
 
-      let mgdl = basal + dayShift + circadian + meals + jitter + hypo
+      const noiseTarget = (noiseRand() * 2 - 1) * noise
+      sensorVariation =
+        noiseCorrelation * sensorVariation + (1 - noiseCorrelation) * noiseTarget
+
+      const hypoProgress = (min - 120) / 120
+      const hypo =
+        hypoDays.has(d) && hypoProgress >= 0 && hypoProgress <= 1
+          ? -55 * Math.sin(Math.PI * hypoProgress) ** 2
+          : 0
+
+      const shiftProgress = smootherstep(min / 1440)
+      const basalShift =
+        profile.shift + (nextProfile.shift - profile.shift) * shiftProgress
+      let mgdl = basal + basalShift + circadian + meals + sensorVariation + hypo
       mgdl = Math.max(40, Math.min(400, mgdl))
       const value =
         unit === 'mg/dL'
@@ -187,6 +270,12 @@ export function generateCGMSeries(options?: GenerateOptions): GlucoseReading[] {
         unit,
         timestamp: new Date(startMs + (d * 1440 + min) * 60000).toISOString(),
       })
+    }
+
+    if (d + 1 < days) {
+      previousProfile = profile
+      profile = nextProfile
+      nextProfile = createDayProfile(profileRand, d + 2, mealTimes, mealAmplitude)
     }
   }
   return readings

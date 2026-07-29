@@ -33,15 +33,22 @@ Calculates the change (delta) between two A1C values.
 a1cToGMI(a1c: number): number
 ```
 
-Converts A1C to Glucose Management Indicator (GMI).
+Maps a laboratory A1C value through estimated average glucose before
+applying the GMI equation.
 
-**Returns:** GMI value
+This legacy compatibility result is not a CGM-derived GMI. GMI is defined
+from mean CGM glucose, not from laboratory A1C. Use [estimateGMI](/docs/api/core/conversions#estimategmi) with
+measured mean CGM glucose for new work.
 
-**See:** [https://diatribe.org/glucose-management-indicator-gmi](https://diatribe.org/glucose-management-indicator-gmi)
+**Returns:** Legacy compatibility result derived through eAG
+
+**Throws:** If A1C is not a positive finite number
+
+**Deprecated:** Use [estimateGMI](/docs/api/core/conversions#estimategmi) with mean CGM glucose.
 
 | Parameter | Description |
 | --- | --- |
-| `a1c` | A1C value |
+| `a1c` | Laboratory A1C value |
 
 
 ---
@@ -163,11 +170,11 @@ estimateEAG(a1c: number): number
 ```
 
 Estimates eAG (estimated average glucose, mg/dL) from an A1C value and
-rejects negative input.
+rejects non-positive or non-finite input.
 
 **Returns:** Estimated average glucose (mg/dL)
 
-**Throws:** If a1c is negative
+**Throws:** If a1c is not a positive finite number
 
 **See:** [https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html](https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html)
 
@@ -186,9 +193,9 @@ rejects negative input.
 estimateGMI(valueOrOptions: string | number | EstimateGMIOptions, unit?: GlucoseUnit): number
 ```
 
-Estimate Glucose Management Indicator (GMI) from average glucose.
+Estimates Glucose Management Indicator (GMI) from mean CGM glucose.
 
-**Returns:** GMI value
+**Returns:** GMI percentage rounded to one decimal place
 
 **Throws:** If unit is required but not provided when input is a number.
 
@@ -198,11 +205,11 @@ Estimate Glucose Management Indicator (GMI) from average glucose.
 
 **Throws:** If a string input cannot be parsed.
 
-**See:** [https://diatribe.org/glucose-management-indicator-gmi](https://diatribe.org/glucose-management-indicator-gmi)
+**See:** [https://doi.org/10.2337/dc18-1581](https://doi.org/10.2337/dc18-1581)
 
 | Parameter | Description |
 | --- | --- |
-| `valueOrOptions` | Glucose value, string, or options object |
+| `valueOrOptions` | Mean CGM glucose value, string, or options object |
 | `unit` | Glucose unit (if value is a number) |
 
 

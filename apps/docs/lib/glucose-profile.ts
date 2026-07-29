@@ -3,9 +3,12 @@ import {
   MGDL_MMOLL_CONVERSION,
   type GlucoseReading,
 } from '@glucoseiq/core'
+import type { AGPProfileResult } from '@glucoseiq/core/metrics'
 
 const MILLISECONDS_PER_DAY = 86_400_000
 const MAX_TRACE_GAP_MS = 15 * 60_000
+export const GMI_DIAL_START_DEGREES = 140
+export const GMI_DIAL_SWEEP_DEGREES = 260
 
 interface GlucoseTraceGeometryOptions {
   readonly readings: readonly GlucoseReading[]
@@ -21,7 +24,50 @@ interface Point {
   readonly y: number
 }
 
+interface DailyProfileGeometryOptions {
+  readonly profile: AGPProfileResult
+  readonly width: number
+  readonly height: number
+  readonly yMin: number
+  readonly yMax: number
+}
+
+interface GMIDialGeometryOptions {
+  readonly value: number
+  readonly min: number
+  readonly max: number
+}
+
 export type GlucoseTraceZone = 'low' | 'in-range' | 'high'
+
+export interface DailyProfileColumn {
+  readonly minuteOfDay: number
+  readonly x: number
+  readonly stemTop: number
+  readonly stemBottom: number
+  readonly capsuleTop: number
+  readonly capsuleBottom: number
+  readonly medianY: number
+}
+
+export interface DailyProfileGeometry {
+  readonly width: number
+  readonly height: number
+  readonly columns: readonly DailyProfileColumn[]
+  readonly target: {
+    readonly lowY: number
+    readonly highY: number
+  }
+  readonly timeLabels: readonly {
+    readonly label: string
+    readonly x: number
+  }[]
+}
+
+export interface GMIDialGeometry {
+  readonly ratio: number
+  readonly arcPercent: number
+}
 
 export interface GlucoseTraceGeometry {
   readonly width: number
@@ -66,6 +112,10 @@ function zoneForMgDl(value: number): GlucoseTraceZone {
 
 function roundToTenth(value: number): number {
   return Math.round(value * 10) / 10
+}
+
+function roundToFour(value: number): number {
+  return Math.round(value * 10_000) / 10_000
 }
 
 function roundedHourLabel(milliseconds: number, timeZone: string): string {
@@ -132,8 +182,20 @@ function smoothTracePath(
     const next = points[index + 1]!
     return next.x - point.x
   })
-  if (steps.some((step) => !Number.isFinite(step) || step <= 0)) {
+  const direction = Math.sign(steps[0]!)
+  if (
+    direction === 0 ||
+    steps.some(
+      (step) => !Number.isFinite(step) || Math.sign(step) !== direction,
+    )
+  ) {
     return straightPath()
+  }
+  if (direction < 0) {
+    return smoothTracePath(
+      points.map((point) => ({ x: -point.x, y: point.y })),
+      (x, y) => serializePoint(-x, y),
+    )
   }
 
   const slopes = steps.map((step, index) => {
@@ -215,6 +277,94 @@ function smoothTracePath(
   }
 
   return commands.join(' ')
+}
+
+export function createGMIDialGeometry({
+  value,
+  min,
+  max,
+}: GMIDialGeometryOptions): GMIDialGeometry {
+  if (
+    ![value, min, max].every(Number.isFinite) ||
+    max <= min
+  ) {
+    throw new RangeError(
+      'GMI dial geometry requires finite values and max > min',
+    )
+  }
+
+  const ratio = Math.min(1, Math.max(0, (value - min) / (max - min)))
+
+  return {
+    ratio: roundToFour(ratio),
+    arcPercent: roundToFour(ratio * 100),
+  }
+}
+
+export function createDailyProfileGeometry({
+  profile,
+  width,
+  height,
+  yMin,
+  yMax,
+}: DailyProfileGeometryOptions): DailyProfileGeometry {
+  if (
+    !profile.valid ||
+    profile.binMinutes !== 120 ||
+    profile.bins.length !== 12 ||
+    ![width, height, yMin, yMax].every(Number.isFinite) ||
+    width <= 0 ||
+    height <= 0 ||
+    yMax <= yMin
+  ) {
+    throw new RangeError(
+      'Daily profile geometry requires twelve valid two-hour bins, positive dimensions, and yMax > yMin',
+    )
+  }
+
+  const yForMgDl = (value: number): number => {
+    const clamped = Math.min(yMax, Math.max(yMin, value))
+    return ((yMax - clamped) / (yMax - yMin)) * height
+  }
+  const profileValue = (binIndex: number, percentile: number): number => {
+    const bin = profile.bins[binIndex]
+    if (bin === undefined || bin.n === 0) {
+      throw new TypeError(`Missing daily profile bin ${binIndex + 1}`)
+    }
+    const value = bin.percentiles[percentile]
+    if (value === null || value === undefined) {
+      throw new TypeError(`Missing p${percentile} profile value`)
+    }
+    return profile.unit === 'mg/dL'
+      ? value
+      : value * MGDL_MMOLL_CONVERSION
+  }
+  const columns = profile.bins.map((bin, index) => ({
+    minuteOfDay: bin.minuteOfDay,
+    x: roundToFour(((index + 0.5) / profile.bins.length) * width),
+    stemTop: roundToFour(yForMgDl(profileValue(index, 95))),
+    stemBottom: roundToFour(yForMgDl(profileValue(index, 5))),
+    capsuleTop: roundToFour(yForMgDl(profileValue(index, 75))),
+    capsuleBottom: roundToFour(yForMgDl(profileValue(index, 25))),
+    medianY: roundToFour(yForMgDl(profileValue(index, 50))),
+  }))
+
+  return {
+    width,
+    height,
+    columns,
+    target: {
+      lowY: roundToFour(yForMgDl(70)),
+      highY: roundToFour(yForMgDl(180)),
+    },
+    timeLabels: [
+      { label: '12 AM', x: 0 },
+      { label: '6 AM', x: width / 4 },
+      { label: '12 PM', x: width / 2 },
+      { label: '6 PM', x: (width * 3) / 4 },
+      { label: '12 AM', x: width },
+    ],
+  }
 }
 
 export function createGlucoseTraceGeometry({

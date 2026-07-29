@@ -4,6 +4,19 @@ import type { GenerateOptions } from '../src'
 
 class NonPlainOptions {}
 
+const completeOptions = {
+  days: 2,
+  intervalMin: 5,
+  seed: 7,
+  start: '2025-06-01T00:00:00Z',
+  basal: 108,
+  mealTimes: [420, 780, 1140],
+  mealAmplitude: 72,
+  noise: 9,
+  nocturnalHypoDays: [1],
+  unit: 'mg/dL',
+} as const satisfies Required<GenerateOptions>
+
 function expectOptionRangeError(options: GenerateOptions, message: string): void {
   let thrown: unknown
   try {
@@ -16,11 +29,57 @@ function expectOptionRangeError(options: GenerateOptions, message: string): void
   expect(thrown).toMatchObject({ message })
 }
 
+function mealExcursion(seed: number): number[] {
+  const options = {
+    days: 1,
+    intervalMin: 1,
+    seed,
+    start: '2025-06-01T00:00:00Z',
+    basal: 110,
+    mealTimes: [720],
+    mealAmplitude: 100,
+    noise: 0,
+    nocturnalHypoDays: [],
+    unit: 'mg/dL',
+  } as const satisfies Required<GenerateOptions>
+  const withMeal = generateCGMSeries(options)
+  const withoutMeal = generateCGMSeries({ ...options, mealAmplitude: 0 })
+
+  return withMeal.map((reading, index) => reading.value - withoutMeal[index].value)
+}
+
+function lagOneCorrelation(values: readonly number[]): number {
+  const left = values.slice(0, -1)
+  const right = values.slice(1)
+  const leftMean = left.reduce((sum, value) => sum + value, 0) / left.length
+  const rightMean = right.reduce((sum, value) => sum + value, 0) / right.length
+  let covariance = 0
+  let leftVariance = 0
+  let rightVariance = 0
+
+  for (let index = 0; index < left.length; index++) {
+    const leftDelta = left[index] - leftMean
+    const rightDelta = right[index] - rightMean
+    covariance += leftDelta * rightDelta
+    leftVariance += leftDelta ** 2
+    rightVariance += rightDelta ** 2
+  }
+
+  return covariance / Math.sqrt(leftVariance * rightVariance)
+}
+
 describe('generateCGMSeries', () => {
-  it('is deterministic for the same seed', () => {
-    const a = generateCGMSeries({ seed: 7 })
-    const b = generateCGMSeries({ seed: 7 })
+  it('is deterministic for identical complete options', () => {
+    const a = generateCGMSeries(completeOptions)
+    const b = generateCGMSeries(completeOptions)
     expect(a).toEqual(b)
+  })
+
+  it('keeps an existing seeded prefix when the requested duration grows', () => {
+    const twoDays = generateCGMSeries(completeOptions)
+    const threeDays = generateCGMSeries({ ...completeOptions, days: 3 })
+
+    expect(threeDays.slice(0, twoDays.length)).toEqual(twoDays)
   })
 
   it('differs across seeds', () => {
@@ -94,6 +153,164 @@ describe('generateCGMSeries', () => {
       return d.getUTCDate() === 2 && d.getUTCHours() >= 2 && d.getUTCHours() < 4
     })
     expect(day1Night.some((x) => x.value < 70)).toBe(true)
+  })
+
+  it('varies seeded meal timing around the nominal meal time', () => {
+    const firstResponseMinutes = Array.from({ length: 24 }, (_, index) => {
+      const response = mealExcursion(index + 1)
+      return response.findIndex((value) => value > 0)
+    })
+
+    expect(Math.min(...firstResponseMinutes)).toBeLessThan(720)
+    expect(Math.max(...firstResponseMinutes)).toBeGreaterThan(720)
+    expect(new Set(firstResponseMinutes).size).toBeGreaterThan(8)
+    for (const minute of firstResponseMinutes) {
+      expect(minute).toBeGreaterThanOrEqual(705)
+      expect(minute).toBeLessThanOrEqual(753)
+    }
+  })
+
+  it('takes 40 to 90 minutes for a meal response to peak', () => {
+    const riseTimes = Array.from({ length: 24 }, (_, index) => {
+      const response = mealExcursion(index + 1)
+      const firstResponse = response.findIndex((value) => value > 0)
+      const peak = response.indexOf(Math.max(...response))
+      return peak - firstResponse
+    })
+
+    for (const riseTime of riseTimes) {
+      // Integer readings can hide the first few minutes of a smooth rise.
+      expect(riseTime).toBeGreaterThanOrEqual(30)
+      expect(riseTime).toBeLessThanOrEqual(90)
+    }
+    expect(new Set(riseTimes).size).toBeGreaterThan(8)
+  })
+
+  it('scales meal peaks between 65% and 125% of the requested amplitude', () => {
+    const peaks = Array.from({ length: 24 }, (_, index) =>
+      Math.max(...mealExcursion(index + 1))
+    )
+
+    for (const peak of peaks) {
+      expect(peak).toBeGreaterThanOrEqual(64)
+      expect(peak).toBeLessThanOrEqual(126)
+    }
+  })
+
+  it('gives meal responses a seeded 120 to 210 minute recovery', () => {
+    const recoveryTimes = Array.from({ length: 24 }, (_, index) => {
+      const response = mealExcursion(index + 1)
+      const peak = response.indexOf(Math.max(...response))
+      const recovered = response.findIndex((value, minute) => minute > peak && value === 0)
+      return recovered - peak
+    })
+
+    for (const recoveryTime of recoveryTimes) {
+      // Rounding against a drifting baseline can hide the final minutes of the tail.
+      expect(recoveryTime).toBeGreaterThanOrEqual(109)
+      expect(recoveryTime).toBeLessThanOrEqual(210)
+    }
+    expect(new Set(recoveryTimes).size).toBeGreaterThan(8)
+  })
+
+  it('uses bounded, correlated sensor variation', () => {
+    const options = {
+      ...completeOptions,
+      days: 3,
+      mealAmplitude: 0,
+      nocturnalHypoDays: [],
+      noise: 20,
+    } as const
+    const noisy = generateCGMSeries(options)
+    const baseline = generateCGMSeries({ ...options, noise: 0 })
+    const variation = noisy.map((reading, index) => reading.value - baseline[index].value)
+
+    expect(Math.max(...variation.map(Math.abs))).toBeLessThanOrEqual(20)
+    expect(lagOneCorrelation(variation)).toBeGreaterThan(0.65)
+  })
+
+  it('shapes a nocturnal low as a smooth two-hour depression', () => {
+    const options = {
+      ...completeOptions,
+      days: 1,
+      intervalMin: 5,
+      mealAmplitude: 0,
+      noise: 0,
+      nocturnalHypoDays: [0],
+    } as const
+    const withLow = generateCGMSeries(options)
+    const baseline = generateCGMSeries({ ...options, nocturnalHypoDays: [] })
+    const depression = withLow.map(
+      (reading, index) => reading.value - baseline[index].value
+    )
+    const atMinute = (minute: number): number => depression[minute / 5]
+    const largestStep = Math.max(
+      ...depression.slice(24, 49).map((value, index) =>
+        index === 0 ? 0 : Math.abs(value - depression[index + 23])
+      )
+    )
+
+    expect(atMinute(115)).toBe(0)
+    expect(atMinute(120)).toBe(0)
+    expect(atMinute(180)).toBeLessThanOrEqual(-50)
+    expect(atMinute(240)).toBe(0)
+    expect(atMinute(245)).toBe(0)
+    expect(largestStep).toBeLessThanOrEqual(8)
+  })
+
+  it('starts an early next-day meal before midnight without a boundary jump', () => {
+    const options = {
+      ...completeOptions,
+      days: 2,
+      intervalMin: 5,
+      seed: 9660,
+      mealTimes: [0],
+      mealAmplitude: 70,
+      noise: 0,
+      nocturnalHypoDays: [],
+    } as const
+    const withMeal = generateCGMSeries(options)
+    const baseline = generateCGMSeries({ ...options, mealAmplitude: 0 })
+    const contribution = withMeal.map(
+      (reading, index) => reading.value - baseline[index].value
+    )
+    const beforeMidnight = contribution[287]
+    const atMidnight = contribution[288]
+    const boundaryStep = Math.abs(atMidnight - beforeMidnight)
+    const neighboringStep = Math.max(
+      Math.abs(beforeMidnight - contribution[286]),
+      Math.abs(contribution[289] - atMidnight)
+    )
+
+    expect(beforeMidnight).toBeGreaterThan(0)
+    expect(boundaryStep).toBeLessThanOrEqual(neighboringStep)
+  })
+
+  it('keeps basal drift continuous across day boundaries', () => {
+    const readings = generateCGMSeries({
+      days: 14,
+      seed: 1,
+      mealTimes: [],
+      mealAmplitude: 0,
+      noise: 0,
+    })
+    const boundarySteps = Array.from({ length: 13 }, (_, day) => {
+      const midnight = (day + 1) * 288
+      return Math.abs(readings[midnight].value - readings[midnight - 1].value)
+    })
+
+    expect(Math.max(...boundarySteps)).toBeLessThanOrEqual(2)
+  })
+
+  it('rejects more than 100,000 seeded meal responses', () => {
+    expectOptionRangeError(
+      {
+        days: 101,
+        intervalMin: 1440,
+        mealTimes: Array.from({ length: 1000 }, () => 720),
+      },
+      'generateCGMSeries cannot model more than 100000 meal responses'
+    )
   })
 
   it.each([
