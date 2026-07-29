@@ -626,7 +626,6 @@ for spec in "${expected[@]}"; do
     sleep 10
   done
 done
- --registry "$registry"
 gh run view RUN_ID --repo marklearst/glucoseiq --log-failed
 ```
 
