@@ -38,15 +38,15 @@
     "release": "turbo run build && changeset publish"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.27.0",
+    "@changesets/cli": "^2.31.1",
     "@changesets/parse": "0.4.3",
     "@eslint/js": "10.0.1",
     "es-module-lexer": "1.7.0",
-    "eslint": "10.7.0",
+    "eslint": "10.8.0",
     "eslint-plugin-react-hooks": "7.1.1",
-    "globals": "17.7.0",
-    "turbo": "^2.5.0",
-    "typescript-eslint": "8.63.0"
+    "globals": "17.9.0",
+    "turbo": "^2.10.8",
+    "typescript-eslint": "8.65.0"
   },
   "engines": {
     "node": ">=24"
