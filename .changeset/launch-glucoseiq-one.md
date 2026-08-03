@@ -35,3 +35,8 @@ routes.
 Core source documentation and the generated API reference now use direct
 descriptions and document existing return behavior for variability metrics.
 The variability calculations and public API signatures are unchanged.
+
+CLI package metadata and docs now describe CGM CSV analysis as command-line
+work that does not require application code. Help text and human-readable
+reports use the same informational disclaimer. Commands, options, exit codes,
+report data, and file output are unchanged.

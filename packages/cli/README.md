@@ -1,6 +1,6 @@
 # @glucoseiq/cli
 
-Command-line glucose analysis and AGP-style SVG generation powered by
+Command-line glucose analysis and AGP-style SVG generation using
 `@glucoseiq/core`. The package exposes the `glucoseiq` executable and a typed,
 injectable `run` function. Requires Node `>=24`.
 
