@@ -88,7 +88,7 @@ export function GlucoseReportSuite({
       className={styles.reportSection}
     >
       <div className={styles.reportIntro}>
-        <h2 id="glucose-report-title">A glucose report, ready to render.</h2>
+        <h2 id="glucose-report-title">A glucose report ready to render.</h2>
         <p>
           The same {days}-day synthetic fixture drives the latest reading,
           24-hour trace, range distribution, GMI estimate, and daily profile.
