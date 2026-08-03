@@ -34,6 +34,15 @@ describe('glucoseStandardDeviation', () => {
     expect(Number.isNaN(glucoseStandardDeviation([]))).toBe(true)
     expect(Number.isNaN(glucoseStandardDeviation([100]))).toBe(true)
   })
+  it('returns NaN for non-array input', () => {
+    expect(Number.isNaN(glucoseStandardDeviation(null as never))).toBe(true)
+  })
+  it.each([NaN, Infinity, -Infinity])(
+    'returns NaN when readings contain %s',
+    (value) => {
+      expect(Number.isNaN(glucoseStandardDeviation([100, value]))).toBe(true)
+    }
+  )
   it('handles negative and non-integer glucose values', () => {
     expect(glucoseStandardDeviation([100, 105.5, 98.2])).toBeGreaterThan(0)
   })
@@ -51,6 +60,15 @@ describe('glucoseCoefficientOfVariation', () => {
     expect(Number.isNaN(glucoseCoefficientOfVariation([100]))).toBe(true)
     expect(Number.isNaN(glucoseCoefficientOfVariation([0, 0, 0]))).toBe(true)
   })
+  it('returns NaN for non-array input', () => {
+    expect(Number.isNaN(glucoseCoefficientOfVariation(null as never))).toBe(true)
+  })
+  it.each([NaN, Infinity, -Infinity])(
+    'returns NaN when readings contain %s',
+    (value) => {
+      expect(Number.isNaN(glucoseCoefficientOfVariation([100, value]))).toBe(true)
+    }
+  )
 })
 
 describe('glucosePercentiles', () => {

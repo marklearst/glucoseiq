@@ -259,7 +259,8 @@ glucoseCoefficientOfVariation(readings: number[]): number
 Calculates the coefficient of variation (CV) for glucose values.
 CV = (SD / mean) × 100. Used to assess glycemic variability.
 
-**Returns:** Coefficient of variation as a percentage, or NaN if &lt;2 values or mean is 0
+**Returns:** Coefficient of variation as a percentage, or NaN if `readings` is not an array,
+contains fewer than 2 values, or has a mean of 0
 
 **See:** [ADA 2019: Glycemic Targets](https://care.diabetesjournals.org/content/42/8/1593)
 
@@ -270,8 +271,8 @@ const valuesMgDl: number[] = [100, 120, 140]
 const coefficientOfVariation = glucoseCoefficientOfVariation(valuesMgDl)
 ```
 
-**Remarks:** Returns NaN when readings contain fewer than 2 values or their mean is 0.
-NaN and Infinity propagate into the result.
+**Remarks:** Returns NaN when `readings` is not an array, contains fewer than 2 values,
+or has a mean of 0. Arrays containing NaN or infinite values return NaN.
 
 | Parameter | Description |
 | --- | --- |
@@ -500,7 +501,7 @@ glucoseStandardDeviation(readings: number[]): number
 Calculates the unbiased sample standard deviation (SD) of glucose values.
 Uses n-1 in the denominator (sample SD), as recommended in research guidelines.
 
-**Returns:** Standard deviation, or NaN if fewer than 2 values
+**Returns:** Standard deviation, or NaN if `readings` is not an array or contains fewer than 2 values
 
 **See:**
 
@@ -514,8 +515,8 @@ const valuesMgDl: number[] = [100, 120, 140]
 const standardDeviation = glucoseStandardDeviation(valuesMgDl)
 ```
 
-**Remarks:** Returns NaN when readings contain fewer than 2 values. NaN and Infinity
-propagate into the result.
+**Remarks:** Returns NaN when `readings` is not an array or contains fewer than 2 values.
+Arrays containing NaN or infinite values return NaN.
 
 | Parameter | Description |
 | --- | --- |

@@ -8,7 +8,7 @@ import { DomainError } from './errors';
  * Uses n-1 in the denominator (sample SD), as recommended in research guidelines.
  *
  * @param readings Array of glucose values (numbers)
- * @returns Standard deviation, or NaN if fewer than 2 values
+ * @returns Standard deviation, or NaN if `readings` is not an array or contains fewer than 2 values
  * @see {@link https://care.diabetesjournals.org/content/42/8/1593 ADA 2019: Glycemic Targets}
  * @see {@link https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7445493/ ISPAD 2019}
  * @example
@@ -19,8 +19,8 @@ import { DomainError } from './errors';
  * const standardDeviation = glucoseStandardDeviation(valuesMgDl)
  * ```
  * @remarks
- * Returns NaN when readings contain fewer than 2 values. NaN and Infinity
- * propagate into the result.
+ * Returns NaN when `readings` is not an array or contains fewer than 2 values.
+ * Arrays containing NaN or infinite values return NaN.
  */
 export function glucoseStandardDeviation(readings: number[]): number {
   if (!Array.isArray(readings) || readings.length < 2) return NaN;
@@ -34,7 +34,8 @@ export function glucoseStandardDeviation(readings: number[]): number {
  * CV = (SD / mean) × 100. Used to assess glycemic variability.
  *
  * @param readings Array of glucose values (numbers)
- * @returns Coefficient of variation as a percentage, or NaN if <2 values or mean is 0
+ * @returns Coefficient of variation as a percentage, or NaN if `readings` is not an array,
+ * contains fewer than 2 values, or has a mean of 0
  * @see {@link https://care.diabetesjournals.org/content/42/8/1593 ADA 2019: Glycemic Targets}
  * @example
  * ```ts typecheck
@@ -44,8 +45,8 @@ export function glucoseStandardDeviation(readings: number[]): number {
  * const coefficientOfVariation = glucoseCoefficientOfVariation(valuesMgDl)
  * ```
  * @remarks
- * Returns NaN when readings contain fewer than 2 values or their mean is 0.
- * NaN and Infinity propagate into the result.
+ * Returns NaN when `readings` is not an array, contains fewer than 2 values,
+ * or has a mean of 0. Arrays containing NaN or infinite values return NaN.
  */
 export function glucoseCoefficientOfVariation(readings: number[]): number {
   if (!Array.isArray(readings) || readings.length < 2) return NaN;
