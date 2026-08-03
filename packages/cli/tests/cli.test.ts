@@ -65,7 +65,12 @@ describe('glucoseiq CLI', () => {
   it('prints help with --help (exit 0) and with no args (exit 1)', () => {
     const io1 = makeIO()
     expect(run(['--help'], io1)).toBe(0)
-    expect(io1.outLines.join('\n')).toContain('Usage:')
+    const help = io1.outLines.join('\n')
+    expect(help).toContain(
+      'glucoseiq: CGM CSV analysis without application code using @glucoseiq/core',
+    )
+    expect(help).toContain('Usage:')
+    expect(help).toContain('Informational only. Not medical advice.')
     const io2 = makeIO()
     expect(run([], io2)).toBe(1)
 
@@ -119,7 +124,7 @@ describe('glucoseiq CLI', () => {
     expect(text).toContain('GlucoseIQ report')
     expect(text).toContain('Glucose IQ')
     expect(text).toContain('Time in range')
-    expect(text).toContain('not medical advice')
+    expect(text).toContain('Not medical advice')
   })
 
   it('flushes a human report with one output call', () => {
@@ -133,7 +138,7 @@ describe('glucoseiq CLI', () => {
     expect(run(['report', csvPath], io)).toBe(0)
     expect(writes).toHaveLength(1)
     expect(writes[0]).toContain('GlucoseIQ report')
-    expect(writes[0]).toContain('\nInformational only — not medical advice.')
+    expect(writes[0]).toContain('\nInformational only. Not medical advice.')
     expect(io.errLines).toEqual([])
   })
 

@@ -24,7 +24,7 @@ export interface CliIO {
   err(line: string): void
 }
 
-const HELP = `glucoseiq — zero-code CGM analysis (powered by @glucoseiq/core)
+const HELP = `glucoseiq: CGM CSV analysis without application code using @glucoseiq/core
 
 Usage:
   glucoseiq report <file.csv> [options]
@@ -39,7 +39,7 @@ Options:
   --agp-svg <out.svg>      Also write the AGP chart as a self-contained SVG
   --help                   Show this help
 
-Informational only — not medical advice.`
+Informational only. Not medical advice.`
 
 const CLI_OPTIONS = {
   'timestamp-col': { type: 'string' },
@@ -190,7 +190,7 @@ export function run(argv: string[], io: CliIO): number {
         `Above range     ${tir.high.percentage}% high · ${tir.veryHigh.percentage}% very high`,
         `Episodes        ${report.episodes!.summary.hypoCount} hypo · ${report.episodes!.summary.hyperCount} hyper`,
         '────────────────────────────────',
-        'Informational only — not medical advice.',
+        'Informational only. Not medical advice.',
       )
     }
 
