@@ -2,10 +2,10 @@
  * @file src/analyze.ts
  *
  * One-call CGM analytics summary. `analyzeGlucose` screens one normalized set
- * of readings and returns selected summary scalars (mean, GMI, CV, SD), the
- * enhanced 5-range TIR, tight range, a selected risk block, a data-sufficiency
- * assessment, episode candidates, and (optionally) an AGP-style
- * percentile-band series.
+ * of readings before calculating its report. The report contains scalar
+ * summaries (mean, GMI, CV, and SD), enhanced 5-range TIR and tight-range
+ * results, risk and data-sufficiency blocks, episode candidates, and an
+ * optional AGP-style percentile-band series.
  *
  * The screened set feeds each result block, but individual metrics retain
  * their documented pairing, window, and sufficiency requirements. Input with

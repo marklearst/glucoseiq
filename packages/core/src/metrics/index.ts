@@ -1,7 +1,6 @@
 /**
- * Advanced CGM analytics metrics.
- * LBGI/HBGI, ADRR, GRADE, GRI, J-Index, CONGA, MODD, Active Percent,
- * and the aggregate calculateAGPMetrics function.
+ * CGM analytics include LBGI/HBGI, ADRR, GRADE, GRI, J-Index, CONGA, MODD,
+ * Active Percent, and the aggregate calculateAGPMetrics function.
  */
 
 export { glucoseLBGI, glucoseHBGI, fbg } from './bgi'

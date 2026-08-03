@@ -1,8 +1,8 @@
 /**
  * @file src/live.ts
  *
- * Live and real-time glucose helpers for rate of change, trend derivation,
- * latest readings, and staleness on CGM home screens and dashboards.
+ * Live glucose helpers derive rate of change and trends, select the latest
+ * reading, and measure staleness for CGM home screens and dashboards.
  * Watch surfaces require host-application integration.
  *
  * These functions calculate rate of change and trend from observed readings.
@@ -84,8 +84,8 @@ export function classifyGlucoseTrend(rocPerMin: number): CGMTrend {
  * Computes glucose rate-of-change and derives a trend from recent readings.
  *
  * Fits a least-squares slope over readings in the trailing window, normalizing
- * mixed units to mg/dL. Useful for feeding a live trend arrow, and for
- * back-filling a trend when a feed (e.g. Nightscout) does not provide one.
+ * mixed units to mg/dL. Hosts can use the result for a live trend arrow or to
+ * back-fill a trend when a feed (e.g. Nightscout) does not provide one.
  *
  * @param readings - Glucose readings with ISO 8601 timestamps
  * @param options - Trailing window configuration
