@@ -106,6 +106,25 @@ test('preflights every manifest before any package can be published', async () =
   assert.equal(state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish'), false)
 })
 
+test('rejects an injected dependency-role removal before publication', async () => {
+  // Catches a caller stripping React's immutable core-dependency role so a bad
+  // packed core range bypasses the shared exact-next.0 contract.
+  assert.equal(typeof publisher.runNextZeroPublisher, 'function')
+  const state = harness()
+  const injectedSpecs = packageSpecs.map((spec) => (
+    spec.name === '@glucoseiq/react'
+      ? { ...spec, coreDependency: false, coreVersion: undefined }
+      : spec
+  ))
+  const invalid = manifests()
+  invalid.get('@glucoseiq/react').dependencies['@glucoseiq/core'] = '^1.0.0-next.1'
+  await assert.rejects(
+    publisher.runNextZeroPublisher({ packageSpecs: injectedSpecs, manifests: invalid, ...state }),
+    /must retain the immutable core dependency role/u,
+  )
+  assert.equal(state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish'), false)
+})
+
 test('publishes missing packages sequentially with npm 11 next provenance arguments', async () => {
   // Catches a dependency-order regression or a publish that leaks into latest.
   assert.equal(typeof publisher.runNextZeroPublisher, 'function')
@@ -179,6 +198,45 @@ test('fails closed on malformed next registry metadata before publication', asyn
   await assert.rejects(
     publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
     /npm next tag must be 1\.0\.0-next\.0/u,
+  )
+  assert.equal(state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish'), false)
+})
+
+test('rejects a wrong next tag even when the exact target version is absent', async () => {
+  // Catches an already-published next.1 tag being treated as permission to
+  // publish next.0 because the target version record has not propagated.
+  assert.equal(typeof publisher.runNextZeroPublisher, 'function')
+  const state = harness({
+    published: new Set(['@glucoseiq/core']),
+    packumentFor(spec) {
+      const value = publishedPackument(spec)
+      delete value.versions[spec.version]
+      value['dist-tags'].next = '1.0.0-next.1'
+      return value
+    },
+  })
+  await assert.rejects(
+    publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
+    /npm next tag must be 1\.0\.0-next\.0/u,
+  )
+  assert.equal(state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish'), false)
+})
+
+test('rejects a malformed exact registry version record before publication', async () => {
+  // Catches an identity-mismatched target record being recovered as a valid
+  // immutable next.0 package.
+  assert.equal(typeof publisher.runNextZeroPublisher, 'function')
+  const state = harness({
+    published: new Set(['@glucoseiq/core']),
+    packumentFor(spec) {
+      const value = publishedPackument(spec)
+      value.versions[spec.version] = { name: spec.name, version: '1.0.0-next.1' }
+      return value
+    },
+  })
+  await assert.rejects(
+    publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
+    /npm registry returned malformed exact version metadata for @glucoseiq\/core/u,
   )
   assert.equal(state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish'), false)
 })
