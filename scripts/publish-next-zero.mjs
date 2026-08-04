@@ -1,5 +1,13 @@
 import { spawnSync } from 'node:child_process'
-import { readFileSync, realpathSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -70,7 +78,7 @@ export function loadNextZeroManifests({ repoRoot = repositoryRoot, packageSpecs 
   }))
 }
 
-export function assertNextZeroPublicationPlan(packageSpecs, manifests) {
+function assertNextZeroManifestIdentities(packageSpecs, manifests) {
   if (!Array.isArray(packageSpecs) || packageSpecs.length !== NEXT_ZERO_PACKAGES.length) {
     throw new Error('next.0 publication must contain exactly five coordinated packages')
   }
@@ -92,6 +100,21 @@ export function assertNextZeroPublicationPlan(packageSpecs, manifests) {
     versions.set(spec.name, manifest.version)
   }
   assertExactNextZeroPackageVersions(versions)
+}
+
+function assertNextZeroSourcePlan(packageSpecs, manifests) {
+  assertNextZeroManifestIdentities(packageSpecs, manifests)
+  for (const spec of packageSpecs) {
+    if (!spec.coreDependency) continue
+    const range = manifests.get(spec.name).dependencies?.['@glucoseiq/core']
+    if (range !== 'workspace:^') {
+      throw new Error(`${spec.name} source core dependency must equal workspace:^; received ${range}`)
+    }
+  }
+}
+
+export function assertNextZeroPublicationPlan(packageSpecs, manifests) {
+  assertNextZeroManifestIdentities(packageSpecs, manifests)
   for (const spec of packageSpecs) {
     if (!spec.coreDependency) continue
     assertPackedCoreDependency({
@@ -100,6 +123,84 @@ export function assertNextZeroPublicationPlan(packageSpecs, manifests) {
       coreVersion: NEXT_ZERO_VERSION,
       packageName: spec.name,
     })
+  }
+}
+
+function removePackedArtifacts(temporaryRoot, primaryError) {
+  try {
+    rmSync(temporaryRoot, { force: true, recursive: true })
+  } catch (cleanupError) {
+    if (primaryError === undefined) throw cleanupError
+    const message = primaryError instanceof Error ? primaryError.message : String(primaryError)
+    throw new AggregateError(
+      [primaryError, cleanupError],
+      `${message}. Temporary package cleanup also failed.`,
+      { cause: cleanupError },
+    )
+  }
+}
+
+async function packNextZeroArtifacts({
+  packageSpecs,
+  runCommand,
+  cwd,
+  commandTimeoutMs,
+}) {
+  const temporaryRoot = mkdtempSync(join(tmpdir(), 'glucoseiq-next-zero-'))
+  const archives = new Map()
+  const packedManifests = new Map()
+  try {
+    for (let index = 0; index < packageSpecs.length; index += 1) {
+      const spec = packageSpecs[index]
+      const packRoot = join(temporaryRoot, String(index))
+      mkdirSync(packRoot)
+      assertCommandResult(
+        await execute(
+          runCommand,
+          'pnpm',
+          [
+            '--dir',
+            join(cwd, spec.directory),
+            'pack',
+            '--pack-destination',
+            packRoot,
+          ],
+          { cwd, timeoutMs: commandTimeoutMs },
+          `Pack ${spec.name}@${spec.version}`,
+        ),
+        `Pack ${spec.name}@${spec.version}`,
+      )
+      const candidates = readdirSync(packRoot, { withFileTypes: true })
+        .filter((entry) => entry.name.endsWith('.tgz'))
+      if (candidates.length !== 1 || !candidates[0].isFile()) {
+        throw new Error(`${spec.name} must produce exactly one regular package tarball`)
+      }
+      const archivePath = join(packRoot, candidates[0].name)
+      const manifestText = assertCommandResult(
+        await execute(
+          runCommand,
+          'tar',
+          ['-xOzf', archivePath, 'package/package.json'],
+          { cwd, timeoutMs: commandTimeoutMs },
+          `Inspect packed manifest for ${spec.name}@${spec.version}`,
+        ),
+        `Inspect packed manifest for ${spec.name}@${spec.version}`,
+      ).stdout
+      if (manifestText.includes('workspace:')) {
+        throw new Error(`${spec.name} packed manifest must not contain workspace dependencies`)
+      }
+      try {
+        packedManifests.set(spec.name, JSON.parse(manifestText))
+      } catch (error) {
+        throw new Error(`${spec.name} packed manifest must contain valid JSON`, { cause: error })
+      }
+      archives.set(spec.name, archivePath)
+    }
+    assertNextZeroPublicationPlan(packageSpecs, packedManifests)
+    return { archives, temporaryRoot }
+  } catch (error) {
+    removePackedArtifacts(temporaryRoot, error)
+    throw error
   }
 }
 
@@ -358,78 +459,91 @@ export async function runNextZeroPublisher({
     throw new TypeError('publisher requires fetchImpl, runCommand, and logger functions')
   }
   assertPositiveInteger(commandTimeoutMs, 'commandTimeoutMs')
-  assertNextZeroPublicationPlan(packageSpecs, manifests)
+  assertNextZeroSourcePlan(packageSpecs, manifests)
+  const { archives, temporaryRoot } = await packNextZeroArtifacts({
+    packageSpecs,
+    runCommand,
+    cwd,
+    commandTimeoutMs,
+  })
+  let primaryError
+  try {
+    const states = await Promise.all(packageSpecs.map((spec) => inspectRegistry(spec, {
+      fetchImpl,
+      registry,
+      timeoutMs: commandTimeoutMs,
+    })))
+    const releaseSha = await resolveReleaseSha(runCommand, cwd, commandTimeoutMs)
+    const remoteStates = []
+    for (const spec of packageSpecs) {
+      remoteStates.push(await inspectRemoteTag(spec, releaseSha, runCommand, cwd, commandTimeoutMs))
+    }
+    const githubExists = []
+    for (const spec of packageSpecs) githubExists.push(await inspectGitHubRelease(spec, runCommand, repository, cwd, commandTimeoutMs))
+    for (let index = 0; index < packageSpecs.length; index += 1) {
+      if (githubExists[index] && remoteStates[index].kind === 'absent') {
+        throw new Error(`GitHub release ${packageSpecs[index].tag} exists while its remote tag is absent`)
+      }
+    }
+    for (let index = 0; index < packageSpecs.length; index += 1) {
+      if (remoteStates[index].kind !== 'absent') {
+        await synchronizeLocalTag(
+          packageSpecs[index],
+          remoteStates[index],
+          releaseSha,
+          runCommand,
+          cwd,
+          commandTimeoutMs,
+        )
+      }
+    }
+    for (let index = 0; index < packageSpecs.length; index += 1) {
+      if (remoteStates[index].kind === 'absent') {
+        await verifyOrCreateLocalTag(packageSpecs[index], releaseSha, runCommand, cwd, commandTimeoutMs)
+      }
+    }
 
-  const states = await Promise.all(packageSpecs.map((spec) => inspectRegistry(spec, {
-    fetchImpl,
-    registry,
-    timeoutMs: commandTimeoutMs,
-  })))
-  const releaseSha = await resolveReleaseSha(runCommand, cwd, commandTimeoutMs)
-  const remoteStates = []
-  for (const spec of packageSpecs) {
-    remoteStates.push(await inspectRemoteTag(spec, releaseSha, runCommand, cwd, commandTimeoutMs))
-  }
-  const githubExists = []
-  for (const spec of packageSpecs) githubExists.push(await inspectGitHubRelease(spec, runCommand, repository, cwd, commandTimeoutMs))
-  for (let index = 0; index < packageSpecs.length; index += 1) {
-    if (githubExists[index] && remoteStates[index].kind === 'absent') {
-      throw new Error(`GitHub release ${packageSpecs[index].tag} exists while its remote tag is absent`)
-    }
-  }
-  for (let index = 0; index < packageSpecs.length; index += 1) {
-    if (remoteStates[index].kind !== 'absent') {
-      await synchronizeLocalTag(
-        packageSpecs[index],
-        remoteStates[index],
-        releaseSha,
-        runCommand,
-        cwd,
-        commandTimeoutMs,
-      )
-    }
-  }
-  for (let index = 0; index < packageSpecs.length; index += 1) {
-    if (remoteStates[index].kind === 'absent') {
-      await verifyOrCreateLocalTag(packageSpecs[index], releaseSha, runCommand, cwd, commandTimeoutMs)
-    }
-  }
+    const npmVersion = assertCommandResult(
+      await execute(runCommand, 'npm', ['--version'], { cwd, timeoutMs: commandTimeoutMs }, 'Check npm version'),
+      'Check npm version',
+    ).stdout.trim()
+    if (!/^11\./u.test(npmVersion)) throw new Error(`next.0 publication requires npm 11; received ${npmVersion}`)
 
-  const npmVersion = assertCommandResult(
-    await execute(runCommand, 'npm', ['--version'], { cwd, timeoutMs: commandTimeoutMs }, 'Check npm version'),
-    'Check npm version',
-  ).stdout.trim()
-  if (!/^11\./u.test(npmVersion)) throw new Error(`next.0 publication requires npm 11; received ${npmVersion}`)
-
-  const alreadyPublished = packageSpecs.filter((_, index) => states[index].published).map(({ name }) => name)
-  const published = [...alreadyPublished]
-  for (const spec of packageSpecs) {
-    if (alreadyPublished.includes(spec.name)) continue
-    const remaining = packageSpecs.slice(packageSpecs.findIndex(({ name }) => name === spec.name)).map(({ name }) => name)
-    let result
-    try {
-      result = await execute(
-        runCommand,
-        'npm',
-        ['publish', spec.directory, '--access', 'public', '--tag', NEXT_ZERO_NPM_TAG, '--provenance'],
-        { cwd, timeoutMs: commandTimeoutMs },
-        `Publish ${spec.name}@${spec.version}`,
-      )
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      throw new Error(
-        `Partial next.0 publication failed. Published: ${published.join(', ') || 'none'}. Remaining: ${remaining.join(', ')}. Cause: ${message}`,
-        { cause: error },
-      )
+    const alreadyPublished = packageSpecs.filter((_, index) => states[index].published).map(({ name }) => name)
+    const published = [...alreadyPublished]
+    for (const spec of packageSpecs) {
+      if (alreadyPublished.includes(spec.name)) continue
+      const remaining = packageSpecs.slice(packageSpecs.findIndex(({ name }) => name === spec.name)).map(({ name }) => name)
+      let result
+      try {
+        result = await execute(
+          runCommand,
+          'npm',
+          ['publish', archives.get(spec.name), '--access', 'public', '--tag', NEXT_ZERO_NPM_TAG, '--provenance'],
+          { cwd, timeoutMs: commandTimeoutMs },
+          `Publish ${spec.name}@${spec.version}`,
+        )
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        throw new Error(
+          `Partial next.0 publication failed. Published: ${published.join(', ') || 'none'}. Remaining: ${remaining.join(', ')}. Cause: ${message}`,
+          { cause: error },
+        )
+      }
+      if (result.status !== 0 || result.signal) {
+        throw new Error(`Partial next.0 publication failed. Published: ${published.join(', ') || 'none'}. Remaining: ${remaining.join(', ')}`)
+      }
+      published.push(spec.name)
     }
-    if (result.status !== 0 || result.signal) {
-      throw new Error(`Partial next.0 publication failed. Published: ${published.join(', ') || 'none'}. Remaining: ${remaining.join(', ')}`)
-    }
-    published.push(spec.name)
+    const githubArtifacts = packageSpecs.filter((_, index) => !githubExists[index])
+    for (const spec of githubArtifacts) logger(`New tag: ${spec.tag}`)
+    return Object.freeze({ releaseSha, published, alreadyPublished, githubArtifacts: githubArtifacts.map(({ tag }) => tag) })
+  } catch (error) {
+    primaryError = error
+    throw error
+  } finally {
+    removePackedArtifacts(temporaryRoot, primaryError)
   }
-  const githubArtifacts = packageSpecs.filter((_, index) => !githubExists[index])
-  for (const spec of githubArtifacts) logger(`New tag: ${spec.tag}`)
-  return Object.freeze({ releaseSha, published, alreadyPublished, githubArtifacts: githubArtifacts.map(({ tag }) => tag) })
 }
 
 function isDirectExecution() {
