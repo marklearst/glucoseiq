@@ -156,8 +156,14 @@ async function inspectRegistry(spec, { fetchImpl, registry, timeoutMs }) {
   ) {
     throw new Error(`${spec.name} npm next tag must be ${NEXT_ZERO_VERSION}; received ${packument['dist-tags'].next ?? 'missing'}`)
   }
+  const hasExactVersion = Object.hasOwn(packument.versions, spec.version)
   const metadata = packument.versions[spec.version]
-  if (!metadata) return { published: false }
+  if (!hasExactVersion) {
+    if (packument['dist-tags'].next === NEXT_ZERO_VERSION) {
+      throw new Error(`npm registry returned malformed exact version metadata for ${spec.name}`)
+    }
+    return { published: false }
+  }
   if (
     !metadata ||
     typeof metadata !== 'object' ||

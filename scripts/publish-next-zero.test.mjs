@@ -241,6 +241,64 @@ test('rejects a malformed exact registry version record before publication', asy
   assert.equal(state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish'), false)
 })
 
+test('rejects an exact next tag without its exact version record before publication', async () => {
+  // Catches a registry race or malformed packument turning an owned next tag
+  // into permission to overwrite an immutable version.
+  assert.equal(typeof publisher.runNextZeroPublisher, 'function')
+  const state = harness({
+    published: new Set(['@glucoseiq/core']),
+    packumentFor(spec) {
+      const value = publishedPackument(spec)
+      delete value.versions[spec.version]
+      return value
+    },
+  })
+  await assert.rejects(
+    publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
+    /npm registry returned malformed exact version metadata for @glucoseiq\/core/u,
+  )
+  assert.equal(state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish'), false)
+})
+
+test('rejects falsey exact version records before publication', async () => {
+  // Catches falsey own properties bypassing the exact-record identity check.
+  for (const malformed of [null, false, 0, '']) {
+    const state = harness({
+      published: new Set(['@glucoseiq/core']),
+      packumentFor(spec) {
+        const value = publishedPackument(spec)
+        value.versions[spec.version] = malformed
+        return value
+      },
+    })
+    await assert.rejects(
+      publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
+      /npm registry returned malformed exact version metadata for @glucoseiq\/core/u,
+    )
+    assert.equal(state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish'), false)
+  }
+})
+
+test('publishes when a stable-only package has neither next tag nor next.0 record', async () => {
+  // Catches the fail-closed exact-tag rule incorrectly blocking a legitimate
+  // unpublished package that only has stable registry history.
+  const state = harness({
+    published: new Set(['@glucoseiq/core']),
+    packumentFor(spec) {
+      const value = publishedPackument(spec)
+      delete value.versions[spec.version]
+      delete value['dist-tags'].next
+      return value
+    },
+  })
+  const result = await publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state })
+  assert.equal(result.alreadyPublished.includes('@glucoseiq/core'), false)
+  assert.equal(
+    state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish' && args[1] === 'packages/core'),
+    true,
+  )
+})
+
 test('rejects a local prerelease tag that points away from the release commit', async () => {
   // Catches a release artifact being attached to a different commit than provenance.
   assert.equal(typeof publisher.runNextZeroPublisher, 'function')
