@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import {
+  existsSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -81,14 +82,28 @@ function synchronizeFixturePackageManager(repository) {
   )
 }
 
+function readLaunchChangesetContents(rootChangeset, fixtureChangeset) {
+  return readFileSync(
+    existsSync(rootChangeset) ? rootChangeset : fixtureChangeset,
+    'utf8',
+  )
+}
+
 function synchronizeLaunchFixture(repository) {
   for (const directory of readdirSync(join(repository, 'packages'))) {
     if (PUBLIC_PACKAGE_DIRECTORIES.includes(`packages/${directory}`)) continue
     rmSync(join(repository, 'packages', directory), { force: true, recursive: true })
   }
+  const fixtureChangeset = join(
+    repository,
+    '.changeset/launch-glucoseiq-one.md',
+  )
   writeFileSync(
-    join(repository, '.changeset/launch-glucoseiq-one.md'),
-    readFileSync(join(REPOSITORY_ROOT, '.changeset/launch-glucoseiq-one.md'), 'utf8'),
+    fixtureChangeset,
+    readLaunchChangesetContents(
+      join(REPOSITORY_ROOT, '.changeset/launch-glucoseiq-one.md'),
+      fixtureChangeset,
+    ),
   )
   runFixtureCommand('git', ['add', '-A', '--'], repository)
   const pending = runFixtureCommand('git', ['status', '--porcelain'], repository)
@@ -236,6 +251,25 @@ test('generated-version fixtures start from the pre-version commit', () => {
     ]),
     'HEAD',
   )
+})
+
+test('launch fixtures keep the pre-version Changeset after the root copy is consumed', () => {
+  const temporaryDirectory = mkdtempSync(
+    join(tmpdir(), 'glucoseiq-launch-fixture-test-'),
+  )
+  const rootChangeset = join(temporaryDirectory, 'consumed.md')
+  const fixtureChangeset = join(temporaryDirectory, 'pre-version.md')
+  const contents = '---\n"@glucoseiq/core": major\n---\n'
+  writeFileSync(fixtureChangeset, contents)
+
+  try {
+    assert.equal(
+      readLaunchChangesetContents(rootChangeset, fixtureChangeset),
+      contents,
+    )
+  } finally {
+    rmSync(temporaryDirectory, { force: true, recursive: true })
+  }
 })
 
 test('generated-version fixtures use the working-tree package manager pin', () => {
