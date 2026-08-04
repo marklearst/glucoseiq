@@ -51,3 +51,7 @@ Core and React documentation now state that reading age is signed and can be
 negative when a reading timestamp is ahead of the current clock. The live guide
 handles that state and states how its timestamp-based merge helper handles
 matching strings. Runtime behavior is unchanged.
+
+Core report and aggregate metric docs now name the exact result types and
+metrics. Calculations, options, errors, return values, and public signatures are
+unchanged.

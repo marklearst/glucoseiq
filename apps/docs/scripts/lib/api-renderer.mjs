@@ -28,13 +28,13 @@ const FUNCTION_CATEGORIES = Object.freeze([
   {
     slug: 'reports',
     title: 'Reports',
-    description: 'Selected composed CGM analytics summaries.',
+    description: 'A CGM report with summary metrics, glucose ranges, risk metrics, data sufficiency, episode candidates, and an optional AGP-style profile.',
     matches: (file) => /(^|\/)analyze\.ts$/u.test(file),
   },
   {
     slug: 'agp',
-    title: 'AGP & Metrics Aggregate',
-    description: 'AGP-style percentile-band series and selected aggregate metrics.',
+    title: 'AGP-Style Profiles and Metrics',
+    description: 'AGP-style percentile-band series and calculated CGM metrics.',
     matches: (file) => /(^|\/)metrics\/agp(?:-profile)?\.ts$/u.test(file),
   },
   {
