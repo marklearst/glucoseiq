@@ -89,9 +89,13 @@ or below 600 mg/dL after normalization, and a parseable timestamp.
 minutesSinceLastReading(readings: GlucoseReading[], now?: string | number | Date): number | null
 ```
 
-Returns minutes elapsed since the most recent reading (sensor staleness).
+Returns signed minutes since the most recent reading (sensor staleness).
 
-**Returns:** Minutes since the latest reading, or `null` if there are none
+**Remarks:** Returns a negative value when the latest usable reading is later than `now`
+or the current clock. Callers choose how to handle clock skew or source
+timing problems.
+
+**Returns:** Signed minutes since the latest reading, or `null` if there are none
 
 **Throws:** If an explicit reference time is invalid
 

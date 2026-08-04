@@ -3,7 +3,7 @@
  *
  * Live glucose helpers derive rate of change and trends, select the latest
  * reading, and measure staleness for CGM home screens and dashboards.
- * Watch surfaces require host-application integration.
+ * Smartwatch views require host-application integration.
  *
  * These functions calculate rate of change and trend from observed readings.
  * They do not forecast future glucose. Forecasting remains outside this
@@ -192,11 +192,16 @@ export function latestReading(readings: GlucoseReading[]): GlucoseReading | null
 }
 
 /**
- * Returns minutes elapsed since the most recent reading (sensor staleness).
+ * Returns signed minutes since the most recent reading (sensor staleness).
+ *
+ * @remarks
+ * Returns a negative value when the latest usable reading is later than `now`
+ * or the current clock. Callers choose how to handle clock skew or source
+ * timing problems.
  *
  * @param readings - Glucose readings
  * @param now - Reference time (ISO string, epoch ms, or Date); defaults to the current time
- * @returns Minutes since the latest reading, or `null` if there are none
+ * @returns Signed minutes since the latest reading, or `null` if there are none
  * @throws {TimestampError} If an explicit reference time is invalid
  * @category Live
  * @public

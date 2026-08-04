@@ -109,6 +109,13 @@ describe('useGlucoseLive', () => {
     expect(result.current.minutesSince).toBeGreaterThan(0)
   })
 
+  it('preserves a negative age when the latest reading is ahead of the clock', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(base + 42 * 60_000)
+    const { result } = renderHook(() => useGlucoseLive(readings))
+    expect(result.current.minutesSince).toBe(-3)
+  })
+
   it('re-evaluates staleness on the refresh interval', () => {
     vi.useFakeTimers()
     const { result } = renderHook(() => useGlucoseLive(readings, { refreshMs: 1000 }))

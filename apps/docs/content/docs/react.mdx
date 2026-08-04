@@ -91,12 +91,20 @@ function CurrentGlucose({ readings }: { readings: GlucoseReading[] }) {
     return <p>No current reading.</p>
   }
 
+  if (live.minutesSince < 0) {
+    return (
+      <p role="status">
+        The latest reading time is ahead of the current clock.
+      </p>
+    )
+  }
+
   return (
     <section aria-live="polite">
       <strong>{live.latest.value} {live.latest.unit}</strong>
       <span>{live.trend.trend}</span>
       <time dateTime={live.latest.timestamp}>
-        {Math.max(0, Math.round(live.minutesSince))} min ago
+        {Math.round(live.minutesSince)} min ago
       </time>
     </section>
   )
