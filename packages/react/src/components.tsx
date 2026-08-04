@@ -35,7 +35,7 @@ function SvgBox(props: {
       className={props.className}
       style={props.style}
       // This private wrapper receives SVG only from @glucoseiq/core renderers.
-      // agpChartToSVG XML-escapes its optional title.
+      // User-supplied text (for example AGP titles) is XML-escaped by core.
       dangerouslySetInnerHTML={{ __html: props.svg }}
     />
   )
