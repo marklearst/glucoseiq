@@ -1,12 +1,15 @@
 'use client'
 
 /**
- * @glucoseiq/react provides React hooks and components for the GlucoseIQ
- * engine.
+ * @glucoseiq/react exports React hooks and components built on @glucoseiq/core.
  *
- * Hooks memoize the pure @glucoseiq/core functions; components wrap the
- * zero-dependency SVG renderers. React is a peer dependency and
- * @glucoseiq/core is a runtime dependency.
+ * Hooks use `useMemo` for report, profile, score, meal response, latest
+ * reading, and trend results. `useGlucoseLive` recalculates reading age on
+ * every render. Components call @glucoseiq/core SVG renderers and place the
+ * returned SVG in a wrapper element.
+ *
+ * React is a peer dependency. @glucoseiq/core is a runtime dependency and has
+ * no runtime dependencies of its own.
  */
 
 export {
