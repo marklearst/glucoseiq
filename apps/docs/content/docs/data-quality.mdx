@@ -14,7 +14,7 @@ rejected rows and mark interpolated points as derived.
 | Audit skipped CSV rows | `parseGlucoseCSV` | Compare source and accepted row counts when an audit is required |
 | Check report validity | `report.valid` | Show an empty state for an invalid report |
 | Measure available history | `report.dataSufficiency` or `calculateActivePercent` | Show coverage separately from analytical values |
-| Find missing readings | `detectGaps` | Choose a threshold that matches the source cadence |
+| Find missing readings | `detectGaps` | Choose a threshold based on the expected time between reading timestamps |
 | Build a regular chart grid | `alignToGrid` | Keep interpolated points separate from observed readings |
 
 ## Choose strict or partial-success normalization
@@ -53,7 +53,7 @@ chronological order. Each error currently contains `index` and `message`.
 
 <Callout type="info" title="Do not hide partial failure">
   A usable report and an imperfect import can both be true. Keep the returned
-  readings, but record or surface the rejected-row count so consumers know the
+  readings, but record or show the rejected-row count so users know the
   dataset was incomplete.
 </Callout>
 
@@ -172,9 +172,9 @@ five-minute timestamp slots occupied by at least one reading.
 `meetsCGMStandard` is true only when both configured thresholds are met, using
 the unrounded slot ratio for the coverage decision.
 
-The report's active-percent calculation uses the default five-minute expected
-interval. For another sampling cadence, calculate timestamp coverage
-separately:
+The report's active-percent calculation uses the default expected interval of
+five minutes. If the usual time between reading timestamps is not five minutes,
+calculate timestamp coverage separately:
 
 ```ts typecheck
 import type { GlucoseReading } from '@glucoseiq/core'
@@ -238,9 +238,9 @@ for (const gap of gaps) {
 The function sorts valid timestamps chronologically and reports intervals
 strictly longer than `maxGapMinutes`. Invalid timestamps are ignored.
 
-Choose the threshold for the source and surface you are building. Connector
-capability descriptors expose typical update and freshness intervals when you
-need a source-aware default:
+Choose the threshold based on the expected time between reading timestamps and
+how you will use the gaps. Connector capability descriptors list typical
+update and freshness intervals when you need a source-aware default:
 
 ```ts typecheck
 import { detectGaps, type GlucoseReading } from '@glucoseiq/core'
