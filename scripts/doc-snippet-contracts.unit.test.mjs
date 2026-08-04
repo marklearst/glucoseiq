@@ -1374,12 +1374,12 @@ test('resolves only regular, contained docs-owned compiler and React type files'
     mkdirSync(react19Root)
     writeFileSync(
       join(typescriptRoot, 'package.json'),
-      JSON.stringify({ version: '5.8.3' })
+      JSON.stringify({ version: '5.9.3' })
     )
     writeFileSync(join(typescriptRoot, 'bin/tsc'), 'export {}')
     for (const [packageRoot, version] of [
       [react18Root, '18.3.31'],
-      [react19Root, '19.2.17'],
+      [react19Root, '19.2.18'],
     ]) {
       writeFileSync(join(packageRoot, 'package.json'), JSON.stringify({ version }))
       for (const file of ['index.d.ts', 'jsx-runtime.d.ts', 'jsx-dev-runtime.d.ts']) {
@@ -1397,7 +1397,7 @@ test('resolves only regular, contained docs-owned compiler and React type files'
       docsManifestPath: '/repo/apps/docs/package.json',
       resolvePackage,
     })
-    assert.equal(toolchain.typescriptVersion, '5.8.3')
+    assert.equal(toolchain.typescriptVersion, '5.9.3')
     assert.equal(toolchain.tscPath, join(typescriptRoot, 'bin/tsc'))
     assert.deepEqual(toolchain.react18, {
       version: '18.3.31',
@@ -1407,7 +1407,7 @@ test('resolves only regular, contained docs-owned compiler and React type files'
       jsxDevRuntime: join(react18Root, 'jsx-dev-runtime.d.ts'),
     })
     assert.deepEqual(toolchain.react19, {
-      version: '19.2.17',
+      version: '19.2.18',
       root: react19Root,
       index: join(react19Root, 'index.d.ts'),
       jsxRuntime: join(react19Root, 'jsx-runtime.d.ts'),
@@ -1424,16 +1424,16 @@ test('resolves only regular, contained docs-owned compiler and React type files'
           docsManifestPath: '/repo/apps/docs/package.json',
           resolvePackage,
         }),
-      /TypeScript 5\.8\.3/u
+      /TypeScript 5\.9\.3/u
     )
     writeFileSync(
       join(typescriptRoot, 'package.json'),
-      JSON.stringify({ version: '5.8.3' })
+      JSON.stringify({ version: '5.9.3' })
     )
 
     writeFileSync(
       join(react18Root, 'package.json'),
-      JSON.stringify({ version: '19.2.17' })
+      JSON.stringify({ version: '19.2.18' })
     )
     assert.throws(
       () =>
@@ -1458,11 +1458,11 @@ test('resolves only regular, contained docs-owned compiler and React type files'
           docsManifestPath: '/repo/apps/docs/package.json',
           resolvePackage,
         }),
-      /React 19.*19\.2\.17/iu
+      /React 19.*19\.2\.18/iu
     )
     writeFileSync(
       join(react19Root, 'package.json'),
-      JSON.stringify({ version: '19.2.17' })
+      JSON.stringify({ version: '19.2.18' })
     )
 
     const outside = join(root, 'outside.d.ts')
@@ -1488,9 +1488,9 @@ test('resolves only regular, contained docs-owned compiler and React type files'
             return join(react19Root, 'package.json')
           },
           readJson(path) {
-            if (path === packagePaths.typescript) return { version: '5.8.3' }
+            if (path === packagePaths.typescript) return { version: '5.9.3' }
             reactReads += 1
-            return { version: reactReads === 1 ? '18.3.31' : '19.2.17' }
+            return { version: reactReads === 1 ? '18.3.31' : '19.2.18' }
           },
         }),
       /distinct React type roots/u
@@ -1625,7 +1625,7 @@ test('creates an isolated strict compiler project with exact declaration mapping
   )
 })
 
-test('TypeScript 5.8.3 rejects a React 19-only API under the React 18 pass', () => {
+test('TypeScript 5.9.3 rejects a React 19-only API under the React 18 pass', () => {
   const typescriptPackage = requireFromDocs.resolve('typescript/package.json')
   const root = mkdtempSync(join(tmpdir(), 'glucoseiq-react-matrix-'))
   try {
@@ -1639,7 +1639,7 @@ test('TypeScript 5.8.3 rejects a React 19-only API under the React 18 pass', () 
     )
     writeFileSync(
       join(react19, 'package.json'),
-      JSON.stringify({ version: '19.2.17' })
+      JSON.stringify({ version: '19.2.18' })
     )
     writeFileSync(
       join(react18, 'index.d.ts'),
@@ -1665,7 +1665,7 @@ test('TypeScript 5.8.3 rejects a React 19-only API under the React 18 pass', () 
         return packagePaths[name]
       },
     })
-    assert.equal(toolchain.typescriptVersion, '5.8.3')
+    assert.equal(toolchain.typescriptVersion, '5.9.3')
 
     const source =
       "import { useEffectEvent } from 'react'\nconst handler = useEffectEvent(() => undefined)\nvoid handler\n"

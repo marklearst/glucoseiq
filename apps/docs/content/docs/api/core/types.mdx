@@ -105,7 +105,7 @@ A single time-of-day bin in the AGP profile.
 | --- | --- | --- |
 | `readonly minuteOfDay` | `number` | Minute-of-day at the start of this bin (0–1439). |
 | `readonly n` | `number` | Number of pooled readings in this bin. |
-| `readonly percentiles` | `Record<number, null \| number>` | Percentile value keyed by percentile; `null` when the bin has no readings. |
+| `readonly percentiles` | `Record<number, number \| null>` | Percentile value keyed by percentile; `null` when the bin has no readings. |
 
 
 ---
@@ -260,16 +260,16 @@ Result of [analyzeGlucose](/docs/api/core/reports#analyzeglucose).
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly agpProfile` | `null \| AGPProfileResult` |  |
+| `readonly agpProfile` | `AGPProfileResult \| null` |  |
 | `readonly cv` | `number` |  |
 | `readonly dataSufficiency` | `DataSufficiency` |  |
-| `readonly episodes` | `null \| EpisodeResult` |  |
+| `readonly episodes` | `EpisodeResult \| null` |  |
 | `readonly gmi` | `number` |  |
 | `readonly meanGlucose` | `number` |  |
-| `readonly risk` | `null \| RiskMetrics` |  |
+| `readonly risk` | `RiskMetrics \| null` |  |
 | `readonly sd` | `number` |  |
-| `readonly tightRange` | `null \| TITRResult` |  |
-| `readonly timeInRange` | `null \| EnhancedTIRResult` |  |
+| `readonly tightRange` | `TITRResult \| null` |  |
+| `readonly timeInRange` | `EnhancedTIRResult \| null` |  |
 | `readonly valid` | `boolean` |  |
 
 
@@ -902,7 +902,7 @@ Result of [glucoseIQScore](/docs/api/core/score#glucoseiqscore).
 | `readonly rating` | `GlucoseIQRating` | Qualitative rating. |
 | `readonly score` | `number` | 0–100 score, higher is better (100 − GRI). |
 | `readonly valid` | `boolean` | Whether the score could be computed. |
-| `readonly zone` | `null \| 'A' \| 'B' \| 'C' \| 'D' \| 'E'` | GRI risk zone (A best … E worst), or null if not computable. |
+| `readonly zone` | `'A' \| 'B' \| 'C' \| 'D' \| 'E' \| null` | GRI risk zone (A best … E worst), or null if not computable. |
 
 
 ---
@@ -1172,7 +1172,7 @@ Result of [analyzeMealResponse](/docs/api/core/meals#analyzemealresponse).
 | `readonly iAUC` | `number` | Incremental AUC above baseline (output unit × minutes). |
 | `readonly peakValue` | `number` | Peak glucose value in the window (output unit). |
 | `readonly readingCount` | `number` | Number of readings in the window. |
-| `readonly returnToBaselineMin` | `null \| number` | Minutes from the meal until glucose first returns to baseline after the peak, or null. |
+| `readonly returnToBaselineMin` | `number \| null` | Minutes from the meal until glucose first returns to baseline after the peak, or null. |
 | `readonly timeToPeakMin` | `number` | Minutes from the meal to the peak. |
 | `readonly valid` | `boolean` | Whether a response could be computed. |
 | `readonly windowMinutes` | `number` | Window analyzed (minutes). |
@@ -1345,7 +1345,7 @@ value for analytics.
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `readonly averageValue` | `null \| number` | Average glucose value in this range (mg/dL or mmol/L) |
+| `readonly averageValue` | `number \| null` | Average glucose value in this range (mg/dL or mmol/L) |
 | `readonly duration` | `number` | Estimated occupied-slot duration allocated to this range (minutes). |
 | `readonly percentage` | `number` | Percentage of readings in this range (0-100) |
 | `readonly readingCount` | `number` | Count of readings in this range |

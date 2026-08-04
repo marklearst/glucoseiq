@@ -50,7 +50,7 @@ Converts a single Dexcom Share entry into a NormalizedCGMReading.
 **Import:** `@glucoseiq/core/connectors`
 
 ```ts fragment="generated API declaration or signature"
-normalizeDexcomTrend(trend: undefined | null | DexcomTrendString | string & {}): CGMTrend
+normalizeDexcomTrend(trend: DexcomTrendString | string & {} | null | undefined): CGMTrend
 ```
 
 Maps a Dexcom Share trend string to the shared `CGMTrend` values.
@@ -105,7 +105,7 @@ Converts a single Libre LinkUp entry into a NormalizedCGMReading.
 **Import:** `@glucoseiq/core/connectors`
 
 ```ts fragment="generated API declaration or signature"
-normalizeLibreTrend(trend: undefined | null | number): CGMTrend
+normalizeLibreTrend(trend: number | null | undefined): CGMTrend
 ```
 
 Maps a Libre LinkUp numeric trend value to the shared `CGMTrend` values.
@@ -121,7 +121,7 @@ and returns 'unknown' for any invalid or unmapped values.
 **Import:** `@glucoseiq/core/connectors`
 
 ```ts fragment="generated API declaration or signature"
-normalizeNightscoutDirection(direction: undefined | NightscoutDirection): CGMTrend
+normalizeNightscoutDirection(direction: NightscoutDirection | undefined): CGMTrend
 ```
 
 Maps a Nightscout direction string to the shared `CGMTrend` values.
