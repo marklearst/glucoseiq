@@ -438,10 +438,17 @@ test('the launch runbook preserves phase, artifact, and OIDC safety gates', () =
   assert.match(runbook, /test "\$\(pnpm --version\)" = "11\.17\.0"/u)
   assert.match(runbook, /test "\$\(npm --version\)" = "11\.17\.0"/u)
 
-  assert.match(runbook, /Transition candidate[\s\S]*pnpm changeset status/u)
   assert.match(
     runbook,
-    /Generated release pull request[\s\S]*test ! -e \.changeset\/launch-glucoseiq-one\.md/u
+    /Release-support candidate[\s\S]*test -e \.changeset\/launch-glucoseiq-one\.md[\s\S]*test ! -e \.changeset\/pre\.json[\s\S]*pnpm changeset status/u
+  )
+  assert.match(
+    runbook,
+    /Prerelease-entry pull request[\s\S]*test -e \.changeset\/launch-glucoseiq-one\.md[\s\S]*test -e \.changeset\/pre\.json[\s\S]*\.changesets == \[\]/u
+  )
+  assert.match(
+    runbook,
+    /Generated release pull request[\s\S]*test -e \.changeset\/launch-glucoseiq-one\.md[\s\S]*test -e \.changeset\/pre\.json[\s\S]*\.changesets == \["launch-glucoseiq-one"\][\s\S]*"1\.0\.0-next\.0"[\s\S]*\^## 1\\\.0\\\.0-next\\\.0\$/u
   )
   assert.match(runbook, /pnpm test:size/u)
   assert.doesNotMatch(runbook, /core root ESM gzip/u)

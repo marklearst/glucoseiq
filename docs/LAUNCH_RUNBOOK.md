@@ -1,12 +1,16 @@
 # GlucoseIQ 1.0 Launch Runbook
 
-This runbook executes the approved two-gate launch without rewriting published
-history:
+This runbook executes the approved prerelease launch without rewriting
+published history:
 
 1. merge the transition pull request, deploy the documentation, and make
    `glucoseiq.dev` canonical; then
-2. review and merge the generated release pull request to publish the package
-   family.
+2. merge the pull request that adds exact `next.0` release support;
+3. in a separate reviewed pull request, add `.changeset/pre.json` with the
+   exact prerelease state to enter Changesets prerelease mode with the `next`
+   tag; then
+4. review and merge the workflow-generated exact `1.0.0-next.0` release pull
+   request to publish the package family under npm dist-tag `next`.
 
 Stop at any failed check. Do not publish around a failed workflow, replace an
 already published artifact, rewrite `main`, or delete a successful registry
@@ -18,11 +22,15 @@ The first coordinated publication is:
 
 | Package | Version | npm tag |
 | --- | ---: | --- |
-| `@glucoseiq/core` | `1.0.0` | `latest` |
-| `@glucoseiq/react` | `1.0.0` | `latest` |
-| `@glucoseiq/tokens` | `1.0.0` | `latest` |
-| `@glucoseiq/testing` | `1.0.0` | `latest` |
-| `@glucoseiq/cli` | `1.0.0` | `latest` |
+| `@glucoseiq/core` | `1.0.0-next.0` | `next` |
+| `@glucoseiq/react` | `1.0.0-next.0` | `next` |
+| `@glucoseiq/tokens` | `1.0.0-next.0` | `next` |
+| `@glucoseiq/testing` | `1.0.0-next.0` | `next` |
+| `@glucoseiq/cli` | `1.0.0-next.0` | `next` |
+
+Do not move `latest` to this prerelease. A later stable `1.0.0` promotion has
+its own reviewed release path.
+
 ## Part A: Machine-checked commands
 
 Run this section against the exact transition or release-candidate commit being
@@ -128,41 +136,67 @@ The frozen install must finish without changing `pnpm-lock.yaml`.
 
 ### A3. Confirm the release state for the current phase
 
-The transition candidate and generated release pull request have intentionally
-different Changesets state. Run only the matching block.
+The release-support pull request, prerelease-entry pull request, and generated
+release pull request have intentionally different Changesets state. Run only
+the matching block.
 
-#### Transition candidate
+#### Release-support candidate
 
 ```bash
 set -euo pipefail
 
 test -e .changeset/launch-glucoseiq-one.md
+test ! -e .changeset/pre.json
 pnpm changeset status
 pnpm test:launch
 ```
 
-The status must predict exactly five scoped `1.0.0` releases, each from a
-major launch entry. Versioning remains independent after this coordinated release.
+Before `.changeset/pre.json` exists, the baseline status predicts five scoped
+`1.0.0` releases from the major launch entry. This is a release-support check,
+not permission to publish stable `1.0.0`; merge this pull request before
+entering prerelease mode in a separate reviewed pull request.
 
-#### Generated release pull request
-
-The versioning workflow consumes the launch Changeset. Do not require
-`pnpm changeset status` to repeat the prediction on this branch. Verify the
-consumed state, exact manifests, changelogs, and release policy instead:
+#### Prerelease-entry pull request
 
 ```bash
 set -euo pipefail
 
-test ! -e .changeset/launch-glucoseiq-one.md
+test -e .changeset/launch-glucoseiq-one.md
+test -e .changeset/pre.json
+jq -e '.mode == "pre" and .tag == "next" and .changesets == []' .changeset/pre.json >/dev/null
+pnpm changeset status
+pnpm test:launch
+```
+
+The exact prerelease state predicts exactly five scoped `1.0.0-next.0`
+releases. It keeps the launch Changeset unconsumed until the workflow generates
+the candidate.
+
+#### Generated release pull request
+
+The versioning workflow records the launch Changeset as consumed in
+`.changeset/pre.json` but retains its Markdown file. Do not require `pnpm
+changeset status` to repeat the prediction on this branch. Verify the consumed
+state, exact manifests, changelogs, and release policy instead:
+
+```bash
+set -euo pipefail
+
+test -e .changeset/launch-glucoseiq-one.md
+test -e .changeset/pre.json
+jq -e '.mode == "pre" and .tag == "next" and .changesets == ["launch-glucoseiq-one"]' .changeset/pre.json >/dev/null
 pnpm test:launch
 
 for package in core react tokens testing cli; do
-  test "$(jq -r .version "packages/$package/package.json")" = "1.0.0"
-  rg -n '^## 1\.0\.0$' "packages/$package/CHANGELOG.md"
+  test "$(jq -r .version "packages/$package/package.json")" = "1.0.0-next.0"
+  rg -n '^## 1\.0\.0-next\.0$' "packages/$package/CHANGELOG.md"
 done
 
 pnpm test:packages:candidate
 ```
+
+This is the only allowed prerelease candidate. The consumed launch Changeset
+must not create `next.1+`; use the later stable `1.0.0` promotion path instead.
 
 ### A4. Run the durable quality gates
 
@@ -239,9 +273,10 @@ for manifest in packages/{core,react,tokens,testing,cli}/package.json; do
 done
 ```
 
-The packed dependents must resolve core as `^1.0.0`; scoped packages must be
-public; ESM types must route to `.d.mts`; CommonJS types must route to `.d.ts`;
-and package READMEs must contain only files and links valid inside a tarball.
+The packed dependents must resolve core as `^1.0.0-next.0`; scoped packages
+must be public; ESM types must route to `.d.mts`; CommonJS types must route to
+`.d.ts`; and package READMEs must contain only files and links valid inside a
+tarball.
 
 ## Part B: Unchecked human and external gates
 
@@ -364,8 +399,11 @@ describes the public discovery metadata.
 - [ ] The release branch is `release/glucoseiq-packages`.
 - [ ] The release branch is current with `main`, its required check belongs to
       that current head, and no newer Changesets remain outside the candidate.
-- [ ] The pull request contains five `1.0.0` manifests, correct changelogs, and the
-      updated lockfile.
+- [ ] The pull request contains `.changeset/pre.json`, the retained
+      `launch-glucoseiq-one.md`, five `1.0.0-next.0` manifests, correct
+      changelogs, and the updated lockfile.
+- [ ] The `pre.json` state uses the `next` tag, records
+      `launch-glucoseiq-one` as consumed, and cannot create `next.1+`.
 - [ ] The release body and commits remain project-focused and contain no
       internal workflow references.
 - [ ] Re-run Part A against the exact versioned release head SHA.
@@ -399,10 +437,11 @@ still use the public contract described in
 
 ### B7. Bootstrap publication
 
-- [ ] Merge the reviewed release pull request.
+- [ ] Merge the reviewed exact `1.0.0-next.0` release pull request.
 - [ ] Observe the GitHub-hosted `release.yml` run for the exact merge SHA.
 - [ ] Confirm it uses Node 24, pnpm 11.17.0, npm 11.17.0, public access, and
-      provenance.
+      provenance, and publishes every package with npm dist-tag `next`, not
+      `latest`.
 - [ ] Do not start a separate manual publication while the workflow is running.
 - [ ] If any package fails, stop and use Partial-publication recovery below.
 
@@ -454,11 +493,11 @@ registry evidence is bound to the exact release commit.
 set -euo pipefail
 
 expected=(
-  '@glucoseiq/core@1.0.0'
-  '@glucoseiq/react@1.0.0'
-  '@glucoseiq/tokens@1.0.0'
-  '@glucoseiq/testing@1.0.0'
-  '@glucoseiq/cli@1.0.0'
+  '@glucoseiq/core@1.0.0-next.0'
+  '@glucoseiq/react@1.0.0-next.0'
+  '@glucoseiq/tokens@1.0.0-next.0'
+  '@glucoseiq/testing@1.0.0-next.0'
+  '@glucoseiq/cli@1.0.0-next.0'
 )
 
 for spec in "${expected[@]}"; do
@@ -469,8 +508,9 @@ done
 ```
 
 Verify that no registry dependency contains `workspace:`, every scoped package
-is public, core-dependent packages use `@glucoseiq/core:^1.0.0`, and the React
-peer remains `>=18`.
+is public, core-dependent packages use `@glucoseiq/core:^1.0.0-next.0`, the npm
+`next` tag is exactly `1.0.0-next.0`, `latest` was not moved to this prerelease,
+and the React peer remains `>=18`.
 
 ### C2. Verify provenance and signatures
 
@@ -486,11 +526,11 @@ tmp=$(mktemp -d)
 trap 'rm -rf -- "$tmp"' EXIT
 npm --prefix "$tmp" init -y
 npm --prefix "$tmp" install --ignore-scripts \
-  @glucoseiq/core@1.0.0 \
-  @glucoseiq/react@1.0.0 \
-  @glucoseiq/tokens@1.0.0 \
-  @glucoseiq/testing@1.0.0 \
-  @glucoseiq/cli@1.0.0 \
+  @glucoseiq/core@1.0.0-next.0 \
+  @glucoseiq/react@1.0.0-next.0 \
+  @glucoseiq/tokens@1.0.0-next.0 \
+  @glucoseiq/testing@1.0.0-next.0 \
+  @glucoseiq/cli@1.0.0-next.0 \
   react@19 \
   react-dom@19
 npm --prefix "$tmp" audit signatures
@@ -504,12 +544,13 @@ See npm's [package provenance verification](https://docs.npmjs.com/viewing-packa
 set -euo pipefail
 
 git fetch --tags origin
-git tag --list '*1.0.0' '*2.0.0'
+git tag --list '*1.0.0-next.0'
 gh release list --repo marklearst/glucoseiq --limit 20
-npm exec --yes --package=@glucoseiq/cli@1.0.0 -- glucoseiq --help
+npm exec --yes --package=@glucoseiq/cli@1.0.0-next.0 -- glucoseiq --help
 ```
 
-- [ ] Git tags and GitHub releases exist for all five versions.
+- [ ] Git tags and published, non-draft prereleases exist for all five exact
+      versions.
 - [ ] Registry tarballs contain the expected READMEs, licenses, manifests,
       runtime files, declarations, executable, and source maps.
 - [ ] Source maps contain no local absolute paths or prohibited attribution.
@@ -593,11 +634,11 @@ set -euo pipefail
 registry='https://registry.npmjs.org'
 propagation_seconds=600
 expected=(
-  '@glucoseiq/core@1.0.0'
-  '@glucoseiq/react@1.0.0'
-  '@glucoseiq/tokens@1.0.0'
-  '@glucoseiq/testing@1.0.0'
-  '@glucoseiq/cli@1.0.0'
+  '@glucoseiq/core@1.0.0-next.0'
+  '@glucoseiq/react@1.0.0-next.0'
+  '@glucoseiq/tokens@1.0.0-next.0'
+  '@glucoseiq/testing@1.0.0-next.0'
+  '@glucoseiq/cli@1.0.0-next.0'
 )
 
 npm ping --registry "$registry" >/dev/null
@@ -653,11 +694,11 @@ set -euo pipefail
 gh run rerun RUN_ID --repo marklearst/glucoseiq --failed
 ```
 
-Changesets should skip versions already present and publish only missing
-versions. Observe the run and repeat the registry inventory before changing a
-dist-tag. If the bootstrap token expired, create another equally narrow
-one-day token or finish the trusted-publisher setup for packages that already
-exist; do not broaden credentials.
+The repository publisher must skip exact versions already present and publish
+only missing versions. Observe the run and repeat the registry inventory before
+changing a dist-tag. If the bootstrap token expired, create another equally
+narrow one-day token or finish the trusted-publisher setup for packages that
+already exist; do not broaden credentials.
 
 ### 4. Recover missing repository artifacts only from verified npm evidence
 
@@ -715,11 +756,11 @@ set -euo pipefail
 repository='marklearst/glucoseiq'
 release_sha='RELEASE_SHA_FROM_FAILED_RUN'
 tags=(
-  '@glucoseiq/core@1.0.0'
-  '@glucoseiq/react@1.0.0'
-  '@glucoseiq/tokens@1.0.0'
-  '@glucoseiq/testing@1.0.0'
-  '@glucoseiq/cli@1.0.0'
+  '@glucoseiq/core@1.0.0-next.0'
+  '@glucoseiq/react@1.0.0-next.0'
+  '@glucoseiq/tokens@1.0.0-next.0'
+  '@glucoseiq/testing@1.0.0-next.0'
+  '@glucoseiq/cli@1.0.0-next.0'
 )
 temporary_directory=$(mktemp -d)
 trap 'rm -rf "$temporary_directory"' EXIT
@@ -768,22 +809,22 @@ for tag in "${tags[@]}"; do
 done
 ```
 
-Finally, inspect each GitHub release. Existing releases must be non-draft,
-non-prerelease releases for the exact tag and are never modified. For a
-confirmed missing release, extract exactly one matching version section from
-the package changelog, review it, type the exact tag as confirmation, and
-create the release only against the already-verified tag:
+Finally, inspect each GitHub release. Existing releases must be published,
+non-draft prereleases for the exact tag and are never modified. For a confirmed
+missing release, extract exactly one matching version section from the package
+changelog, review it, type the exact tag as confirmation, and create the
+release only against the already-verified tag:
 
 ```bash
 set -euo pipefail
 
 repository='marklearst/glucoseiq'
 records=(
-  '@glucoseiq/core@1.0.0|packages/core/CHANGELOG.md|1.0.0'
-  '@glucoseiq/react@1.0.0|packages/react/CHANGELOG.md|1.0.0'
-  '@glucoseiq/tokens@1.0.0|packages/tokens/CHANGELOG.md|1.0.0'
-  '@glucoseiq/testing@1.0.0|packages/testing/CHANGELOG.md|1.0.0'
-  '@glucoseiq/cli@1.0.0|packages/cli/CHANGELOG.md|1.0.0'
+  '@glucoseiq/core@1.0.0-next.0|packages/core/CHANGELOG.md|1.0.0-next.0'
+  '@glucoseiq/react@1.0.0-next.0|packages/react/CHANGELOG.md|1.0.0-next.0'
+  '@glucoseiq/tokens@1.0.0-next.0|packages/tokens/CHANGELOG.md|1.0.0-next.0'
+  '@glucoseiq/testing@1.0.0-next.0|packages/testing/CHANGELOG.md|1.0.0-next.0'
+  '@glucoseiq/cli@1.0.0-next.0|packages/cli/CHANGELOG.md|1.0.0-next.0'
 )
 temporary_directory=$(mktemp -d)
 trap 'rm -rf "$temporary_directory"' EXIT
@@ -796,7 +837,7 @@ for record in "${records[@]}"; do
   if release_json=$(gh api "repos/$repository/releases/tags/$encoded_tag" \
     2>"$error_file"); then
     jq -e --arg tag "$tag" \
-      '.tag_name == $tag and .draft == false and .prerelease == false' \
+      '.tag_name == $tag and .draft == false and .prerelease == true' \
       <<<"$release_json" >/dev/null
     printf 'PRESERVE %s GitHub release\n' "$tag"
     continue
@@ -854,16 +895,16 @@ If a published tarball, manifest, declaration, executable, or runtime is bad:
 
 1. leave the published version in place;
 2. fix the source with a focused regression test;
-3. add a patch Changeset for every package whose own artifact or dependency
-   contract changes;
-4. run the complete candidate suite and inspect new tarballs;
-5. publish the corrective patch through the approved workflow; and
-6. move `latest` only after the patch verifies.
+3. do not create `next.1+`; hold the correction for the later stable `1.0.0`
+   promotion;
+4. run the complete candidate suite and inspect the later stable tarballs;
+5. publish the corrective stable version through the approved workflow; and
+6. move `latest` only after that stable version verifies.
 
 If the bad version needs a warning, deprecate that version only after the
 replacement exists and document the exact upgrade. Missing provenance cannot
 be attached to an immutable published version; correct the workflow and ship a
-verified patch.
+verified stable replacement.
 
 Finish recovery by rerunning Parts C and D and recording the incident, root
 cause, affected versions, corrective release, and final registry state.
