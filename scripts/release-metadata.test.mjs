@@ -127,9 +127,27 @@ assert.match(
   publish,
   /uses: changesets\/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d/u,
 )
-// Catches the action reverting to its git-cli tag push path, which cannot
-// recover when the publisher's remote-tag preflight finds a correct tag.
-assert.match(publish, /^ {10}commitMode: github-api$/mu)
+// Catches the action returning to its API tag path, which swallows every
+// createRef error before it creates a public GitHub release.
+assert.doesNotMatch(publish, /^ {10}commitMode:/mu)
+assert.match(publish, /name: Prepare Git tag authentication/u)
+assert.match(publish, /glucoseiq-git-askpass/u)
+assert.match(publish, /GIT_ASKPASS: \$\{\{ runner\.temp \}\}\/glucoseiq-git-askpass/u)
+assert.match(publish, /GIT_TERMINAL_PROMPT: 0/u)
+assert.match(publish, /name: Remove Git tag authentication helper/u)
+assert.match(
+  publish,
+  /name: Remove Git tag authentication helper\n {8}if: \$\{\{ always\(\) \}\}/u,
+)
+assert.ok(
+  publish.indexOf('name: Prepare Git tag authentication') <
+    publish.indexOf('uses: changesets/action@') &&
+    publish.indexOf('uses: changesets/action@') <
+    publish.indexOf('name: Remove Git tag authentication helper') &&
+    publish.indexOf('name: Remove Git tag authentication helper') <
+    publish.indexOf('name: Resolve publication inventory'),
+  'ephemeral Git tag authentication must surround only the Changesets Action',
+)
 assert.match(publish, /name: Resolve publication inventory/u)
 assert.match(
   publish,

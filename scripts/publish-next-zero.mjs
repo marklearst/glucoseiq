@@ -230,7 +230,11 @@ function parseRemoteTagState(output, tag, releaseSha) {
   if (commit !== releaseSha) {
     throw new Error(`Remote tag ${tag} must resolve to release commit ${releaseSha}; received ${commit}`)
   }
-  return { kind: peeled === undefined ? 'lightweight' : 'annotated' }
+  return {
+    kind: peeled === undefined ? 'lightweight' : 'annotated',
+    objectSha: direct,
+    commitSha: commit,
+  }
 }
 
 async function inspectRemoteTag(spec, releaseSha, runCommand, cwd, timeoutMs) {
@@ -272,6 +276,49 @@ async function verifyOrCreateLocalTag(spec, releaseSha, runCommand, cwd, timeout
     await execute(runCommand, 'git', ['tag', '-a', spec.tag, releaseSha, '-m', spec.tag], { cwd, timeoutMs }, `Create local tag ${spec.tag}`),
     `Create local tag ${spec.tag}`,
   )
+}
+
+async function synchronizeLocalTag(spec, remoteState, releaseSha, runCommand, cwd, timeoutMs) {
+  const ref = `refs/tags/${spec.tag}`
+  assertCommandResult(
+    await execute(
+      runCommand,
+      'git',
+      ['fetch', '--force', '--no-tags', 'origin', `${ref}:${ref}`],
+      { cwd, timeoutMs },
+      `Synchronize local tag ${spec.tag}`,
+    ),
+    `Synchronize local tag ${spec.tag}`,
+  )
+  const objectSha = assertCommandResult(
+    await execute(
+      runCommand,
+      'git',
+      ['rev-parse', '--verify', ref],
+      { cwd, timeoutMs },
+      `Resolve local tag object ${spec.tag}`,
+    ),
+    `Resolve local tag object ${spec.tag}`,
+  ).stdout.trim()
+  if (!GIT_SHA.test(objectSha)) {
+    throw new Error(`Local tag ${spec.tag} returned a malformed object SHA`)
+  }
+  if (objectSha !== remoteState.objectSha) {
+    throw new Error(`Remote tag ${spec.tag} changed during local synchronization`)
+  }
+  const commitSha = assertCommandResult(
+    await execute(
+      runCommand,
+      'git',
+      ['rev-parse', '--verify', `${ref}^{commit}`],
+      { cwd, timeoutMs },
+      `Resolve local tag commit ${spec.tag}`,
+    ),
+    `Resolve local tag commit ${spec.tag}`,
+  ).stdout.trim()
+  if (commitSha !== releaseSha || commitSha !== remoteState.commitSha) {
+    throw new Error(`${spec.tag} must resolve to release commit ${releaseSha}; received ${commitSha}`)
+  }
 }
 
 async function inspectGitHubRelease(spec, runCommand, repository, cwd, timeoutMs) {
@@ -330,7 +377,23 @@ export async function runNextZeroPublisher({
       throw new Error(`GitHub release ${packageSpecs[index].tag} exists while its remote tag is absent`)
     }
   }
-  for (const spec of packageSpecs) await verifyOrCreateLocalTag(spec, releaseSha, runCommand, cwd, commandTimeoutMs)
+  for (let index = 0; index < packageSpecs.length; index += 1) {
+    if (remoteStates[index].kind !== 'absent') {
+      await synchronizeLocalTag(
+        packageSpecs[index],
+        remoteStates[index],
+        releaseSha,
+        runCommand,
+        cwd,
+        commandTimeoutMs,
+      )
+    }
+  }
+  for (let index = 0; index < packageSpecs.length; index += 1) {
+    if (remoteStates[index].kind === 'absent') {
+      await verifyOrCreateLocalTag(packageSpecs[index], releaseSha, runCommand, cwd, commandTimeoutMs)
+    }
+  }
 
   const npmVersion = assertCommandResult(
     await execute(runCommand, 'npm', ['--version'], { cwd, timeoutMs: commandTimeoutMs }, 'Check npm version'),
