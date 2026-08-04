@@ -167,6 +167,9 @@ assert.deepEqual(createNextZeroPackageVersions(), nextZeroVersions)
 assert.doesNotThrow(() => assertExactNextZeroPackageVersions(nextZeroVersions))
 assert.equal(assertCandidatePackageVersions(nextZeroVersions), 'next.0')
 assert.equal(assertCandidatePackageVersions(launchVersions), 'stable')
+const stableBuildVersions = new Map(launchVersions)
+stableBuildVersions.set('@glucoseiq/core', '1.0.0+build-sha')
+assert.equal(assertCandidatePackageVersions(stableBuildVersions), 'stable')
 assert.equal(
   assertCandidatePackageVersions(new Map([
     ['@glucoseiq/core', '1.4.0'],

@@ -50,9 +50,9 @@ export function assertCandidatePackageVersions(versions) {
     }
   }
 
-  const containsPrerelease = LAUNCH_PACKAGE_VERSION_ENTRIES.some(([name]) =>
-    typeof versions.get(name) === 'string' && versions.get(name).includes('-'))
-  if (containsPrerelease) {
+  const containsNonStableVersion = LAUNCH_PACKAGE_VERSION_ENTRIES.some(([name]) =>
+    typeof versions.get(name) !== 'string' || !STABLE_SEMVER.test(versions.get(name)))
+  if (containsNonStableVersion) {
     try {
       assertExactNextZeroPackageVersions(versions)
     } catch (error) {
