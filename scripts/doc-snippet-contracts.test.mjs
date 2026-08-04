@@ -463,6 +463,16 @@ test('the launch runbook preserves phase, artifact, and OIDC safety gates', () =
   assert.match(runbook, /trap 'rm -rf -- "\$tmp"' EXIT/u)
   assert.match(runbook, /confirmed E404 after the propagation window/u)
   assert.match(runbook, /Unexpected registry failure/u)
+  // Catches recovery checks that accept a wrong `next` tag or promote it through `latest`.
+  assert.match(
+    runbook,
+    /packages=\([\s\S]*'@glucoseiq\/core'[\s\S]*'@glucoseiq\/react'[\s\S]*'@glucoseiq\/tokens'[\s\S]*'@glucoseiq\/testing'[\s\S]*'@glucoseiq\/cli'[\s\S]*\)[\s\S]*npm view "\$package" dist-tags --registry "\$registry" --json[\s\S]*--arg next_version '1\.0\.0-next\.0'[\s\S]*\.next == \$next_version and \.latest != \$next_version/u
+  )
+  // Catches recovery that creates a stable GitHub release for an exact prerelease tag.
+  assert.match(
+    runbook,
+    /gh release create "\$tag" --repo "\$repository" --verify-tag[\s\S]*--title "\$tag" --notes-file "\$notes" --prerelease/u
+  )
 
   const removeToken = runbook.indexOf('Remove every workflow reference to `NPM_TOKEN`')
   const deleteToken = runbook.indexOf('Delete the GitHub repository secret')
