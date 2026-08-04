@@ -1,0 +1,13 @@
+{
+  "mode": "pre",
+  "tag": "next",
+  "initialVersions": {
+    "@glucoseiq/cli": "0.0.0",
+    "@glucoseiq/core": "0.0.0",
+    "@glucoseiq/react": "0.0.0",
+    "@glucoseiq/testing": "0.0.0",
+    "@glucoseiq/tokens": "0.0.0",
+    "docs": "0.0.0"
+  },
+  "changesets": []
+}
