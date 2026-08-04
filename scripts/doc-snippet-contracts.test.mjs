@@ -346,8 +346,9 @@ test('homepage report and UI examples pair visual shorthand with semantic text',
   assert.match(homepage, /<GlucoseReportSuite/u)
   assert.match(
     reportSuite,
-    /<figure className=\{styles\.reportFigure\} data-motion-part="report">/u
+    /<figure className=\{styles\.reportFigure\}>/u
   )
+  assert.doesNotMatch(reportSuite, /data-motion-part|data-entrance-state/u)
   assert.match(
     reportSuite,
     /<figcaption className=\{styles\.reportCaption\}>/u

@@ -14,18 +14,16 @@ const files = {
   gmi: 'app/(home)/gmi-scale.tsx',
   tir: 'app/(home)/time-in-range-distribution.tsx',
   agp: 'app/(home)/agp-profile.tsx',
-  entrance: 'app/(home)/report-entrance.tsx',
   styles: 'app/(home)/glucose-report.module.css',
 }
 
-test('homepage report uses four server-rendered views behind one client entrance', () => {
+test('homepage renders all four report views directly as server components', () => {
   for (const path of Object.values(files)) {
     assert.equal(existsSync(join(docsRoot, path)), true, `${path} is missing`)
   }
 
   const page = read(files.page)
   const suite = read(files.suite)
-  const entrance = read(files.entrance)
   const serverViews = [
     suite,
     read(files.trace),
@@ -34,40 +32,44 @@ test('homepage report uses four server-rendered views behind one client entrance
     read(files.agp),
   ]
 
-  assert.match(page, /<ReportEntrance>\s*<GlucoseReportSuite/u)
+  assert.match(page, /<GlucoseReportSuite[\s\S]*?\/>/u)
+  assert.doesNotMatch(page, /ReportEntrance|report-entrance/u)
   assert.match(suite, /data-report-view="trace"/u)
   assert.match(read(files.gmi), /data-report-view="gmi"/u)
   assert.match(read(files.tir), /data-report-view="tir"/u)
   assert.match(read(files.agp), /data-report-view="agp"/u)
-  assert.match(entrance, /^'use client'/u)
-
   for (const source of serverViews) {
     assert.doesNotMatch(source, /['"]use client['"]/u)
   }
 })
 
-test('report entrance runs once without taking control of page scrolling', () => {
-  const entrance = read(files.entrance)
+test('report has no observer, reveal state, loader, or motion-only client boundary', () => {
+  const page = read(files.page)
   const styles = read(files.styles)
+  const reportSources = [
+    page,
+    read(files.suite),
+    read(files.trace),
+    read(files.gmi),
+    read(files.tir),
+    read(files.agp),
+    styles,
+  ].join('\n')
 
-  assert.equal((entrance.match(/new IntersectionObserver/gu) ?? []).length, 1)
+  assert.equal(
+    existsSync(join(docsRoot, 'app/(home)/report-entrance.tsx')),
+    false,
+  )
+  assert.equal(
+    existsSync(join(docsRoot, 'app/(home)/report-motion.ts')),
+    false,
+  )
   assert.doesNotMatch(
-    `${entrance}\n${styles}`,
-    /view-timeline|animation-timeline|scrollend|position:\s*sticky|preventDefault\(|addEventListener\(\s*['"](?:wheel|touchmove)/u,
+    reportSources,
+    /IntersectionObserver|requestAnimationFrame|view-timeline|animation-timeline|scrollend|position:\s*sticky|preventDefault\(|addEventListener\(|data-entrance-state|data-motion-part|--profile-delay|reportEntrance|reportShellIn|reportReveal|gmiReveal|profileColumnIn/u,
   )
-  assert.doesNotMatch(entrance, /addEventListener\(\s*['"]scroll/u)
-  assert.match(entrance, /root\.dataset\.entranceState/u)
-  assert.match(
-    entrance,
-    /root\.querySelector<HTMLElement>\('\[data-motion-part="report"\]'\)/u,
-  )
-  assert.match(entrance, /observer\.observe\(target\)/u)
-  assert.match(entrance, /target\.getBoundingClientRect\(\)/u)
-  assert.match(entrance, /prefers-reduced-motion/u)
-  assert.match(entrance, /event\.persisted/u)
-  assert.match(styles, /\.reportEntrance\[data-entrance-state='armed'\]/u)
-  assert.match(styles, /\.reportEntrance\[data-entrance-state='revealing'\]/u)
-  assert.match(styles, /prefers-reduced-motion:\s*reduce/u)
+  assert.doesNotMatch(styles, /@keyframes|\banimation\s*:/u)
+  assert.doesNotMatch(styles, /filter:\s*blur|opacity:\s*0(?:\.0+1)?/u)
 })
 
 test('report layout gives the trace priority and adapts without horizontal overflow', () => {

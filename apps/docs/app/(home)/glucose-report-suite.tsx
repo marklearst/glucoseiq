@@ -94,7 +94,7 @@ export function GlucoseReportSuite({
           24-hour trace, range distribution, GMI estimate, and daily profile.
         </p>
       </div>
-      <figure className={styles.reportFigure} data-motion-part="report">
+      <figure className={styles.reportFigure}>
         <div className={styles.reportGrid}>
           <section
             aria-labelledby="trace-panel-title"
@@ -154,10 +154,7 @@ export function GlucoseReportSuite({
             <GlucoseTrace geometry={traceGeometry} />
           </section>
 
-          <div
-            className={styles.supportDeck}
-            data-motion-part="analytics"
-          >
+          <div className={styles.supportDeck}>
             <GMIScale
               days={days}
               meanGlucose={meanGlucose}
