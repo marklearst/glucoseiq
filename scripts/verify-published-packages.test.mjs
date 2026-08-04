@@ -12,6 +12,7 @@ import test from 'node:test'
 import * as publishedVerifier from './verify-published-packages.mjs'
 import {
   LAUNCH_PACKAGES,
+  NEXT_ZERO_PACKAGES,
   createExpectedPublicationPlan,
   createPublishedPackageSpecs,
   deriveCheckedOutReleasePlan,
@@ -186,9 +187,8 @@ function createVersionMetadata(spec) {
   }
 
   if (spec.coreDependency) {
-    const coreMajor = spec.coreVersion?.split('.')[0] ?? '1'
     metadata.dependencies = {
-      '@glucoseiq/core': spec.coreDependencyRange ?? `^${coreMajor}.0.0`,
+      '@glucoseiq/core': spec.coreDependencyRange ?? `^${spec.coreVersion ?? '1.0.0'}`,
     }
   }
   if (spec.name === '@glucoseiq/react') metadata.peerDependencies = { react: '>=18' }
@@ -201,7 +201,9 @@ function createPackument(spec) {
   return {
     name: spec.name,
     'dist-tags': {
-      latest: spec.version,
+      ...(spec.version === '1.0.0-next.0'
+        ? { next: spec.version, latest: '0.9.0' }
+        : { latest: spec.version }),
     },
     versions: {
       [spec.version]: metadata,
@@ -209,8 +211,8 @@ function createPackument(spec) {
   }
 }
 
-function createSnapshot() {
-  return new Map(LAUNCH_PACKAGES.map((spec) => [spec.name, createPackument(spec)]))
+function createSnapshot(packageSpecs = LAUNCH_PACKAGES) {
+  return new Map(packageSpecs.map((spec) => [spec.name, createPackument(spec)]))
 }
 
 function expectedPackedManifest(spec) {
@@ -307,7 +309,11 @@ function createHappyHarness({
       const tag = decodeURIComponent(encodedTag)
       return {
         status: 0,
-        stdout: JSON.stringify({ tag_name: tag, draft: false, prerelease: false }),
+        stdout: JSON.stringify({
+          tag_name: tag,
+          draft: false,
+          prerelease: tag.endsWith('@1.0.0-next.0'),
+        }),
         stderr: '',
       }
     }
@@ -340,16 +346,34 @@ function createHappyHarness({
   return { commands, events, fetchCalls, fetchImpl, releaseSha, runCommand }
 }
 
-test('locks the five coordinated launch package versions and tags', () => {
+test('locks the five coordinated next.0 package versions and tags', () => {
+  // Catches a prerelease verification path silently accepting next.1, a stable
+  // release, or non-exact package tags.
   assert.deepEqual(
-    LAUNCH_PACKAGES.map(({ name, version, tag }) => ({ name, version, tag })),
+    NEXT_ZERO_PACKAGES.map(({ name, version, tag }) => ({ name, version, tag })),
     [
-      { name: '@glucoseiq/core', version: '1.0.0', tag: '@glucoseiq/core@1.0.0' },
-      { name: '@glucoseiq/react', version: '1.0.0', tag: '@glucoseiq/react@1.0.0' },
-      { name: '@glucoseiq/tokens', version: '1.0.0', tag: '@glucoseiq/tokens@1.0.0' },
-      { name: '@glucoseiq/testing', version: '1.0.0', tag: '@glucoseiq/testing@1.0.0' },
-      { name: '@glucoseiq/cli', version: '1.0.0', tag: '@glucoseiq/cli@1.0.0' },
+      { name: '@glucoseiq/core', version: '1.0.0-next.0', tag: '@glucoseiq/core@1.0.0-next.0' },
+      { name: '@glucoseiq/react', version: '1.0.0-next.0', tag: '@glucoseiq/react@1.0.0-next.0' },
+      { name: '@glucoseiq/tokens', version: '1.0.0-next.0', tag: '@glucoseiq/tokens@1.0.0-next.0' },
+      { name: '@glucoseiq/testing', version: '1.0.0-next.0', tag: '@glucoseiq/testing@1.0.0-next.0' },
+      { name: '@glucoseiq/cli', version: '1.0.0-next.0', tag: '@glucoseiq/cli@1.0.0-next.0' },
     ],
+  )
+})
+
+test('requires the exact npm next tag and a published GitHub prerelease for next.0', async () => {
+  // Catches a prerelease being promoted through latest or represented as a stable release.
+  const snapshot = createSnapshot(NEXT_ZERO_PACKAGES)
+  assert.doesNotThrow(() => validateRegistrySnapshot(snapshot, { packageSpecs: NEXT_ZERO_PACKAGES }))
+  const harness = createHappyHarness({ packageSpecs: NEXT_ZERO_PACKAGES })
+  await assert.doesNotReject(
+    verifyRepositoryArtifacts({ packageSpecs: NEXT_ZERO_PACKAGES, runCommand: harness.runCommand }),
+  )
+
+  snapshot.get('@glucoseiq/core')['dist-tags'].next = '1.0.0-next.1'
+  assert.throws(
+    () => validateRegistrySnapshot(snapshot, { packageSpecs: NEXT_ZERO_PACKAGES }),
+    /@glucoseiq\/core next must be 1\.0\.0-next\.0/u,
   )
 })
 

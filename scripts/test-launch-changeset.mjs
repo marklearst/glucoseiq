@@ -5,13 +5,20 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   assertLaunchVersionPolicy,
+  createNextZeroPackageVersions,
   queryPublicLaunchVersions,
 } from './lib/package-contracts.mjs'
 import { spawnPackageContractCommandSync } from './lib/package-command.mjs'
+import { parsePrereleaseState } from './test-changeset-policy.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const launchChangeset = join(root, '.changeset/launch-glucoseiq-one.md')
 const hasLaunchChangeset = existsSync(launchChangeset)
+const prereleaseStatePath = join(root, '.changeset/pre.json')
+const prereleaseState = existsSync(prereleaseStatePath)
+  ? parsePrereleaseState(readFileSync(prereleaseStatePath), prereleaseStatePath)
+  : undefined
+const prereleaseStateKind = prereleaseState?.kind ?? 'none'
 const packageDirectories = new Map([
   ['@glucoseiq/core', 'packages/core'],
   ['@glucoseiq/react', 'packages/react'],
@@ -25,6 +32,7 @@ const baselineVersions = new Map(
 const launchVersions = new Map(
   [...packageDirectories].map(([name]) => [name, '1.0.0']),
 )
+const nextZeroVersions = createNextZeroPackageVersions()
 const currentVersions = new Map(
   [...packageDirectories].map(([name, directory]) => {
     const manifest = JSON.parse(readFileSync(join(root, directory, 'package.json'), 'utf8'))
@@ -64,6 +72,7 @@ if (!hasLaunchChangeset) {
       launchVersions,
       hasLaunchChangeset,
       allLaunchVersionsPublic: publicLaunchStatus.allPublic,
+      prereleaseStateKind,
     })
     if (policy === 'release') {
       console.log('Launch changeset has been consumed and all five release versions are correct.')
@@ -86,7 +95,13 @@ assertLaunchVersionPolicy({
   launchVersions,
   hasLaunchChangeset,
   allLaunchVersionsPublic: false,
+  prereleaseStateKind,
 })
+
+if (prereleaseStateKind === 'generated') {
+  console.log('Launch prerelease state is the exact coordinated next.0 candidate.')
+  process.exit(0)
+}
 
 const temporaryRoot = mkdtempSync(join(tmpdir(), 'glucoseiq-changeset-'))
 const outputPath = join(temporaryRoot, 'status.json')
@@ -111,10 +126,22 @@ try {
     .map((release) => [release.name, release.oldVersion, release.newVersion, release.type])
     .sort(([left], [right]) => left.localeCompare(right))
 
-  assert.deepEqual(releases, expectedReleases)
+  const expected = prereleaseStateKind === 'initial'
+    ? expectedReleases.map(([name, oldVersion, , type]) => [
+        name,
+        oldVersion,
+        nextZeroVersions.get(name),
+        type,
+      ])
+    : expectedReleases
+  assert.deepEqual(releases, expected)
   assert.equal(status.changesets.length, 1, 'the launch must use one coordinated bootstrap changeset')
   assert.equal(status.changesets[0].id, 'launch-glucoseiq-one')
-  console.log('Launch changeset predicts five scoped 1.0.0 packages.')
+  console.log(
+    prereleaseStateKind === 'initial'
+      ? 'Launch changeset predicts five scoped 1.0.0-next.0 packages.'
+      : 'Launch changeset predicts five scoped 1.0.0 packages.',
+  )
 } finally {
   rmSync(temporaryRoot, { recursive: true, force: true })
 }

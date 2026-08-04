@@ -33,11 +33,24 @@ A main-branch push runs the quality suite in
 release pull request. That candidate is checked out by its exact commit, built,
 packed, and tested before its required check can pass.
 
-Merging the reviewed release pull request starts publication only after the
-same quality suite, the versioned-tarball matrix, and the live
-`glucoseiq.dev` preflight pass. Registry verification runs after a real
-publication and checks the published packages, metadata, tags, provenance,
-entrypoints, declarations, React peers, and CLI.
+For the first prerelease, merge the pull request that adds exact `next.0`
+release support. In a separate reviewed pull request, add `.changeset/pre.json`
+with the exact prerelease state to enter Changesets prerelease mode with the
+`next` tag.
+The workflow then creates or refreshes a draft release pull request with the
+five exact `1.0.0-next.0` package candidates. Review that candidate before
+merging it.
+
+The generated candidate keeps `.changeset/launch-glucoseiq-one.md` and records
+`launch-glucoseiq-one` as consumed in `.changeset/pre.json`. Merging it starts
+publication only after the same quality suite, the versioned-tarball matrix,
+and the live `glucoseiq.dev` preflight pass. All five packages publish under
+the npm dist-tag `next`, not `latest`. Registry verification then checks the
+published packages, metadata, tags, provenance, entrypoints, declarations,
+React peers, and CLI.
+
+The consumed launch Changeset cannot create `next.1+`. Begin a later stable
+`1.0.0` promotion in its own reviewed release path.
 
 ## npm authentication
 

@@ -1,17 +1,79 @@
+import {
+  CORE_PACKAGE_IDENTITY,
+  LAUNCH_PACKAGE_SPECS,
+  NEXT_ZERO_CORE_RANGE,
+  NEXT_ZERO_PACKAGE_SPECS,
+  NEXT_ZERO_VERSION,
+} from './release-contract.mjs'
+
+export {
+  CORE_PACKAGE_IDENTITY,
+  RELEASE_PACKAGE_IDENTITIES,
+} from './release-contract.mjs'
+
 const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
 const STABLE_SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
-
 const LAUNCH_PACKAGE_VERSION_ENTRIES = Object.freeze([
-  Object.freeze(['@glucoseiq/core', '1.0.0']),
-  Object.freeze(['@glucoseiq/react', '1.0.0']),
-  Object.freeze(['@glucoseiq/tokens', '1.0.0']),
-  Object.freeze(['@glucoseiq/testing', '1.0.0']),
-  Object.freeze(['@glucoseiq/cli', '1.0.0']),
+  ...LAUNCH_PACKAGE_SPECS.map(({ name, version }) => Object.freeze([name, version])),
 ])
+const NEXT_ZERO_PACKAGE_VERSION_ENTRIES = Object.freeze(
+  NEXT_ZERO_PACKAGE_SPECS.map(({ name, version }) => Object.freeze([name, version])),
+)
 const PACKAGE_CONTRACT_SOURCES = new Set(['local', 'candidate', 'registry'])
 
 export function createLaunchPackageVersions() {
   return new Map(LAUNCH_PACKAGE_VERSION_ENTRIES)
+}
+
+export function createNextZeroPackageVersions() {
+  return new Map(NEXT_ZERO_PACKAGE_VERSION_ENTRIES)
+}
+
+export function assertExactNextZeroPackageVersions(versions) {
+  if (!(versions instanceof Map) || versions.size !== NEXT_ZERO_PACKAGE_VERSION_ENTRIES.length) {
+    throw new Error('next.0 package versions must contain exactly five coordinated packages')
+  }
+  for (const [name, expected] of NEXT_ZERO_PACKAGE_VERSION_ENTRIES) {
+    if (versions.get(name) !== expected) {
+      throw new Error(`${name} must use the exact next.0 version ${expected}; received ${versions.get(name)}`)
+    }
+  }
+}
+
+export function assertCandidatePackageVersions(versions) {
+  if (!(versions instanceof Map) || versions.size !== LAUNCH_PACKAGE_VERSION_ENTRIES.length) {
+    throw new Error('candidate package versions must contain exactly five release packages')
+  }
+  for (const [name] of LAUNCH_PACKAGE_VERSION_ENTRIES) {
+    if (!versions.has(name)) {
+      throw new Error('candidate package versions must contain exactly five release packages')
+    }
+  }
+
+  const containsNonStableVersion = LAUNCH_PACKAGE_VERSION_ENTRIES.some(([name]) =>
+    typeof versions.get(name) !== 'string' || !STABLE_SEMVER.test(versions.get(name)))
+  if (containsNonStableVersion) {
+    try {
+      assertExactNextZeroPackageVersions(versions)
+    } catch (error) {
+      throw new Error(
+        'candidate package versions must be the exact next.0 prerelease or coordinated stable versions',
+        { cause: error },
+      )
+    }
+    return 'next.0'
+  }
+
+  for (const [name, minimum] of LAUNCH_PACKAGE_VERSION_ENTRIES) {
+    const current = versions.get(name)
+    if (typeof current !== 'string' || !STABLE_SEMVER.test(current)) {
+      throw new Error(`${name} candidate must be a stable semantic version; received ${current}`)
+    }
+    if (compareStableSemver(current, minimum) < 0) {
+      throw new Error(`${name} stable candidate must be at least ${minimum}; received ${current}`)
+    }
+  }
+  return 'stable'
 }
 
 export function parsePackageContractSource(args) {
@@ -52,10 +114,17 @@ export function assertPackedCoreDependency({
   if (!PACKAGE_CONTRACT_SOURCES.has(source)) {
     throw new Error(`Package-contract source must be local, candidate, or registry; received ${source}`)
   }
-  if (!STABLE_SEMVER.test(coreVersion)) {
+  const exactNextZero = coreVersion === NEXT_ZERO_VERSION
+  if (!exactNextZero && !STABLE_SEMVER.test(coreVersion)) {
     throw new Error(`${packageName} core version must be a stable semantic version`)
   }
 
+  if (exactNextZero) {
+    if (range !== NEXT_ZERO_CORE_RANGE) {
+      throw new Error(`${packageName} next.0 core dependency must equal ${NEXT_ZERO_CORE_RANGE}; received ${range}`)
+    }
+    return
+  }
   const expected = `^${coreVersion}`
   if (source !== 'registry') {
     if (range !== expected) {
@@ -72,8 +141,9 @@ export function assertPackedCoreDependency({
   if (!lowerMatch || !coreMatch) {
     throw new Error(`${packageName} registry core dependency must be a stable caret range; received ${range}`)
   }
-  if (compareStableSemver(lowerBound, '1.0.0') < 0) {
-    throw new Error(`${packageName} registry core dependency must start at 1.0.0 or newer; received ${range}`)
+  const stableCoreFloor = CORE_PACKAGE_IDENTITY.minimumStableVersion
+  if (compareStableSemver(lowerBound, stableCoreFloor) < 0) {
+    throw new Error(`${packageName} registry core dependency must start at ${stableCoreFloor} or newer; received ${range}`)
   }
   if (
     compareStableSemver(coreVersion, lowerBound) < 0 ||
@@ -120,8 +190,33 @@ export function assertLaunchVersionPolicy({
   launchVersions,
   hasLaunchChangeset,
   allLaunchVersionsPublic,
+  prereleaseStateKind = 'none',
 }) {
+  if (!['none', 'initial', 'generated'].includes(prereleaseStateKind)) {
+    throw new Error(`Unknown launch prerelease state: ${String(prereleaseStateKind)}`)
+  }
+  if (prereleaseStateKind !== 'none' && !hasLaunchChangeset) {
+    throw new Error('The next.0 prerelease must retain the launch Changeset')
+  }
   const baselineMismatch = exactVersionMismatch(currentVersions, baselineVersions)
+  if (prereleaseStateKind === 'initial') {
+    if (baselineMismatch) {
+      throw new Error(
+        `${baselineMismatch.name} initial next.0 baseline must be ${baselineMismatch.expected}; received ${baselineMismatch.current}`,
+      )
+    }
+    return 'initial-next.0'
+  }
+  if (prereleaseStateKind === 'generated') {
+    try {
+      assertExactNextZeroPackageVersions(currentVersions)
+    } catch (error) {
+      throw new Error('Launch versions must be the exact next.0 prerelease', {
+        cause: error,
+      })
+    }
+    return 'generated-next.0'
+  }
   if (hasLaunchChangeset) {
     if (baselineMismatch) {
       throw new Error(
