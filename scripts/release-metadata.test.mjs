@@ -204,6 +204,11 @@ for (const source of [workflow, ciWorkflow]) {
 }
 assert.match(ciWorkflow, /pnpm test:errors/u)
 assert.match(ciWorkflow, /pnpm test:release-safety/u)
+assert.match(
+  ciWorkflow,
+  /if: github\.event_name == 'pull_request'\n {8}run: pnpm lint:commits --from "\$\{\{ github\.event\.pull_request\.base\.sha \}\}" --to "\$\{\{ github\.event\.pull_request\.head\.sha \}\}"/u,
+  'pull-request CI must lint only the exact head commits after the selected base',
+)
 assert.match(ciWorkflow, /pnpm --filter docs test:api/u)
 assert.match(ciWorkflow, /npm install --global npm@11\.17\.0/u)
 assert.match(ciWorkflow, /^ {4}timeout-minutes: 30$/mu)
@@ -220,8 +225,14 @@ assert.match(
 assert.doesNotMatch(ciWorkflow, /^ {4}name: Build & test \(Node 24\)$/mu)
 
 assert.equal(
+  rootPackage.scripts['lint:commits'],
+  'commitlint --config commitlint.config.mjs --verbose',
+  'commit linting must use the repository configuration explicitly',
+)
+
+assert.equal(
   rootPackage.scripts['test:release-safety'],
-  'node --test scripts/test-changeset-policy.test.mjs scripts/release-preflight.test.mjs scripts/verify-published-packages.test.mjs',
+  'node --test scripts/commit-message-contracts.test.mjs scripts/test-changeset-policy.test.mjs scripts/release-preflight.test.mjs scripts/verify-published-packages.test.mjs',
   'release-safety regressions must have one durable root command',
 )
 
