@@ -46,3 +46,8 @@ has no runtime dependencies. React source documentation now explains how its
 hooks and components use core. It also names React as a peer dependency and core
 as a runtime dependency. Package exports, dependencies, calculations, and
 runtime behavior are unchanged.
+
+Core and React documentation now state that reading age is signed and can be
+negative when a reading timestamp is ahead of the current clock. The live guide
+handles that state and states how its timestamp-based merge helper handles
+matching strings. Runtime behavior is unchanged.

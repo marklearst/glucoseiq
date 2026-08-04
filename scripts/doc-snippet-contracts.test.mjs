@@ -407,6 +407,16 @@ test('homepage report and UI examples pair visual shorthand with semantic text',
   assert.match(react, /adjacent text summary/u)
 })
 
+test('live examples expose future timestamps instead of hiding them', () => {
+  const live = readTracked('apps/docs/content/docs/live.mdx')
+  assert.match(live, /if \(live\.minutesSince < 0\)/u)
+  assert.doesNotMatch(live, /Math\.max\(0,\s*Math\.round\(live\.minutesSince\)\)/u)
+
+  const react = readTracked('apps/docs/content/docs/react.mdx')
+  assert.match(react, /if \(live\.minutesSince < 0\)/u)
+  assert.doesNotMatch(react, /Math\.max\(0,\s*Math\.round\(live\.minutesSince\)\)/u)
+})
+
 test('the launch runbook preserves phase, artifact, and OIDC safety gates', () => {
   const runbook = readTracked('docs/LAUNCH_RUNBOOK.md')
 
