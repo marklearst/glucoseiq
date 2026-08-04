@@ -1,14 +1,14 @@
 ---
-title: Build a Dashboard in 10 Minutes
+title: Build a Glucose Dashboard
 description: Turn normalized CGM readings into a React dashboard with live glucose, Time in Range, and an AGP-style profile.
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-This guide builds a useful dashboard from one input: an array of normalized
-glucose readings. GlucoseIQ owns the analytics and renderers; your application
-owns the data source, layout, and visual system.
+This guide builds a dashboard from one input: an array of normalized glucose
+readings. GlucoseIQ provides the analytics and SVG renderers. Your application
+provides the data source, layout, and visual design.
 
 By the end, you will have a current-glucose tile, Time-in-Range summary,
 AGP-style percentile bands, GMI, and data-sufficiency state without adding a
@@ -75,7 +75,7 @@ result to `GlucoseReading[]` once, then pass that array through the rest of your
 application. Mixed `mg/dL` and `mmol/L` input is supported.
 
 <Callout type="info" title="Start with enough history">
-  A current-glucose surface can work with a few recent readings. A meaningful
+  A current-glucose tile can work with a few recent readings. A meaningful
   AGP profile and data-sufficiency assessment need multiple days of CGM data;
   the default sufficiency target is at least 14 days and 70% timestamp-slot
   coverage. Coverage is not proof of sensor wear.
@@ -225,7 +225,7 @@ rendering:
 - `useAGPProfile` returns percentile bins for D3, Visx, Canvas, or a native
   charting layer.
 - `useGlucoseLive` returns the latest reading, derived trend, and staleness for
-  a custom current-glucose surface.
+  a custom current-glucose display.
 
 ## Production checklist
 
@@ -233,6 +233,6 @@ rendering:
 - Validate and normalize source payloads at ingestion.
 - Pass stable `readings` and option references to memoized hooks.
 - Show an empty state when `report.valid` is `false`.
-- Surface `dataSufficiency` instead of implying that sparse data is complete.
+- Show `dataSufficiency` instead of implying that sparse data is complete.
 - Treat every result as informational, not medical advice or an alerting
   system.
