@@ -268,6 +268,45 @@ assert.equal(
 )
 assert.equal(
   assertLaunchVersionPolicy({
+    currentVersions: baselineVersions,
+    baselineVersions,
+    launchVersions,
+    hasLaunchChangeset: true,
+    allLaunchVersionsPublic: false,
+    prereleaseStateKind: 'initial',
+  }),
+  'initial-next.0',
+)
+assert.equal(
+  assertLaunchVersionPolicy({
+    currentVersions: nextZeroVersions,
+    baselineVersions,
+    launchVersions,
+    hasLaunchChangeset: true,
+    allLaunchVersionsPublic: false,
+    prereleaseStateKind: 'generated',
+  }),
+  'generated-next.0',
+)
+for (const invalidVersions of [
+  launchVersions,
+  new Map(nextZeroVersions).set('@glucoseiq/core', '1.0.0-next.1'),
+]) {
+  assert.throws(
+    () =>
+      assertLaunchVersionPolicy({
+        currentVersions: invalidVersions,
+        baselineVersions,
+        launchVersions,
+        hasLaunchChangeset: true,
+        allLaunchVersionsPublic: false,
+        prereleaseStateKind: 'generated',
+      }),
+    /exact next\.0|next\.0 prerelease/iu,
+  )
+}
+assert.equal(
+  assertLaunchVersionPolicy({
     currentVersions: launchVersions,
     baselineVersions,
     launchVersions,

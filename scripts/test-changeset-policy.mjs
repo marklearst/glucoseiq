@@ -34,6 +34,15 @@ const PUBLIC_PACKAGE_NAMES = Object.freeze([
   ['@glucoseiq/tokens', 'packages/tokens'],
 ])
 const PUBLIC_PACKAGE_BY_NAME = new Map(PUBLIC_PACKAGE_NAMES)
+const LAUNCH_CHANGESET_ID = 'launch-glucoseiq-one'
+const INITIAL_PRERELEASE_VERSIONS = Object.freeze({
+  '@glucoseiq/cli': '0.0.0',
+  '@glucoseiq/core': '0.0.0',
+  '@glucoseiq/react': '0.0.0',
+  '@glucoseiq/testing': '0.0.0',
+  '@glucoseiq/tokens': '0.0.0',
+  docs: '0.0.0',
+})
 
 function comparePaths(left, right) {
   return left < right ? -1 : left > right ? 1 : 0
@@ -44,6 +53,178 @@ function decodeUtf8(buffer, label) {
     return utf8Decoder.decode(buffer)
   } catch (error) {
     throw new Error(`${label} is not valid UTF-8`, { cause: error })
+  }
+}
+
+function assertExactObjectKeys(value, expected, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`${label} must be a JSON object`)
+  }
+  const actual = Object.keys(value).sort(comparePaths)
+  const wanted = [...expected].sort(comparePaths)
+  if (actual.length !== wanted.length || actual.some((key, index) => key !== wanted[index])) {
+    throw new Error(`${label} must contain exactly ${wanted.join(', ')}`)
+  }
+}
+
+/** Parses one of the two exact prerelease states owned by this launch. */
+export function parsePrereleaseState(source, label = '.changeset/pre.json') {
+  let parsed
+  try {
+    const text = Buffer.isBuffer(source) || source instanceof Uint8Array
+      ? decodeUtf8(source, label)
+      : source
+    if (typeof text !== 'string') throw new TypeError('source must be text or bytes')
+    parsed = JSON.parse(text)
+  } catch (error) {
+    throw new Error(`${label} must be valid JSON`, { cause: error })
+  }
+
+  assertExactObjectKeys(
+    parsed,
+    ['mode', 'tag', 'initialVersions', 'changesets'],
+    label,
+  )
+  if (parsed.mode !== 'pre') throw new Error(`${label} mode must be pre`)
+  if (parsed.tag !== 'next') throw new Error(`${label} tag must be next`)
+  assertExactObjectKeys(
+    parsed.initialVersions,
+    Object.keys(INITIAL_PRERELEASE_VERSIONS),
+    `${label} initialVersions`,
+  )
+  for (const [name, version] of Object.entries(INITIAL_PRERELEASE_VERSIONS)) {
+    if (parsed.initialVersions[name] !== version) {
+      throw new Error(`${label} initial version for ${name} must be ${version}`)
+    }
+  }
+  if (!Array.isArray(parsed.changesets)) {
+    throw new Error(`${label} changesets must be an array`)
+  }
+  const consumed = new Set()
+  for (const id of parsed.changesets) {
+    if (id !== LAUNCH_CHANGESET_ID) {
+      throw new Error(`${label} contains an unknown consumed Changeset ID`)
+    }
+    if (consumed.has(id)) {
+      throw new Error(`${label} contains a duplicated consumed Changeset ID`)
+    }
+    consumed.add(id)
+  }
+  if (parsed.changesets.length > 1) {
+    throw new Error(`${label} contains too many consumed Changesets`)
+  }
+  return {
+    kind: parsed.changesets.length === 0 ? 'initial' : 'generated',
+    consumedChangesets: [...parsed.changesets],
+  }
+}
+
+function trackedChangesetIds(paths) {
+  if (!Array.isArray(paths)) throw new TypeError('changesetPaths must be an array')
+  const ids = []
+  for (const path of paths) {
+    if (!isChangesetReaderPath(path)) {
+      throw new Error(`Release mode received an invalid Changeset path: ${String(path)}`)
+    }
+    ids.push(path.slice('.changeset/'.length, -'.md'.length))
+  }
+  const unique = [...new Set(ids)].sort(comparePaths)
+  if (unique.length !== ids.length) {
+    throw new Error('Release mode received a duplicated Changeset path')
+  }
+  return unique
+}
+
+/** Separates version-PR and publication decisions from unconsumed Changesets. */
+export function detectReleaseMode({
+  changesetPaths,
+  policy,
+  prereleaseStateSource,
+}) {
+  if (!policy || typeof policy !== 'object') {
+    throw new TypeError('policy must be an object')
+  }
+  const tracked = trackedChangesetIds(changesetPaths)
+  const prerelease = prereleaseStateSource === undefined
+    ? undefined
+    : parsePrereleaseState(prereleaseStateSource)
+  const consumed = new Set(prerelease?.consumedChangesets ?? [])
+  const pendingChangesets = tracked.filter((id) => !consumed.has(id))
+  const generated = policy.reason === 'generated-version-commit'
+
+  if (!prerelease) {
+    if (generated) {
+      if (pendingChangesets.length > 0) {
+        throw new Error('A stale generated release has pending Changesets')
+      }
+      if (policy.consumedChangesets?.includes(LAUNCH_CHANGESET_ID)) {
+        throw new Error('The launch must not publish a stable generated release before next.0')
+      }
+      if (policy.releaseKind !== 'stable') {
+        throw new Error('A generated release without pre.json must be stable')
+      }
+      return {
+        pendingChangesets,
+        publishCommand: 'pnpm changeset publish',
+        shouldPublish: true,
+        shouldVersion: false,
+        state: 'generated-stable',
+      }
+    }
+    if (
+      pendingChangesets.includes(LAUNCH_CHANGESET_ID) &&
+      pendingChangesets.length !== 1
+    ) {
+      throw new Error('The launch baseline must contain only its coordinated Changeset')
+    }
+    return {
+      pendingChangesets,
+      publishCommand: null,
+      shouldPublish: false,
+      shouldVersion: pendingChangesets.length > 0,
+      state: pendingChangesets.includes(LAUNCH_CHANGESET_ID) ? 'baseline' : 'idle',
+    }
+  }
+
+  if (tracked.length !== 1 || tracked[0] !== LAUNCH_CHANGESET_ID) {
+    throw new Error('The next.0 prerelease must retain only the launch Changeset')
+  }
+  if (prerelease.kind === 'initial') {
+    if (generated) throw new Error('The initial next.0 state cannot be a generated release')
+    return {
+      pendingChangesets,
+      publishCommand: null,
+      shouldPublish: false,
+      shouldVersion: true,
+      state: 'initial-next.0',
+    }
+  }
+  if (!generated) {
+    return {
+      pendingChangesets,
+      publishCommand: null,
+      shouldPublish: false,
+      shouldVersion: false,
+      state: 'consumed-next.0',
+    }
+  }
+  if (
+    policy.releaseKind !== 'next.0' ||
+    policy.versionedPackages?.length !== PUBLIC_PACKAGE_DIRECTORIES.length ||
+    policy.versionedPackages.some(
+      (directory, index) => directory !== PUBLIC_PACKAGE_DIRECTORIES[index],
+    ) ||
+    policy.consumedChangesets?.length !== 1 ||
+    policy.consumedChangesets[0] !== LAUNCH_CHANGESET_ID
+  ) {
+    throw new Error('Only the exact replay-validated generated next.0 release may publish')
+  }
+  return {
+    pendingChangesets,
+    publishCommand: 'pnpm publish:next.0',
+    shouldPublish: true,
+    shouldVersion: false,
+    state: 'generated-next.0',
   }
 }
 
@@ -228,11 +409,16 @@ function readChangesetReleaseDirectories({ changes, execFile, cwd }) {
 function generatedVersionCommitPackages(changes) {
   const manifests = new Set()
   const changelogs = new Set()
-  let consumedChangesets = 0
+  const deletedChangesets = []
+  let prereleaseStateModified = false
 
   for (const { status, path } of changes) {
     if (status === 'D' && isChangesetReaderPath(path)) {
-      consumedChangesets += 1
+      deletedChangesets.push(path.slice('.changeset/'.length, -'.md'.length))
+      continue
+    }
+    if (status === 'M' && path === '.changeset/pre.json') {
+      prereleaseStateModified = true
       continue
     }
     if (status === 'M' && path === 'pnpm-lock.yaml') continue
@@ -252,12 +438,34 @@ function generatedVersionCommitPackages(changes) {
     return undefined
   }
 
-  if (consumedChangesets === 0 || manifests.size === 0) return undefined
+  if (manifests.size === 0) return undefined
   if (manifests.size !== changelogs.size) return undefined
   for (const directory of manifests) {
     if (!changelogs.has(directory)) return undefined
   }
-  return [...manifests].sort(comparePaths)
+  const versionedPackages = [...manifests].sort(comparePaths)
+  if (prereleaseStateModified) {
+    if (
+      deletedChangesets.length !== 0 ||
+      versionedPackages.length !== PUBLIC_PACKAGE_DIRECTORIES.length ||
+      versionedPackages.some(
+        (directory, index) => directory !== PUBLIC_PACKAGE_DIRECTORIES[index],
+      )
+    ) {
+      return undefined
+    }
+    return {
+      consumedChangesets: [LAUNCH_CHANGESET_ID],
+      releaseKind: 'next.0',
+      versionedPackages,
+    }
+  }
+  if (deletedChangesets.length === 0) return undefined
+  return {
+    consumedChangesets: deletedChangesets.sort(comparePaths),
+    releaseKind: 'stable',
+    versionedPackages,
+  }
 }
 
 function isValidBranchName(branch) {
@@ -361,16 +569,16 @@ export function evaluateChangesetPolicy({
     allowGeneratedVersionCommit &&
     generatedVersionValidated
   ) {
-    const versionedPackages = generatedVersionCommitPackages(normalizedChanges)
-    if (versionedPackages) {
+    const generatedVersion = generatedVersionCommitPackages(normalizedChanges)
+    if (generatedVersion) {
       return {
         ok: true,
         reason: 'generated-version-commit',
-        releaseAffectingPaths: versionedPackages.map(
+        releaseAffectingPaths: generatedVersion.versionedPackages.map(
           (directory) => `${directory}/package.json`,
         ),
         changesets: [],
-        versionedPackages,
+        ...generatedVersion,
       }
     }
   }
@@ -886,12 +1094,34 @@ export function runChangesetPolicy({
       { cwd, label: `reading the pull-request diff from ${BASE_REFERENCE}` },
     ),
   )
-  const generatedVersionPackages =
+  const generatedVersion =
     branch === 'main' && pushBaseOid
       ? generatedVersionCommitPackages(changes)
       : undefined
   let generatedVersionValidated = false
-  if (generatedVersionPackages) {
+  if (generatedVersion?.releaseKind === 'next.0') {
+    const initialState = parsePrereleaseState(
+      runGit(execFile, ['cat-file', 'blob', `${comparisonBase.oid}:.changeset/pre.json`], {
+        cwd,
+        label: 'reading the initial prerelease state',
+      }),
+      'initial .changeset/pre.json',
+    )
+    if (initialState.kind !== 'initial') {
+      throw new Error('Initial .changeset/pre.json must not contain consumed Changesets')
+    }
+    const generatedState = parsePrereleaseState(
+      runGit(execFile, ['cat-file', 'blob', 'HEAD:.changeset/pre.json'], {
+        cwd,
+        label: 'reading the generated prerelease state',
+      }),
+      'generated .changeset/pre.json',
+    )
+    if (generatedState.kind !== 'generated') {
+      throw new Error('Generated .changeset/pre.json must consume the launch Changeset')
+    }
+  }
+  if (generatedVersion) {
     generatedVersionValidated = validateVersionCommit({
       ...generatedVersionOptions,
       baseOid: comparisonBase.oid,

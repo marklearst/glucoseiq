@@ -39,22 +39,26 @@ assert.doesNotMatch(workflow, /^ {2}release:$/mu, 'the former combined release j
 assert.match(quality, /^ {4}permissions:\n {6}contents: read$/mu)
 assert.match(quality, /^ {4}timeout-minutes: 30$/mu)
 assert.doesNotMatch(quality, /^ {6}\S+: write$/mu)
-assert.match(quality, /^ {4}outputs:\n {6}has_changesets:/mu)
+assert.match(quality, /^ {4}outputs:\n {6}should_version:/mu)
 assert.match(quality, /^ {6}should_publish:/mu)
+assert.match(quality, /^ {6}publish_command:/mu)
+assert.match(quality, /^ {6}release_state:/mu)
 assert.match(quality, /^ {6}expected_packages:/mu)
 assert.match(quality, /npm install --global npm@11\.17\.0/u)
 assert.match(
   quality,
-  /import \{\s+isChangesetReaderPath,\s+parseNullDelimitedPaths,\s+runChangesetPolicy,?\s+\}/u,
+  /import \{\s+detectReleaseMode,\s+isChangesetReaderPath,\s+parseNullDelimitedPaths,\s+runChangesetPolicy,?\s+\}/u,
 )
-assert.match(quality, /paths\.some\(isChangesetReaderPath\)/u)
+assert.match(quality, /paths\.filter\(isChangesetReaderPath\)/u)
+assert.match(quality, /detectReleaseMode/u)
 assert.match(quality, /policy\.reason === 'generated-version-commit'/u)
 assert.match(quality, /policy\.versionedPackages/u)
 assert.match(quality, /createExpectedPublicationPlan/u)
 assert.match(quality, /expected_packages=\$\{JSON\.stringify\(expectedPackages\)\}/u)
-assert.match(quality, /if \(hasChangesets && generatedVersionCommit\)/u)
-assert.match(quality, /stale release merge/iu)
-assert.match(quality, /!hasChangesets && generatedVersionCommit/u)
+assert.match(quality, /should_version=\$\{releaseMode\.shouldVersion\}/u)
+assert.match(quality, /should_publish=\$\{releaseMode\.shouldPublish\}/u)
+assert.match(quality, /publish_command=\$\{releaseMode\.publishCommand \?\? ''\}/u)
+assert.match(quality, /release_state=\$\{releaseMode\.state\}/u)
 assert.doesNotMatch(quality, /git ls-files '\.changeset\/\*\.md'/u)
 for (const command of [
   'pnpm build',
@@ -77,7 +81,7 @@ for (const command of [
 
 assert.match(version, /^ {4}needs: quality$/mu)
 assert.match(version, /^ {4}timeout-minutes: 45$/mu)
-assert.match(version, /^ {4}if: needs\.quality\.outputs\.has_changesets == 'true'$/mu)
+assert.match(version, /^ {4}if: needs\.quality\.outputs\.should_version == 'true'$/mu)
 assert.match(version, /^ {4}permissions:\n {6}contents: write\n {6}pull-requests: write\n {6}checks: write$/mu)
 assert.match(version, /npm install --global npm@11\.17\.0/u)
 assert.doesNotMatch(version, /id-token:/u)
@@ -86,6 +90,7 @@ assert.match(version, /base: main/u)
 assert.match(version, /commit-message: 'chore\(release\): version packages'/u)
 assert.match(version, /title: 'chore\(release\): version packages'/u)
 assert.match(version, /body-path: \.github\/release-pr-body\.md/u)
+assert.match(version, /^ {12}\.changeset\/pre\.json$/mu)
 assert.match(version, /draft: always-true/u)
 assert.match(version, /pull-request-head-sha/u)
 assert.match(version, /name: Checkout release candidate/u)
@@ -143,7 +148,10 @@ assert.match(
 assert.match(publish, /inventory\.reportedPackages/u)
 assert.match(publish, /inventory\.verificationPackages/u)
 assert.doesNotMatch(publish, /continue-on-error:/u)
-assert.equal(occurrences(publish, /publish: pnpm changeset publish/gu), 1)
+assert.equal(
+  occurrences(publish, /publish: \$\{\{ needs\.quality\.outputs\.publish_command \}\}/gu),
+  1,
+)
 assert.doesNotMatch(
   publish.slice(publish.indexOf('name: Resolve publication inventory')),
   /(?:changeset|npm) publish/u,
@@ -232,7 +240,7 @@ assert.equal(
 
 assert.equal(
   rootPackage.scripts['test:release-safety'],
-  'node --test scripts/commit-message-contracts.test.mjs scripts/test-changeset-policy.test.mjs scripts/release-preflight.test.mjs scripts/verify-published-packages.test.mjs',
+  'node --test scripts/commit-message-contracts.test.mjs scripts/test-changeset-policy.test.mjs scripts/release-preflight.test.mjs scripts/verify-published-packages.test.mjs scripts/publish-next-zero.test.mjs',
   'release-safety regressions must have one durable root command',
 )
 

@@ -22,8 +22,10 @@ jobs:
     permissions:
       contents: read
     outputs:
-      has_changesets: ${{ steps.release-mode.outputs.has_changesets }}
+      should_version: ${{ steps.release-mode.outputs.should_version }}
       should_publish: ${{ steps.release-mode.outputs.should_publish }}
+      publish_command: ${{ steps.release-mode.outputs.publish_command }}
+      release_state: ${{ steps.release-mode.outputs.release_state }}
       expected_packages: ${{ steps.release-mode.outputs.expected_packages }}
     steps:
       - name: Checkout repository
@@ -66,8 +68,9 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import { execFileSync } from 'node:child_process'
-          import { appendFileSync } from 'node:fs'
+          import { appendFileSync, existsSync, readFileSync } from 'node:fs'
           import {
+            detectReleaseMode,
             isChangesetReaderPath,
             parseNullDelimitedPaths,
             runChangesetPolicy,
@@ -80,20 +83,29 @@ jobs:
           const output = execFileSync(
             'git',
             ['ls-files', '-z', '--', '.changeset'],
-            { encoding: null, shell: false },
+            {
+              encoding: null,
+              killSignal: 'SIGKILL',
+              maxBuffer: 16 * 1024 * 1024,
+              shell: false,
+              stdio: ['ignore', 'pipe', 'pipe'],
+              timeout: 120_000,
+            },
           )
           const paths = parseNullDelimitedPaths(output)
-          const hasChangesets = paths.some(isChangesetReaderPath)
+          const changesetPaths = paths.filter(isChangesetReaderPath)
+          const prereleaseStateSource = existsSync('.changeset/pre.json')
+            ? readFileSync('.changeset/pre.json')
+            : undefined
           const policy = runChangesetPolicy({ write: () => {} })
           const generatedVersionCommit =
             policy.reason === 'generated-version-commit'
-          if (hasChangesets && generatedVersionCommit) {
-            throw new Error(
-              'A stale release merge left newer Changesets on main; publication is blocked. Refresh and re-review the release candidate from current main.',
-            )
-          }
-          const shouldPublish = !hasChangesets && generatedVersionCommit
-          const expectedPackages = generatedVersionCommit
+          const releaseMode = detectReleaseMode({
+            changesetPaths,
+            policy,
+            prereleaseStateSource,
+          })
+          const expectedPackages = releaseMode.shouldPublish && generatedVersionCommit
             ? createExpectedPublicationPlan(
                 policy.versionedPackages,
                 loadPublishedPackageSpecs(),
@@ -101,7 +113,7 @@ jobs:
             : []
           appendFileSync(
             process.env.GITHUB_OUTPUT,
-            `has_changesets=${hasChangesets}\nshould_publish=${shouldPublish}\nexpected_packages=${JSON.stringify(expectedPackages)}\n`,
+            `should_version=${releaseMode.shouldVersion}\nshould_publish=${releaseMode.shouldPublish}\npublish_command=${releaseMode.publishCommand ?? ''}\nrelease_state=${releaseMode.state}\nexpected_packages=${JSON.stringify(expectedPackages)}\n`,
           )
           NODE
 
@@ -154,7 +166,7 @@ jobs:
   version:
     name: Version packages
     needs: quality
-    if: needs.quality.outputs.has_changesets == 'true'
+    if: needs.quality.outputs.should_version == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -204,6 +216,7 @@ jobs:
           draft: always-true
           add-paths: |
             .changeset/*.md
+            .changeset/pre.json
             packages/*/package.json
             packages/*/CHANGELOG.md
             pnpm-lock.yaml
@@ -330,7 +343,7 @@ jobs:
         id: changesets
         uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
-          publish: pnpm changeset publish
+          publish: ${{ needs.quality.outputs.publish_command }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

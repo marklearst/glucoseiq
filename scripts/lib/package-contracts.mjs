@@ -146,8 +146,33 @@ export function assertLaunchVersionPolicy({
   launchVersions,
   hasLaunchChangeset,
   allLaunchVersionsPublic,
+  prereleaseStateKind = 'none',
 }) {
+  if (!['none', 'initial', 'generated'].includes(prereleaseStateKind)) {
+    throw new Error(`Unknown launch prerelease state: ${String(prereleaseStateKind)}`)
+  }
+  if (prereleaseStateKind !== 'none' && !hasLaunchChangeset) {
+    throw new Error('The next.0 prerelease must retain the launch Changeset')
+  }
   const baselineMismatch = exactVersionMismatch(currentVersions, baselineVersions)
+  if (prereleaseStateKind === 'initial') {
+    if (baselineMismatch) {
+      throw new Error(
+        `${baselineMismatch.name} initial next.0 baseline must be ${baselineMismatch.expected}; received ${baselineMismatch.current}`,
+      )
+    }
+    return 'initial-next.0'
+  }
+  if (prereleaseStateKind === 'generated') {
+    try {
+      assertExactNextZeroPackageVersions(currentVersions)
+    } catch (error) {
+      throw new Error('Launch versions must be the exact next.0 prerelease', {
+        cause: error,
+      })
+    }
+    return 'generated-next.0'
+  }
   if (hasLaunchChangeset) {
     if (baselineMismatch) {
       throw new Error(
