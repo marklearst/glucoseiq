@@ -127,6 +127,9 @@ assert.match(
   publish,
   /uses: changesets\/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d/u,
 )
+// Catches the action reverting to its git-cli tag push path, which cannot
+// recover when the publisher's remote-tag preflight finds a correct tag.
+assert.match(publish, /^ {10}commitMode: github-api$/mu)
 assert.match(publish, /name: Resolve publication inventory/u)
 assert.match(
   publish,
@@ -240,7 +243,7 @@ assert.equal(
 
 assert.equal(
   rootPackage.scripts['test:release-safety'],
-  'node --test scripts/commit-message-contracts.test.mjs scripts/test-changeset-policy.test.mjs scripts/release-preflight.test.mjs scripts/verify-published-packages.test.mjs scripts/publish-next-zero.test.mjs',
+  'node --test scripts/commit-message-contracts.test.mjs scripts/test-changeset-policy.test.mjs scripts/release-preflight.test.mjs scripts/release-contract-consumers.test.mjs scripts/verify-published-packages.test.mjs scripts/publish-next-zero.test.mjs',
   'release-safety regressions must have one durable root command',
 )
 

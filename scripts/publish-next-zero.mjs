@@ -6,29 +6,21 @@ import {
   assertExactNextZeroPackageVersions,
   assertPackedCoreDependency,
 } from './lib/package-contracts.mjs'
+import {
+  NEXT_ZERO_NPM_TAG,
+  NEXT_ZERO_PACKAGE_SPECS,
+  NEXT_ZERO_VERSION,
+} from './lib/release-contract.mjs'
+
+export { NEXT_ZERO_PACKAGE_SPECS as NEXT_ZERO_PACKAGES } from './lib/release-contract.mjs'
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url))
 const repositoryRoot = resolve(scriptDirectory, '..')
 const DEFAULT_REGISTRY = 'https://registry.npmjs.org'
 const DEFAULT_REPOSITORY = 'marklearst/glucoseiq'
 const DEFAULT_TIMEOUT_MS = 15 * 60_000
-const NEXT_ZERO_VERSION = '1.0.0-next.0'
-
-export const NEXT_ZERO_PACKAGES = Object.freeze([
-  ['@glucoseiq/core', 'packages/core'],
-  ['@glucoseiq/react', 'packages/react'],
-  ['@glucoseiq/tokens', 'packages/tokens'],
-  ['@glucoseiq/testing', 'packages/testing'],
-  ['@glucoseiq/cli', 'packages/cli'],
-].map(([name, directory]) => Object.freeze({
-  name,
-  directory,
-  version: NEXT_ZERO_VERSION,
-  tag: `${name}@${NEXT_ZERO_VERSION}`,
-  ...(name === '@glucoseiq/react' || name === '@glucoseiq/testing' || name === '@glucoseiq/cli'
-    ? { coreDependency: true, coreVersion: NEXT_ZERO_VERSION }
-    : {}),
-})))
+const NEXT_ZERO_PACKAGES = NEXT_ZERO_PACKAGE_SPECS
+const GIT_SHA = /^[a-f0-9]{40}$/u
 
 function assertPositiveInteger(value, label) {
   if (!Number.isSafeInteger(value) || value < 1) throw new RangeError(`${label} must be a positive safe integer`)
@@ -150,16 +142,14 @@ async function inspectRegistry(spec, { fetchImpl, registry, timeoutMs }) {
   if (!packument['dist-tags'] || typeof packument['dist-tags'] !== 'object' || Array.isArray(packument['dist-tags'])) {
     throw new Error(`npm registry returned malformed dist-tags for ${spec.name}`)
   }
-  if (
-    packument['dist-tags'].next !== undefined &&
-    packument['dist-tags'].next !== NEXT_ZERO_VERSION
-  ) {
-    throw new Error(`${spec.name} npm next tag must be ${NEXT_ZERO_VERSION}; received ${packument['dist-tags'].next ?? 'missing'}`)
+  const nextVersion = packument['dist-tags'][NEXT_ZERO_NPM_TAG]
+  if (nextVersion !== undefined && nextVersion !== NEXT_ZERO_VERSION) {
+    throw new Error(`${spec.name} npm ${NEXT_ZERO_NPM_TAG} tag must be ${NEXT_ZERO_VERSION}; received ${nextVersion ?? 'missing'}`)
   }
   const hasExactVersion = Object.hasOwn(packument.versions, spec.version)
   const metadata = packument.versions[spec.version]
   if (!hasExactVersion) {
-    if (packument['dist-tags'].next === NEXT_ZERO_VERSION) {
+    if (nextVersion === NEXT_ZERO_VERSION) {
       throw new Error(`npm registry returned malformed exact version metadata for ${spec.name}`)
     }
     return { published: false }
@@ -173,8 +163,8 @@ async function inspectRegistry(spec, { fetchImpl, registry, timeoutMs }) {
   ) {
     throw new Error(`npm registry returned malformed exact version metadata for ${spec.name}`)
   }
-  if (packument['dist-tags'].next !== NEXT_ZERO_VERSION) {
-    throw new Error(`${spec.name} npm next tag must be ${NEXT_ZERO_VERSION}; received ${packument['dist-tags'].next ?? 'missing'}`)
+  if (nextVersion !== NEXT_ZERO_VERSION) {
+    throw new Error(`${spec.name} npm ${NEXT_ZERO_NPM_TAG} tag must be ${NEXT_ZERO_VERSION}; received ${nextVersion ?? 'missing'}`)
   }
   if (packument['dist-tags'].latest === NEXT_ZERO_VERSION) {
     throw new Error(`${spec.name} npm latest must not promote ${NEXT_ZERO_VERSION}`)
@@ -201,6 +191,65 @@ async function resolveReleaseSha(runCommand, cwd, timeoutMs) {
   const sha = result.stdout.trim()
   if (!/^[a-f0-9]{40}$/u.test(sha)) throw new Error('Release commit must be a 40-character lowercase Git SHA')
   return sha
+}
+
+function parseRemoteTagState(output, tag, releaseSha) {
+  if (typeof output !== 'string') {
+    throw new Error(`Remote tag ${tag} returned malformed output`)
+  }
+  if (output === '') return { kind: 'absent' }
+  if (!output.endsWith('\n')) {
+    throw new Error(`Remote tag ${tag} returned malformed output`)
+  }
+
+  const directRef = `refs/tags/${tag}`
+  const peeledRef = `${directRef}^{}`
+  let direct
+  let peeled
+  for (const line of output.slice(0, -1).split('\n')) {
+    const match = /^(?<sha>[a-f0-9]{40})\t(?<ref>[^\t\r\n]+)$/u.exec(line)
+    if (!match || (match.groups.ref !== directRef && match.groups.ref !== peeledRef)) {
+      throw new Error(`Remote tag ${tag} returned malformed output`)
+    }
+    if (match.groups.ref === directRef) {
+      if (direct !== undefined) throw new Error(`Remote tag ${tag} returned malformed output`)
+      direct = match.groups.sha
+    } else {
+      if (peeled !== undefined) throw new Error(`Remote tag ${tag} returned malformed output`)
+      peeled = match.groups.sha
+    }
+  }
+  if (
+    !direct ||
+    !GIT_SHA.test(direct) ||
+    (peeled !== undefined && !GIT_SHA.test(peeled))
+  ) {
+    throw new Error(`Remote tag ${tag} returned malformed output`)
+  }
+  const commit = peeled ?? direct
+  if (commit !== releaseSha) {
+    throw new Error(`Remote tag ${tag} must resolve to release commit ${releaseSha}; received ${commit}`)
+  }
+  return { kind: peeled === undefined ? 'lightweight' : 'annotated' }
+}
+
+async function inspectRemoteTag(spec, releaseSha, runCommand, cwd, timeoutMs) {
+  const result = assertCommandResult(
+    await execute(
+      runCommand,
+      'git',
+      [
+        'ls-remote',
+        'origin',
+        `refs/tags/${spec.tag}`,
+        `refs/tags/${spec.tag}^{}`,
+      ],
+      { cwd, timeoutMs },
+      `Check remote tag ${spec.tag}`,
+    ),
+    `Check remote tag ${spec.tag}`,
+  )
+  return parseRemoteTagState(result.stdout, spec.tag, releaseSha)
 }
 
 async function verifyOrCreateLocalTag(spec, releaseSha, runCommand, cwd, timeoutMs) {
@@ -270,6 +319,9 @@ export async function runNextZeroPublisher({
     timeoutMs: commandTimeoutMs,
   })))
   const releaseSha = await resolveReleaseSha(runCommand, cwd, commandTimeoutMs)
+  for (const spec of packageSpecs) {
+    await inspectRemoteTag(spec, releaseSha, runCommand, cwd, commandTimeoutMs)
+  }
   for (const spec of packageSpecs) await verifyOrCreateLocalTag(spec, releaseSha, runCommand, cwd, commandTimeoutMs)
   const githubExists = []
   for (const spec of packageSpecs) githubExists.push(await inspectGitHubRelease(spec, runCommand, repository, cwd, commandTimeoutMs))
@@ -290,7 +342,7 @@ export async function runNextZeroPublisher({
       result = await execute(
         runCommand,
         'npm',
-        ['publish', spec.directory, '--access', 'public', '--tag', 'next', '--provenance'],
+        ['publish', spec.directory, '--access', 'public', '--tag', NEXT_ZERO_NPM_TAG, '--provenance'],
         { cwd, timeoutMs: commandTimeoutMs },
         `Publish ${spec.name}@${spec.version}`,
       )

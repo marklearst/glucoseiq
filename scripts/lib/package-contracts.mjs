@@ -1,16 +1,19 @@
+import {
+  LAUNCH_PACKAGE_SPECS,
+  NEXT_ZERO_CORE_RANGE,
+  NEXT_ZERO_PACKAGE_SPECS,
+  NEXT_ZERO_VERSION,
+} from './release-contract.mjs'
+
+export { RELEASE_PACKAGE_IDENTITIES } from './release-contract.mjs'
+
 const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
 const STABLE_SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
-
 const LAUNCH_PACKAGE_VERSION_ENTRIES = Object.freeze([
-  Object.freeze(['@glucoseiq/core', '1.0.0']),
-  Object.freeze(['@glucoseiq/react', '1.0.0']),
-  Object.freeze(['@glucoseiq/tokens', '1.0.0']),
-  Object.freeze(['@glucoseiq/testing', '1.0.0']),
-  Object.freeze(['@glucoseiq/cli', '1.0.0']),
+  ...LAUNCH_PACKAGE_SPECS.map(({ name, version }) => Object.freeze([name, version])),
 ])
-const NEXT_ZERO_VERSION = '1.0.0-next.0'
 const NEXT_ZERO_PACKAGE_VERSION_ENTRIES = Object.freeze(
-  LAUNCH_PACKAGE_VERSION_ENTRIES.map(([name]) => Object.freeze([name, NEXT_ZERO_VERSION])),
+  NEXT_ZERO_PACKAGE_SPECS.map(({ name, version }) => Object.freeze([name, version])),
 )
 const PACKAGE_CONTRACT_SOURCES = new Set(['local', 'candidate', 'registry'])
 
@@ -76,13 +79,13 @@ export function assertPackedCoreDependency({
     throw new Error(`${packageName} core version must be a stable semantic version`)
   }
 
-  const expected = `^${coreVersion}`
   if (exactNextZero) {
-    if (range !== expected) {
-      throw new Error(`${packageName} next.0 core dependency must equal ${expected}; received ${range}`)
+    if (range !== NEXT_ZERO_CORE_RANGE) {
+      throw new Error(`${packageName} next.0 core dependency must equal ${NEXT_ZERO_CORE_RANGE}; received ${range}`)
     }
     return
   }
+  const expected = `^${coreVersion}`
   if (source !== 'registry') {
     if (range !== expected) {
       throw new Error(`${packageName} core dependency must equal ${expected}; received ${range}`)

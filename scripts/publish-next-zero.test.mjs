@@ -50,6 +50,8 @@ function harness({
   publishThrow,
   packumentFor,
   githubRelease,
+  remoteTagFailure,
+  remoteTagOutput,
 } = {}) {
   const commands = []
   const lines = []
@@ -74,6 +76,13 @@ function harness({
         return missingTags
           ? { status: 1, stdout: '', stderr: '' }
           : { status: 0, stdout: `${tagCommit}\n`, stderr: '' }
+      }
+      if (command === 'git' && args[0] === 'ls-remote') {
+        const tag = args[2].slice('refs/tags/'.length)
+        if (remoteTagFailure?.(tag)) {
+          return { status: 128, stdout: '', stderr: 'simulated remote transport failure' }
+        }
+        return { status: 0, stdout: remoteTagOutput?.(tag) ?? '', stderr: '' }
       }
       if (command === 'git' && args[0] === 'tag') return { status: 0, stdout: '', stderr: '' }
       if (command === 'gh') {
@@ -162,6 +171,143 @@ test('creates each missing local exact tag at the checked-out release commit', a
     state.commands.filter(({ command, args }) => command === 'git' && args[0] === 'tag').map(({ args }) => args.slice(1, 4)),
     packageSpecs.map(({ tag }) => ['-a', tag, releaseSha]),
   )
+})
+
+test('preflights every absent remote exact tag before next.0 publication', async () => {
+  // Catches publishing before a remote tag collision or recovery state has
+  // been checked for every package identity.
+  assert.equal(typeof publisher.runNextZeroPublisher, 'function')
+  const state = harness()
+  await publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state })
+  assert.deepEqual(
+    state.commands
+      .filter(({ command, args }) => command === 'git' && args[0] === 'ls-remote')
+      .map(({ args }) => args),
+    packageSpecs.map(({ tag }) => [
+      'ls-remote',
+      'origin',
+      `refs/tags/${tag}`,
+      `refs/tags/${tag}^{}`,
+    ]),
+  )
+})
+
+test('accepts existing correct lightweight remote tags before next.0 publication', async () => {
+  // Catches rejecting a safe recovery where an exact lightweight tag already
+  // points at the checked-out release commit.
+  assert.equal(typeof publisher.runNextZeroPublisher, 'function')
+  const state = harness({
+    remoteTagOutput(tag) {
+      return `${releaseSha}\trefs/tags/${tag}\n`
+    },
+  })
+  await assert.doesNotReject(
+    publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
+  )
+  assert.equal(
+    state.commands.filter(({ command, args }) => command === 'git' && args[0] === 'ls-remote').length,
+    packageSpecs.length,
+  )
+})
+
+test('accepts existing correct annotated remote tags through their peeled refs', async () => {
+  // Catches treating the annotated tag object SHA as the release commit rather
+  // than validating the peeled commit that GitHub will release.
+  assert.equal(typeof publisher.runNextZeroPublisher, 'function')
+  const state = harness({
+    remoteTagOutput(tag) {
+      return `89abcdef0123456789abcdef0123456789abcdef\trefs/tags/${tag}\n${releaseSha}\trefs/tags/${tag}^{}\n`
+    },
+  })
+  await assert.doesNotReject(
+    publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
+  )
+  assert.equal(
+    state.commands.filter(({ command, args }) => command === 'git' && args[0] === 'ls-remote').length,
+    packageSpecs.length,
+  )
+})
+
+test('rejects a remote exact tag that points at a different commit before publication', async () => {
+  // Catches recovery publishing packages while a GitHub tag would release a
+  // different commit than the checked-out candidate.
+  assert.equal(typeof publisher.runNextZeroPublisher, 'function')
+  const state = harness({
+    remoteTagOutput(tag) {
+      return `89abcdef0123456789abcdef0123456789abcdef\trefs/tags/${tag}\n`
+    },
+  })
+  await assert.rejects(
+    publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
+    /Remote tag.*release commit/u,
+  )
+  assert.equal(state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish'), false)
+})
+
+test('rejects malformed remote tag output before publication', async () => {
+  // Catches a malformed remote ref response being interpreted as an absent tag
+  // and allowing immutable npm publication to proceed.
+  assert.equal(typeof publisher.runNextZeroPublisher, 'function')
+  const state = harness({
+    remoteTagOutput() {
+      return 'not a git ref\n'
+    },
+  })
+  await assert.rejects(
+    publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
+    /Remote tag.*malformed/u,
+  )
+  assert.equal(state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish'), false)
+})
+
+test('rejects malformed remote tag records with extra or duplicate refs before publication', async () => {
+  // Catches an unbounded or ambiguous remote ref response being treated as a
+  // safe tag record before immutable npm publication begins.
+  assert.equal(typeof publisher.runNextZeroPublisher, 'function')
+  const invalidOutputs = [
+    (tag) => `${releaseSha}\trefs/tags/${tag}\n${releaseSha}\trefs/tags/unexpected\n`,
+    (tag) => `${releaseSha}\trefs/tags/${tag}\n${releaseSha}\trefs/tags/${tag}\n`,
+  ]
+  for (const remoteTagOutput of invalidOutputs) {
+    const state = harness({ remoteTagOutput })
+    await assert.rejects(
+      publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
+      /Remote tag.*malformed/u,
+    )
+    assert.equal(state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish'), false)
+  }
+})
+
+test('rejects an annotated remote tag with a malformed direct object SHA before publication', async () => {
+  // Catches accepting a peeled commit while the direct annotated ref is
+  // malformed, which hides remote corruption from release recovery.
+  assert.equal(typeof publisher.runNextZeroPublisher, 'function')
+  const state = harness({
+    remoteTagOutput(tag) {
+      return `not-a-git-object\trefs/tags/${tag}\n${releaseSha}\trefs/tags/${tag}^{}\n`
+    },
+  })
+  await assert.rejects(
+    publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
+    /Remote tag.*malformed/u,
+  )
+  assert.equal(state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish'), false)
+})
+
+test('rejects a remote tag command failure before publication', async () => {
+  // Catches a transport failure being downgraded to an absent tag during
+  // recovery, which would permit publication without a complete preflight.
+  assert.equal(typeof publisher.runNextZeroPublisher, 'function')
+  const state = harness({
+    remoteTagFailure(tag) {
+      return tag === packageSpecs[0].tag
+    },
+  })
+  await assert.rejects(
+    publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
+    /Check remote tag.*failed/u,
+  )
+  assert.equal(state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish'), false)
 })
 
 test('reports the published and remaining package inventories after a publish failure', async () => {
