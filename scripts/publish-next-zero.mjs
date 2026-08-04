@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import {
   mkdirSync,
   mkdtempSync,
@@ -147,7 +148,7 @@ async function packNextZeroArtifacts({
   commandTimeoutMs,
 }) {
   const temporaryRoot = mkdtempSync(join(tmpdir(), 'glucoseiq-next-zero-'))
-  const archives = new Map()
+  const artifacts = new Map()
   const packedManifests = new Map()
   try {
     for (let index = 0; index < packageSpecs.length; index += 1) {
@@ -194,10 +195,15 @@ async function packNextZeroArtifacts({
       } catch (error) {
         throw new Error(`${spec.name} packed manifest must contain valid JSON`, { cause: error })
       }
-      archives.set(spec.name, archivePath)
+      const archive = readFileSync(archivePath)
+      artifacts.set(spec.name, Object.freeze({
+        archivePath,
+        integrity: `sha512-${createHash('sha512').update(archive).digest('base64')}`,
+        shasum: createHash('sha1').update(archive).digest('hex'),
+      }))
     }
     assertNextZeroPublicationPlan(packageSpecs, packedManifests)
-    return { archives, temporaryRoot }
+    return { artifacts, temporaryRoot }
   } catch (error) {
     removePackedArtifacts(temporaryRoot, error)
     throw error
@@ -211,7 +217,7 @@ function registryUrl(registry, name) {
   return root.href
 }
 
-async function inspectRegistry(spec, { fetchImpl, registry, timeoutMs }) {
+async function inspectRegistry(spec, artifact, { fetchImpl, registry, timeoutMs }) {
   let response
   try {
     response = await fetchImpl(registryUrl(registry, spec.name), {
@@ -269,6 +275,15 @@ async function inspectRegistry(spec, { fetchImpl, registry, timeoutMs }) {
   }
   if (packument['dist-tags'].latest === NEXT_ZERO_VERSION) {
     throw new Error(`${spec.name} npm latest must not promote ${NEXT_ZERO_VERSION}`)
+  }
+  if (!metadata.dist || typeof metadata.dist !== 'object' || Array.isArray(metadata.dist)) {
+    throw new Error(`npm registry returned malformed distribution metadata for ${spec.name}`)
+  }
+  if (metadata.dist.integrity !== artifact.integrity) {
+    throw new Error(`${spec.name} registry tarball integrity must match the packed candidate`)
+  }
+  if (metadata.dist.shasum !== artifact.shasum) {
+    throw new Error(`${spec.name} registry tarball shasum must match the packed candidate`)
   }
   return { published: true }
 }
@@ -460,7 +475,7 @@ export async function runNextZeroPublisher({
   }
   assertPositiveInteger(commandTimeoutMs, 'commandTimeoutMs')
   assertNextZeroSourcePlan(packageSpecs, manifests)
-  const { archives, temporaryRoot } = await packNextZeroArtifacts({
+  const { artifacts, temporaryRoot } = await packNextZeroArtifacts({
     packageSpecs,
     runCommand,
     cwd,
@@ -468,7 +483,7 @@ export async function runNextZeroPublisher({
   })
   let primaryError
   try {
-    const states = await Promise.all(packageSpecs.map((spec) => inspectRegistry(spec, {
+    const states = await Promise.all(packageSpecs.map((spec) => inspectRegistry(spec, artifacts.get(spec.name), {
       fetchImpl,
       registry,
       timeoutMs: commandTimeoutMs,
@@ -519,7 +534,7 @@ export async function runNextZeroPublisher({
         result = await execute(
           runCommand,
           'npm',
-          ['publish', archives.get(spec.name), '--access', 'public', '--tag', NEXT_ZERO_NPM_TAG, '--provenance'],
+          ['publish', artifacts.get(spec.name).archivePath, '--access', 'public', '--tag', NEXT_ZERO_NPM_TAG, '--provenance'],
           { cwd, timeoutMs: commandTimeoutMs },
           `Publish ${spec.name}@${spec.version}`,
         )
