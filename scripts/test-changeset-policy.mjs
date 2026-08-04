@@ -9,6 +9,12 @@ import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import {
+  NEXT_ZERO_NPM_TAG,
+  RELEASE_PACKAGE_IDENTITIES,
+} from './lib/release-contract.mjs'
+
+export { NEXT_ZERO_NPM_TAG, RELEASE_PACKAGE_IDENTITIES }
 
 const RELEASE_BRANCH = 'release/glucoseiq-packages'
 const BASE_REFERENCE = 'origin/main'
@@ -20,29 +26,18 @@ const CHANGESETS_CLI = require.resolve('@changesets/cli/bin.js')
 const parseChangeset = require('@changesets/parse').default
 
 export const PUBLIC_PACKAGE_DIRECTORIES = Object.freeze([
-  'packages/cli',
-  'packages/core',
-  'packages/react',
-  'packages/testing',
-  'packages/tokens',
+  ...RELEASE_PACKAGE_IDENTITIES
+    .map(({ directory }) => directory)
+    .sort(comparePaths),
 ])
-const PUBLIC_PACKAGE_NAMES = Object.freeze([
-  ['@glucoseiq/cli', 'packages/cli'],
-  ['@glucoseiq/core', 'packages/core'],
-  ['@glucoseiq/react', 'packages/react'],
-  ['@glucoseiq/testing', 'packages/testing'],
-  ['@glucoseiq/tokens', 'packages/tokens'],
-])
-const PUBLIC_PACKAGE_BY_NAME = new Map(PUBLIC_PACKAGE_NAMES)
+const PUBLIC_PACKAGE_BY_NAME = new Map(
+  RELEASE_PACKAGE_IDENTITIES.map(({ name, directory }) => [name, directory]),
+)
 const LAUNCH_CHANGESET_ID = 'launch-glucoseiq-one'
-const INITIAL_PRERELEASE_VERSIONS = Object.freeze({
-  '@glucoseiq/cli': '0.0.0',
-  '@glucoseiq/core': '0.0.0',
-  '@glucoseiq/react': '0.0.0',
-  '@glucoseiq/testing': '0.0.0',
-  '@glucoseiq/tokens': '0.0.0',
-  docs: '0.0.0',
-})
+const INITIAL_PRERELEASE_VERSIONS = Object.freeze(Object.fromEntries([
+  ...RELEASE_PACKAGE_IDENTITIES.map(({ name }) => [name, '0.0.0']),
+  ['docs', '0.0.0'],
+]))
 
 function comparePaths(left, right) {
   return left < right ? -1 : left > right ? 1 : 0
@@ -86,7 +81,9 @@ export function parsePrereleaseState(source, label = '.changeset/pre.json') {
     label,
   )
   if (parsed.mode !== 'pre') throw new Error(`${label} mode must be pre`)
-  if (parsed.tag !== 'next') throw new Error(`${label} tag must be next`)
+  if (parsed.tag !== NEXT_ZERO_NPM_TAG) {
+    throw new Error(`${label} tag must be ${NEXT_ZERO_NPM_TAG}`)
+  }
   assertExactObjectKeys(
     parsed.initialVersions,
     Object.keys(INITIAL_PRERELEASE_VERSIONS),

@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-
-const publisher = await import('./publish-next-zero.mjs').catch(() => ({}))
+import * as publisher from './publish-next-zero.mjs'
 
 const releaseSha = '0123456789abcdef0123456789abcdef01234567'
 const packageSpecs = [
@@ -226,6 +225,25 @@ test('accepts existing correct annotated remote tags through their peeled refs',
     state.commands.filter(({ command, args }) => command === 'git' && args[0] === 'ls-remote').length,
     packageSpecs.length,
   )
+})
+
+test('rejects an existing GitHub prerelease whose exact remote tag is absent', async () => {
+  // Catches a deleted remote tag being hidden by a surviving GitHub release,
+  // which would suppress the action output needed to restore the tag.
+  assert.equal(typeof publisher.runNextZeroPublisher, 'function')
+  const state = harness({
+    githubRelease(args) {
+      const endpoint = args.at(-1)
+      const tag = decodeURIComponent(endpoint.slice(endpoint.lastIndexOf('/') + 1))
+      return { tag_name: tag, draft: false, prerelease: true }
+    },
+  })
+  await assert.rejects(
+    publisher.runNextZeroPublisher({ packageSpecs, manifests: manifests(), ...state }),
+    /GitHub release.*remote tag.*absent/u,
+  )
+  assert.equal(state.commands.some(({ command, args }) => command === 'npm' && args[0] === 'publish'), false)
+  assert.equal(state.commands.some(({ command, args }) => command === 'git' && args[0] === 'tag'), false)
 })
 
 test('rejects a remote exact tag that points at a different commit before publication', async () => {
