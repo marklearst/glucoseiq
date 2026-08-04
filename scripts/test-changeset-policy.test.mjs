@@ -218,20 +218,23 @@ function createGeneratedVersionFixture({
   if (prerelease || prepareBase) {
     prepareBase?.(repository)
     runFixtureCommand('git', ['add', '-A', '--'], repository)
-    runFixtureCommand(
-      'git',
-      [
-        '-c',
-        'user.name=Release Fixture',
-        '-c',
-        'user.email=release-fixture@example.invalid',
-        'commit',
-        '--quiet',
-        '-m',
-        'test: prepare version fixture',
-      ],
-      repository,
-    )
+    const pending = runFixtureCommand('git', ['status', '--porcelain'], repository)
+    if (pending.length > 0) {
+      runFixtureCommand(
+        'git',
+        [
+          '-c',
+          'user.name=Release Fixture',
+          '-c',
+          'user.email=release-fixture@example.invalid',
+          'commit',
+          '--quiet',
+          '-m',
+          'test: prepare version fixture',
+        ],
+        repository,
+      )
+    }
   }
   const baseOid = runFixtureCommand(
     'git',
