@@ -40,6 +40,42 @@ export function assertExactNextZeroPackageVersions(versions) {
   }
 }
 
+export function assertCandidatePackageVersions(versions) {
+  if (!(versions instanceof Map) || versions.size !== LAUNCH_PACKAGE_VERSION_ENTRIES.length) {
+    throw new Error('candidate package versions must contain exactly five release packages')
+  }
+  for (const [name] of LAUNCH_PACKAGE_VERSION_ENTRIES) {
+    if (!versions.has(name)) {
+      throw new Error('candidate package versions must contain exactly five release packages')
+    }
+  }
+
+  const containsPrerelease = LAUNCH_PACKAGE_VERSION_ENTRIES.some(([name]) =>
+    typeof versions.get(name) === 'string' && versions.get(name).includes('-'))
+  if (containsPrerelease) {
+    try {
+      assertExactNextZeroPackageVersions(versions)
+    } catch (error) {
+      throw new Error(
+        'candidate package versions must be the exact next.0 prerelease or coordinated stable versions',
+        { cause: error },
+      )
+    }
+    return 'next.0'
+  }
+
+  for (const [name, minimum] of LAUNCH_PACKAGE_VERSION_ENTRIES) {
+    const current = versions.get(name)
+    if (typeof current !== 'string' || !STABLE_SEMVER.test(current)) {
+      throw new Error(`${name} candidate must be a stable semantic version; received ${current}`)
+    }
+    if (compareStableSemver(current, minimum) < 0) {
+      throw new Error(`${name} stable candidate must be at least ${minimum}; received ${current}`)
+    }
+  }
+  return 'stable'
+}
+
 export function parsePackageContractSource(args) {
   if (!Array.isArray(args)) throw new TypeError('package-contract arguments must be an array')
   if (args.length === 0) return 'local'
