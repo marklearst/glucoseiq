@@ -12,7 +12,6 @@ const pagePath = join(docsRoot, 'app/(home)/page.tsx')
 const page = read('app/(home)/page.tsx')
 const styles = read('app/(home)/home.module.css')
 const reportSuite = read('app/(home)/glucose-report-suite.tsx')
-const reportEntrance = read('app/(home)/report-entrance.tsx')
 const reportStyles = read('app/(home)/glucose-report.module.css')
 const glucoseTrace = read('app/(home)/glucose-trace.tsx')
 const gmiScale = read('app/(home)/gmi-scale.tsx')
@@ -42,6 +41,10 @@ test('docs use the drop-only lockup while the homepage retains the full mark', (
   assert.match(logo, /const showRing = props\.variant !== 'drop'/u)
   assert.match(logo, /<LogoMark size=\{s\} variant="drop" \/>/u)
   assert.match(page, /<LogoMark motion size=\{92\} \/>/u)
+  assert.match(
+    styles,
+    /\.heroMark\s*\{[^}]*width:\s*92px;[^}]*height:\s*110px;/u,
+  )
 })
 
 test('homepage keeps structure and styling in separate server files', () => {
@@ -50,6 +53,7 @@ test('homepage keeps structure and styling in separate server files', () => {
   assert.doesNotMatch(page, /<style>/u)
   assert.doesNotMatch(page, /^\s*['"]use client['"];?/mu)
   for (const source of [
+    page,
     reportSuite,
     glucoseTrace,
     gmiScale,
@@ -58,7 +62,6 @@ test('homepage keeps structure and styling in separate server files', () => {
   ]) {
     assert.doesNotMatch(source, /^\s*['"]use client['"];?/mu)
   }
-  assert.match(reportEntrance, /^\s*['"]use client['"];?/mu)
 })
 
 test('shared installer offers the same four commands everywhere', () => {
@@ -145,8 +148,9 @@ test('getting started reports the GMI implied by its example readings', () => {
 test('homepage renders one four-view report with one shared limitation', () => {
   assert.match(
     page,
-    /<ReportEntrance>[\s\S]*?<GlucoseReportSuite[\s\S]*?<\/ReportEntrance>/u,
+    /<GlucoseReportSuite[\s\S]*?totalReadings=\{report\.dataSufficiency\.totalReadings\}[\s\S]*?\/>/u,
   )
+  assert.doesNotMatch(page, /ReportEntrance|report-entrance/u)
   for (const view of ['trace', 'gmi', 'tir', 'agp']) {
     const sources = `${reportSuite}\n${gmiScale}\n${timeInRange}\n${agpProfile}`
     assert.equal(
@@ -245,6 +249,10 @@ test('report layout preserves hierarchy across desktop, tablet, and phone', () =
   )
   assert.match(reportStyles, /\.reportPanel\s*\{[^}]*overflow:\s*clip;/u)
   assert.match(reportStyles, /\.supportDeck > \.reportPanel \+ \.reportPanel/u)
+  assert.match(
+    reportStyles,
+    /\.reportFigure\s*\{[\s\S]*?font-variant-numeric:\s*tabular-nums;/u,
+  )
   assert.doesNotMatch(reportStyles, /font-family:[^;]*mono/u)
 })
 
@@ -342,10 +350,13 @@ test('homepage navigation keeps one restrained translucent boundary', () => {
 })
 
 test('homepage avoids scroll capture and generic dashboard machinery', () => {
-  const source = `${page}\n${styles}\n${reportEntrance}\n${reportStyles}`
+  const source = `${page}\n${styles}\n${reportSuite}\n${reportStyles}`
   for (const forbidden of [
+    'IntersectionObserver',
     'requestAnimationFrame',
     'animation-timeline',
+    'data-entrance-state',
+    'data-motion-part',
     'position: sticky',
     'preventDefault(',
     'GSAP',
@@ -357,21 +368,17 @@ test('homepage avoids scroll capture and generic dashboard machinery', () => {
     assert.equal(source.includes(forbidden), false, `remove ${forbidden}`)
   }
   assert.doesNotMatch(source, /addEventListener\(['"]scroll['"]/u)
-  assert.match(reportEntrance, /new IntersectionObserver/u)
+  assert.doesNotMatch(reportStyles, /@keyframes|\banimation\s*:/u)
 })
 
-test('homepage preserves focus, reduced motion, and safety language', () => {
+test('homepage preserves focus and safety language with a complete static report', () => {
   assert.match(layout, /<HomeLayout\b/u)
   assert.doesNotMatch(page, /<main\b/u)
   assert.match(page, /Informational use only\. Not medical advice\./u)
   assert.match(styles, /:focus-visible\s*\{/u)
-  assert.match(
+  assert.doesNotMatch(
     reportStyles,
-    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?animation:\s*none;[\s\S]*?filter:\s*none;[\s\S]*?opacity:\s*1;/u,
-  )
-  assert.match(
-    reportStyles,
-    /\.reportEntrance\[data-entrance-state='armed'\] \.reportFigure\s*\{[\s\S]*?filter:\s*blur\(1\.5px\);/u,
+    /reportEntrance|data-entrance-state|prefers-reduced-motion|filter:\s*blur|opacity:\s*0(?:\.0+1)?/u,
   )
   assert.match(
     styles,
@@ -379,24 +386,29 @@ test('homepage preserves focus, reduced motion, and safety language', () => {
   )
 })
 
-test('hero mark settles before its ring completes one clockwise pass', () => {
+test('hero mark uses one short landing and fades the complete ring', () => {
   assert.match(logo, /data-logo-part="drop"/u)
-  assert.match(logo, /data-logo-part="ring-reveal"/u)
-  assert.match(logo, /data-logo-part="ring-tip"/u)
+  assert.match(logo, /data-logo-part="ring"/u)
+  assert.doesNotMatch(logo, /mask=|ring-reveal|ring-tip|strokeDash|rotate\(/u)
   assert.match(
     styles,
-    /animation:\s*homeDropSettle 700ms/u,
+    /animation:\s*homeDropLand 360ms ease-out both;/u,
   )
   assert.match(
     styles,
-    /animation:\s*homeRingReveal 720ms cubic-bezier\(0\.65,\s*0,\s*0\.35,\s*1\) 760ms both;/u,
+    /animation:\s*homeRingFade 360ms ease-out both;/u,
   )
+  const ringKeyframes = /@keyframes homeRingFade\s*\{([\s\S]*?)\n\}/u.exec(styles)?.[1]
+  const dropKeyframes = /@keyframes homeDropLand\s*\{([\s\S]*?)\n\}/u.exec(styles)?.[1]
+  assert.notEqual(ringKeyframes, undefined)
+  assert.notEqual(dropKeyframes, undefined)
+  assert.match(ringKeyframes, /opacity:\s*0;/u)
+  assert.match(ringKeyframes, /opacity:\s*1;/u)
+  assert.doesNotMatch(ringKeyframes, /transform|rotate|stroke-dash/u)
+  assert.doesNotMatch(dropKeyframes, /scale|rotate|animation-timing-function/u)
+  assert.doesNotMatch(styles, /homeDropSettle|homeRingReveal|homeRingTip|rotate\(360deg\)|stroke-dashoffset/u)
   assert.match(
     styles,
-    /animation:\s*homeRingTip 720ms cubic-bezier\(0\.65,\s*0,\s*0\.35,\s*1\) 760ms both;/u,
-  )
-  assert.match(
-    styles,
-    /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\[data-logo-part='ring-reveal'\][\s\S]*?stroke-dashoffset:\s*0;/u,
+    /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\[data-logo-part='drop'\][\s\S]*?\[data-logo-part='ring'\][\s\S]*?animation:\s*none;/u,
   )
 })

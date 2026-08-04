@@ -125,22 +125,12 @@
 .heroMark
   :global(svg[data-logo-motion='true'] [data-logo-part='drop']) {
   transform-box: fill-box;
-  transform-origin: 50% 82%;
-  animation: homeDropSettle 700ms both;
+  animation: homeDropLand 360ms ease-out both;
 }
 
 .heroMark
-  :global(svg[data-logo-motion='true'] [data-logo-part='ring-reveal']) {
-  stroke-dashoffset: 1;
-  animation: homeRingReveal 720ms cubic-bezier(0.65, 0, 0.35, 1) 760ms both;
-}
-
-.heroMark
-  :global(svg[data-logo-motion='true'] [data-logo-part='ring-tip']) {
-  color: #30d158;
-  transform-box: view-box;
-  transform-origin: 32px 52px;
-  animation: homeRingTip 720ms cubic-bezier(0.65, 0, 0.35, 1) 760ms both;
+  :global(svg[data-logo-motion='true'] [data-logo-part='ring']) {
+  animation: homeRingFade 360ms ease-out both;
 }
 
 .hero h1 {
@@ -656,20 +646,8 @@
   .heroMark
     :global(svg[data-logo-motion='true'] [data-logo-part='drop']),
   .heroMark
-    :global(svg[data-logo-motion='true'] [data-logo-part='ring-reveal']),
-  .heroMark
-    :global(svg[data-logo-motion='true'] [data-logo-part='ring-tip']) {
+    :global(svg[data-logo-motion='true'] [data-logo-part='ring']) {
     animation: none;
-  }
-
-  .heroMark
-    :global(svg[data-logo-motion='true'] [data-logo-part='ring-reveal']) {
-    stroke-dashoffset: 0;
-  }
-
-  .heroMark
-    :global(svg[data-logo-motion='true'] [data-logo-part='ring-tip']) {
-    display: none;
   }
 
   .primaryAction,
@@ -687,78 +665,22 @@
   }
 }
 
-@keyframes homeDropSettle {
-  0% {
-    transform: translate3d(0, -520px, 0) scaleX(0.96) scaleY(1.04);
-    animation-timing-function: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+@keyframes homeDropLand {
+  from {
+    transform: translate3d(0, -520px, 0);
   }
 
-  78% {
-    transform: translate3d(0, 0, 0) scaleX(0.97) scaleY(1.04);
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  84% {
-    transform: translate3d(0, 1px, 0) scaleX(1.055) scaleY(0.945);
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  94% {
-    transform: translate3d(0, 0, 0) scaleX(0.99) scaleY(1.01);
-  }
-
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
+  to {
+    transform: translate3d(0, 0, 0);
   }
 }
 
-@keyframes homeRingReveal {
-  0% {
+@keyframes homeRingFade {
+  from {
     opacity: 0;
-    stroke-dashoffset: 1;
   }
 
-  8% {
+  to {
     opacity: 1;
-  }
-
-  100% {
-    opacity: 1;
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes homeRingTip {
-  0% {
-    color: #30d158;
-    opacity: 0;
-    transform: rotate(0deg);
-  }
-
-  6% {
-    opacity: 0.94;
-  }
-
-  25% {
-    color: #ffd60a;
-  }
-
-  50% {
-    color: #ff6b3d;
-  }
-
-  75% {
-    color: #ffd60a;
-  }
-
-  92% {
-    color: #9be22d;
-    opacity: 0.88;
-  }
-
-  100% {
-    color: #30d158;
-    opacity: 0;
-    transform: rotate(360deg);
   }
 }
