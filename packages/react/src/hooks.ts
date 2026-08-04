@@ -1,9 +1,13 @@
 /**
  * @file src/hooks.ts
  *
- * Memoized React hooks over the @glucoseiq/core engine. Each hook is a thin
- * useMemo around the corresponding pure function. useGlucoseLive additionally
- * supports an opt-in client-side refresh interval.
+ * React hooks for @glucoseiq/core results.
+ *
+ * Report, profile, score, meal response, latest reading, and trend results use
+ * `useMemo`. They update when React receives a different readings array,
+ * options object, or other hook input. `useGlucoseLive` recalculates reading
+ * age on every render. When set, `refreshMs` requests interval renders so
+ * reading age can change while the readings stay the same.
  */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -46,7 +50,7 @@ function validateRefreshInterval(refreshMs: number | undefined): number | undefi
   return refreshMs
 }
 
-/** Memoized one-call CGM analytics summary. */
+/** Returns a memoized glucose report. */
 export function useGlucoseAnalysis(
   readings: GlucoseReading[],
   options?: AnalyzeGlucoseOptions
@@ -54,7 +58,7 @@ export function useGlucoseAnalysis(
   return useMemo(() => analyzeGlucose(readings, options), [readings, options])
 }
 
-/** Memoized AGP percentile-band series. */
+/** Returns a memoized AGP percentile profile. */
 export function useAGPProfile(
   readings: GlucoseReading[],
   options?: AGPProfileOptions
@@ -62,12 +66,12 @@ export function useAGPProfile(
   return useMemo(() => buildAGPProfile(readings, options), [readings, options])
 }
 
-/** Memoized Glucose IQ score. */
+/** Returns a memoized Glucose IQ score. */
 export function useGlucoseIQScore(readings: GlucoseReading[]): GlucoseIQScore {
   return useMemo(() => glucoseIQScore(readings), [readings])
 }
 
-/** Memoized meal-response analysis. */
+/** Returns a memoized meal-response report. */
 export function useMealResponse(
   readings: GlucoseReading[],
   mealTime: string,
@@ -85,22 +89,27 @@ export interface GlucoseLiveOptions extends GlucoseTrendOptions {
   readonly refreshMs?: number
 }
 
-/** Live view-model for a current-glucose surface. */
+/** Latest reading, trend, and reading age returned by {@link useGlucoseLive}. */
 export interface GlucoseLive {
   /** Most recent reading, or null. */
   readonly latest: GlucoseReading | null
-  /** Derived trend + rate of change. */
+  /** Derived trend and rate of change. */
   readonly trend: GlucoseTrendResult
   /** Minutes since the last reading (staleness), or null. */
   readonly minutesSince: number | null
 }
 
 /**
- * Live current-glucose view-model: latest reading, derived trend, and
- * staleness. Pass `refreshMs` to re-evaluate staleness on an interval (the
- * trend arrow updates when `readings` changes).
+ * Returns the latest reading, derived trend, and minutes since the last
+ * reading.
  *
- * @throws {DomainError} If `refreshMs` is not a whole millisecond from 1 through the platform timer maximum (`INVALID_OPTION`).
+ * The latest reading updates when React receives a different `readings` array.
+ * The trend updates when React receives a different `readings` array or
+ * `options` object. `minutesSince` recalculates on every render. When set,
+ * `refreshMs` requests interval renders so reading age can change while the
+ * readings stay the same.
+ *
+ * @throws {DomainError} If `refreshMs` is not a whole number of milliseconds from `1` through `2_147_483_647` (`INVALID_OPTION`).
  */
 export function useGlucoseLive(
   readings: GlucoseReading[],

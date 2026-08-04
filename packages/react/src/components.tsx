@@ -34,8 +34,8 @@ function SvgBox(props: {
     <div
       className={props.className}
       style={props.style}
-      // The SVG is produced by @glucoseiq/core from numeric data with
-      // The core renderer XML-escapes text before React inlines the SVG.
+      // This private wrapper receives SVG only from @glucoseiq/core renderers.
+      // agpChartToSVG XML-escapes its optional title.
       dangerouslySetInnerHTML={{ __html: props.svg }}
     />
   )
