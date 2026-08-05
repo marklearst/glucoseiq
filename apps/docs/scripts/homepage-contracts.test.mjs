@@ -386,29 +386,48 @@ test('homepage preserves focus and safety language with a complete static report
   )
 })
 
-test('hero mark uses one short landing and fades the complete ring', () => {
+test('hero mark lands before its ring completes one clockwise pass', () => {
   assert.match(logo, /data-logo-part="drop"/u)
-  assert.match(logo, /data-logo-part="ring"/u)
-  assert.doesNotMatch(logo, /mask=|ring-reveal|ring-tip|strokeDash|rotate\(/u)
+  assert.match(logo, /data-logo-part="ring-reveal"/u)
+  assert.match(logo, /pathLength="1"/u)
+  assert.match(logo, /strokeDasharray="1"/u)
+  assert.match(logo, /strokeDashoffset="1"/u)
+  assert.match(logo, /transform="rotate\(-90 32 52\)"/u)
+  assert.match(logo, /mask=\{props\.motion \? `url\(#\$\{ringRevealId\}\)` : undefined\}/u)
+  assert.doesNotMatch(logo, /ring-tip|tipShadow|feDropShadow/u)
   assert.match(
     styles,
     /animation:\s*homeDropLand 360ms ease-out both;/u,
   )
   assert.match(
     styles,
-    /animation:\s*homeRingFade 360ms ease-out both;/u,
+    /animation:\s*homeRingReveal 720ms cubic-bezier\(0\.65,\s*0,\s*0\.35,\s*1\) 360ms both;/u,
   )
-  const ringKeyframes = /@keyframes homeRingFade\s*\{([\s\S]*?)\n\}/u.exec(styles)?.[1]
+  const ringKeyframes = /@keyframes homeRingReveal\s*\{([\s\S]*?)\n\}/u.exec(styles)?.[1]
   const dropKeyframes = /@keyframes homeDropLand\s*\{([\s\S]*?)\n\}/u.exec(styles)?.[1]
   assert.notEqual(ringKeyframes, undefined)
   assert.notEqual(dropKeyframes, undefined)
-  assert.match(ringKeyframes, /opacity:\s*0;/u)
-  assert.match(ringKeyframes, /opacity:\s*1;/u)
-  assert.doesNotMatch(ringKeyframes, /transform|rotate|stroke-dash/u)
+  assert.match(ringKeyframes, /stroke-dashoffset:\s*1;/u)
+  assert.match(ringKeyframes, /stroke-dashoffset:\s*0;/u)
   assert.doesNotMatch(dropKeyframes, /scale|rotate|animation-timing-function/u)
-  assert.doesNotMatch(styles, /homeDropSettle|homeRingReveal|homeRingTip|rotate\(360deg\)|stroke-dashoffset/u)
+  assert.doesNotMatch(styles, /homeRingTip|rotate\(360deg\)/u)
   assert.match(
     styles,
-    /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\[data-logo-part='drop'\][\s\S]*?\[data-logo-part='ring'\][\s\S]*?animation:\s*none;/u,
+    /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\[data-logo-part='ring-reveal'\][\s\S]*?animation:\s*none;[\s\S]*?stroke-dashoffset:\s*0;/u,
+  )
+})
+
+test('hero mark keeps a compact gap below the navigation', () => {
+  assert.match(
+    styles,
+    /\.hero\s*\{[\s\S]*?padding-block:\s*clamp\(88px,\s*calc\(13vw - 8px\),\s*176px\)\s+clamp\(72px,\s*9vw,\s*128px\);/u,
+  )
+  assert.match(
+    styles,
+    /@media\s*\(max-width:\s*760px\)[\s\S]*?\.hero\s*\{\s*padding-block:\s*80px 72px;/u,
+  )
+  assert.match(
+    styles,
+    /@media\s*\(max-width:\s*480px\)[\s\S]*?\.hero\s*\{\s*padding-top:\s*64px;/u,
   )
 })
