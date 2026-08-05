@@ -71,7 +71,9 @@ function runFixtureCommand(file, args, cwd) {
 
 function selectGeneratedVersionFixtureRevision(changes) {
   return changes.some(
-    ({ status, path }) => status === 'D' && isChangesetReaderPath(path),
+    ({ status, path }) =>
+      (status === 'D' && isChangesetReaderPath(path)) ||
+      (status === 'M' && path === '.changeset/pre.json'),
   )
     ? 'HEAD^1'
     : 'HEAD'
@@ -309,6 +311,21 @@ test('generated-version fixtures start from the pre-version commit', () => {
     selectGeneratedVersionFixtureRevision([
       { status: 'M', path: '.changeset/release.md' },
       { status: 'M', path: 'packages/core/src/index.ts' },
+    ]),
+    'HEAD',
+  )
+})
+
+test('generated-version fixtures rewind only generated prerelease state', () => {
+  assert.equal(
+    selectGeneratedVersionFixtureRevision([
+      { status: 'M', path: '.changeset/pre.json' },
+    ]),
+    'HEAD^1',
+  )
+  assert.equal(
+    selectGeneratedVersionFixtureRevision([
+      { status: 'A', path: '.changeset/pre.json' },
     ]),
     'HEAD',
   )
