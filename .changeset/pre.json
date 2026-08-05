@@ -9,5 +9,7 @@
     "@glucoseiq/tokens": "0.0.0",
     "docs": "0.0.0"
   },
-  "changesets": []
+  "changesets": [
+    "launch-glucoseiq-one"
+  ]
 }

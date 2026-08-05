@@ -1,6 +1,6 @@
 {
   "name": "@glucoseiq/testing",
-  "version": "0.0.0",
+  "version": "1.0.0-next.0",
   "description": "Fixed-seed synthetic CGM data and scenario fixtures for tests, examples, and local product states.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
