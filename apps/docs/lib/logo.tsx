@@ -52,7 +52,7 @@ export function LogoMark(props: {
             r="11.5"
             stroke="white"
             strokeDasharray="1"
-            strokeDashoffset="0"
+            strokeDashoffset="1"
             strokeLinecap="round"
             strokeWidth="8"
             transform="rotate(-90 32 52)"
