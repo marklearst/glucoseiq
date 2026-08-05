@@ -8,6 +8,7 @@ export function LogoMark(props: {
 }): JSX.Element {
   const id = useId().replaceAll(':', '')
   const gradientId = `giq-ring-${id}`
+  const ringRevealId = `giq-ring-reveal-${id}`
   const s = props.size ?? 28
   const showRing = props.variant !== 'drop'
   return (
@@ -34,6 +35,29 @@ export function LogoMark(props: {
           <stop offset="0.82" stopColor="#FF9F0A" />
           <stop offset="1" stopColor="#FF6B3D" />
         </linearGradient>
+        <mask
+          height="84"
+          id={ringRevealId}
+          maskUnits="userSpaceOnUse"
+          width="64"
+          x="0"
+          y="0"
+        >
+          <circle
+            cx="32"
+            cy="52"
+            data-logo-part="ring-reveal"
+            fill="none"
+            pathLength="1"
+            r="11.5"
+            stroke="white"
+            strokeDasharray="1"
+            strokeDashoffset="0"
+            strokeLinecap="round"
+            strokeWidth="8"
+            transform="rotate(-90 32 52)"
+          />
+        </mask>
       </defs>
       <path
         data-logo-part="drop"
@@ -50,6 +74,7 @@ export function LogoMark(props: {
           data-logo-part="ring"
           fill={`url(#${gradientId})`}
           fillRule="evenodd"
+          mask={props.motion ? `url(#${ringRevealId})` : undefined}
         />
       ) : null}
     </svg>
