@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -155,6 +156,30 @@ function synchronizePackageContractFixture(repository) {
   }
 }
 
+function normalizeFixturePrereleaseState(repository, prerelease) {
+  const prereleaseStatePath = join(repository, '.changeset/pre.json')
+  if (!prerelease) {
+    rmSync(prereleaseStatePath, { force: true })
+    return
+  }
+  writeFileSync(
+    prereleaseStatePath,
+    `${JSON.stringify({
+      mode: 'pre',
+      tag: 'next',
+      initialVersions: {
+        '@glucoseiq/cli': '0.0.0',
+        '@glucoseiq/core': '0.0.0',
+        '@glucoseiq/react': '0.0.0',
+        '@glucoseiq/testing': '0.0.0',
+        '@glucoseiq/tokens': '0.0.0',
+        docs: '0.0.0',
+      },
+      changesets: [],
+    }, null, 2)}\n`,
+  )
+}
+
 function createGeneratedVersionFixture({
   generate = true,
   mutate,
@@ -196,25 +221,8 @@ function createGeneratedVersionFixture({
     )
   }
   synchronizeFixturePackageManager(repository)
+  normalizeFixturePrereleaseState(repository, prerelease)
   synchronizeLaunchFixture(repository)
-  if (prerelease) {
-    writeFileSync(
-      join(repository, '.changeset/pre.json'),
-      `${JSON.stringify({
-        mode: 'pre',
-        tag: 'next',
-        initialVersions: {
-          '@glucoseiq/cli': '0.0.0',
-          '@glucoseiq/core': '0.0.0',
-          '@glucoseiq/react': '0.0.0',
-          '@glucoseiq/testing': '0.0.0',
-          '@glucoseiq/tokens': '0.0.0',
-          docs: '0.0.0',
-        },
-        changesets: [],
-      }, null, 2)}\n`,
-    )
-  }
   if (prerelease || prepareBase) {
     prepareBase?.(repository)
     runFixtureCommand('git', ['add', '-A', '--'], repository)
@@ -320,6 +328,24 @@ test('launch fixtures keep the pre-version Changeset after the root copy is cons
       readLaunchChangesetContents(rootChangeset, fixtureChangeset),
       contents,
     )
+  } finally {
+    rmSync(temporaryDirectory, { force: true, recursive: true })
+  }
+})
+
+test('stable generated-version fixtures remove ambient prerelease state', () => {
+  const temporaryDirectory = mkdtempSync(
+    join(tmpdir(), 'glucoseiq-prerelease-fixture-test-'),
+  )
+  const repository = join(temporaryDirectory, 'repository')
+  const changesetDirectory = join(repository, '.changeset')
+  const prereleaseStatePath = join(changesetDirectory, 'pre.json')
+  mkdirSync(changesetDirectory, { recursive: true })
+  writeFileSync(prereleaseStatePath, '{}\n')
+
+  try {
+    normalizeFixturePrereleaseState(repository, false)
+    assert.equal(existsSync(prereleaseStatePath), false)
   } finally {
     rmSync(temporaryDirectory, { force: true, recursive: true })
   }
