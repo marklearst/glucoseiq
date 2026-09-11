@@ -118,7 +118,7 @@
     "@vitest/ui": "^3.2.7",
     "tsup": "^8.4.0",
     "typescript": "^5.8.3",
-    "vitest": "^3.2.7"
+    "vitest": "^4.1.11"
   },
   "files": [
     "dist/",
