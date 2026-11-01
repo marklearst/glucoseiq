@@ -421,7 +421,6 @@ function _calculateSimpleMAGE(readings: number[], sd: number): number {
   }
 
   // If no turning points found with windowing, try simple adjacent comparison
-  /* c8 ignore next 10 */
   if (turningPoints.length === 0) {
     for (let i = 1; i < readings.length - 1; i++) {
       if (readings[i] > readings[i - 1] && readings[i] > readings[i + 1]) {

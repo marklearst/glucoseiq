@@ -86,7 +86,7 @@ describe('splitDayNight', () => {
     const unexpectedError = new Error('Unexpected date-time formatter failure')
     const dateTimeFormatSpy = vi
       .spyOn(Intl, 'DateTimeFormat')
-      .mockImplementation(() => {
+      .mockImplementation(function () {
         throw unexpectedError
       })
     let thrown: unknown

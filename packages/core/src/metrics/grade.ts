@@ -31,8 +31,7 @@ function gradeScore(mgdl: number): number {
   const mmol = mgdl / MGDL_TO_MMOL
   if (mmol <= 1) return 0
   const inner = Math.log10(mmol)
-  /* c8 ignore next -- inner > 0 is guaranteed when mmol > 1 (guarded above) */
-  if (inner <= 0) return 0
+  // inner is positive because mmol > 1 (guarded above).
   const logLog = Math.log10(inner) + 0.16
   return 425 * logLog * logLog
 }

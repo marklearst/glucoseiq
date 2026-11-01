@@ -115,6 +115,12 @@ function readLaunchChangesetContents(rootChangeset, fixtureChangeset) {
 }
 
 function synchronizeLaunchFixture(repository) {
+  // This fixture models only the initial launch, not unrelated pending releases.
+  for (const name of readdirSync(join(repository, '.changeset'))) {
+    if (name !== 'launch-glucoseiq-one.md' && isChangesetReaderPath(`.changeset/${name}`)) {
+      rmSync(join(repository, '.changeset', name))
+    }
+  }
   for (const directory of readdirSync(join(repository, 'packages'))) {
     if (PUBLIC_PACKAGE_DIRECTORIES.includes(`packages/${directory}`)) continue
     rmSync(join(repository, 'packages', directory), { force: true, recursive: true })
@@ -163,6 +169,13 @@ function normalizeFixturePrereleaseState(repository, prerelease) {
   if (!prerelease) {
     rmSync(prereleaseStatePath, { force: true })
     return
+  }
+  // Reset the cloned manifests as well as pre.json so the fixture always
+  // exercises the first prerelease, even after next.0 has been published.
+  for (const directory of PUBLIC_PACKAGE_DIRECTORIES) {
+    updateFixtureManifest(repository, directory, (manifest) => {
+      manifest.version = '0.0.0'
+    })
   }
   writeFileSync(
     prereleaseStatePath,
@@ -365,6 +378,28 @@ test('stable generated-version fixtures remove ambient prerelease state', () => 
     assert.equal(existsSync(prereleaseStatePath), false)
   } finally {
     rmSync(temporaryDirectory, { force: true, recursive: true })
+  }
+})
+
+test('next.0 fixtures reset package versions after an earlier prerelease', () => {
+  const repository = mkdtempSync(join(tmpdir(), 'glucoseiq-next-zero-fixture-'))
+  mkdirSync(join(repository, '.changeset'))
+  for (const directory of PUBLIC_PACKAGE_DIRECTORIES) {
+    mkdirSync(join(repository, directory), { recursive: true })
+    writeFileSync(join(repository, directory, 'package.json'), JSON.stringify({
+      name: `@glucoseiq/${directory.split('/').at(-1)}`,
+      version: '1.0.0-next.7',
+    }))
+  }
+
+  try {
+    normalizeFixturePrereleaseState(repository, true)
+    for (const directory of PUBLIC_PACKAGE_DIRECTORIES) {
+      const manifest = JSON.parse(readFileSync(join(repository, directory, 'package.json'), 'utf8'))
+      assert.equal(manifest.version, '0.0.0', directory)
+    }
+  } finally {
+    rmSync(repository, { recursive: true, force: true })
   }
 })
 
@@ -1452,7 +1487,15 @@ test('rejects a generated-version-shaped commit that omits a planned package rel
         ['checkout', 'HEAD', '--', 'packages/react/package.json'],
         repository,
       )
-      rmSync(join(repository, 'packages/react/CHANGELOG.md'))
+      const changelog = 'packages/react/CHANGELOG.md'
+      const tracked = runFixtureCommand(
+        'git', ['ls-tree', '--name-only', 'HEAD', '--', changelog], repository,
+      )
+      if (tracked.length > 0) {
+        runFixtureCommand('git', ['checkout', 'HEAD', '--', changelog], repository)
+      } else {
+        rmSync(join(repository, changelog))
+      }
     },
   })
 
