@@ -83,6 +83,11 @@ describe('MAGE Implementation', () => {
   });
 
   describe('Edge Cases and Robustness', () => {
+    it('uses adjacent turning points when repeated peaks defeat the wider window', () => {
+      const data = Array.from({ length: 20 }, (_, index) => index % 2 === 0 ? 100 : 200);
+      expect(glucoseMAGE(data, { longWindow: data.length })).toBe(100);
+    });
+
     it('should handle minimal data that meets requirements', () => {
       const minimalData = [100, 150, 80];
       const mage = glucoseMAGE(minimalData);

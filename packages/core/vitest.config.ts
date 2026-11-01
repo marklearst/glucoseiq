@@ -16,7 +16,6 @@ export default defineConfig({
         'src/connectors/types.ts',
         'src/interop/types.ts',
       ],
-      all: true,
       include: ['src/**/*.ts'],
       thresholds: {
         lines: 100,

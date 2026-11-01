@@ -660,6 +660,27 @@ describe('Nightscout adapter', () => {
       expect(result?.timestamp).toBe(new Date(1700000000000).toISOString())
     })
 
+    it('falls back to date when the parser returns an out-of-range epoch', () => {
+      const dateParseSpy = vi.spyOn(Date, 'parse').mockReturnValue(8.64e15 + 1)
+      try {
+        expect(normalizeNightscoutEntry({
+          sgv: 110,
+          date: 1700000000000,
+          dateString: '2023-11-14T22:13:20.000Z',
+        }).timestamp).toBe('2023-11-14T22:13:20.000Z')
+      } finally {
+        dateParseSpy.mockRestore()
+      }
+    })
+
+    it('throws when dateString is invalid and no epoch fallback exists', () => {
+      expect(() => normalizeNightscoutEntry({
+        sgv: 110,
+        date: undefined as unknown as number,
+        dateString: 'not-a-valid-iso',
+      })).toThrow("Unable to parse Nightscout timestamp from 'dateString'")
+    })
+
     it('throws when dateString is invalid and date fallback is invalid', () => {
       const entry: NightscoutEntry = {
         sgv: 110,

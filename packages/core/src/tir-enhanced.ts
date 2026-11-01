@@ -384,7 +384,7 @@ export function calculatePregnancyTIR(
       }
     } else if (normalizedValue <= highThreshold) {
       inRangeReadings.push(normalizedReading)
-    } else if (normalizedValue > highThreshold) {
+    } else {
       aboveRangeReadings.push(normalizedReading)
     }
   }
