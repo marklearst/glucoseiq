@@ -3,8 +3,11 @@ import { createRequire } from 'node:module'
 import test from 'node:test'
 
 const require = createRequire(import.meta.url)
-const { detectContentType, optimizeImage } = require(
-  'next/dist/server/image-optimizer',
+const { detectContentType } = require(
+  'next/dist/server/image-optimizer/detect-content-type',
+)
+const { optimizeImage } = require(
+  'next/dist/server/image-optimizer/transform',
 )
 
 const PNG_FIXTURE = Buffer.from(
